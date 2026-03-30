@@ -23,7 +23,8 @@ Read these in order:
 - Reuse Pi utilities such as `parseCommandArgs`, `substituteArgs`, and `parseFrontmatter` instead of reimplementing parser behavior.
 - Extension-registered commands must take precedence over native flat prompt templates with the same name.
 - Expanded prompt content must be sent as Pi user-message content, not through a custom render path.
-- `_index.md` is the fallback for bare `/command` invocations.
+- Bare `/command` should open an interactive menu of nested prompts.
+- Prompts with missing required arguments should pause and collect operator input before expansion.
 - Flat `.md` prompt templates remain Pi-native behavior. This package should only add directory-based routing on top.
 - Preserve user vs project prompt scope when surfacing command metadata.
 

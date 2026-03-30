@@ -14,6 +14,8 @@ Operators should be able to:
 
 - organize prompts by folder
 - invoke them as grouped slash commands
+- open an interactive menu from bare `/command`
+- provide missing prompt arguments through guided input
 - keep using Pi-native prompt template behavior
 
 Example:
@@ -33,7 +35,7 @@ Expected behavior:
 - `workspace.md` stays native Pi `/workspace`
 - `superset/create.md` becomes `/superset create`
 - `superset/list.md` becomes `/superset list`
-- `superset/_index.md` becomes `/superset`
+- `/superset` opens an interactive menu for the nested prompts
 
 ## Design principles
 
@@ -74,13 +76,16 @@ These features define the package.
 1.2 **File-to-subcommand mapping**
 - Markdown files inside the directory become subcommands.
 
-1.3 **Bare command fallback**
-- `_index.md` handles `/command` with no subcommand.
+1.3 **Interactive bare command menu**
+- Bare `/command` opens an interactive menu where each nested prompt is an option.
 
-1.4 **Pi-native prompt compatibility**
+1.4 **Guided argument collection**
+- If a selected or directly invoked prompt expects missing arguments, the extension should ask for them and wait for operator input before expansion.
+
+1.5 **Pi-native prompt compatibility**
 - Frontmatter, args, markdown, and message delivery stay Pi-compatible.
 
-1.5 **Coexistence with flat prompts**
+1.6 **Coexistence with flat prompts**
 - Native flat `.md` prompts keep working unchanged.
 
 ### Priority 2: Discoverability and operator UX
@@ -117,7 +122,7 @@ These features make the package trustworthy.
 These features make the package understandable.
 
 4.1 **Clear directory convention docs**
-- Explain folders, subcommands, and `_index.md`.
+- Explain folders, subcommands, menu behavior, and guided input.
 
 4.2 **Example grouped prompts**
 - Include at least one realistic command group.
@@ -133,7 +138,6 @@ Keep these out of scope for the initial release:
 - aliases or alternate command names
 - custom syntax beyond Pi prompt-template behavior
 - prompt inheritance across directories
-- interactive menus or custom UI flows
 - dynamic generated subcommands
 - grouped-prompt-specific permission systems
 
@@ -146,4 +150,4 @@ The roadmap should implement these phases in order:
 3. **Reliability and runtime correctness**
 4. **Documentation and examples**
 
-A first useful release is done when grouped prompts route correctly, feel native, are discoverable, preserve scope, and are documented clearly.
+A first useful release is done when grouped prompts route correctly, bare commands open a usable menu, missing arguments are collected interactively, the result feels native, scope is preserved, and the behavior is documented clearly.
