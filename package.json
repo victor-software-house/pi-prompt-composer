@@ -1,38 +1,40 @@
 {
 	"name": "pi-prompt-composer",
 	"version": "0.1.0",
-	"description": "Folder-nested prompt routing extension for Pi.",
-	"author": "Victor Software House",
-	"type": "module",
-	"keywords": [
-		"pi-package",
-		"pi",
-		"pi-extension",
-		"prompt-templates",
-		"slash-commands"
-	],
+	"description": "Folder-nested prompt routing extension for Pi",
 	"license": "MIT",
+	"author": "Victor Software House",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/victor-software-house/pi-prompt-composer.git"
 	},
-	"homepage": "https://github.com/victor-software-house/pi-prompt-composer#readme",
-	"bugs": {
-		"url": "https://github.com/victor-software-house/pi-prompt-composer/issues"
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
 	},
-	"engines": {
-		"node": ">=20"
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"pi-coding-agent",
+		"prompt-templates",
+		"slash-commands"
+	],
+	"pi": {
+		"extensions": [
+			"./extensions"
+		]
 	},
+	"type": "module",
 	"files": [
 		"extensions",
-		"src",
 		"README.md",
 		"LICENSE"
 	],
 	"scripts": {
-		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
 		"prepare": "lefthook install"
 	},
 	"peerDependencies": {
@@ -40,16 +42,17 @@
 		"@mariozechner/pi-tui": "*"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.0",
-		"@mariozechner/pi-coding-agent": "*",
-		"@mariozechner/pi-tui": "*",
-		"@types/node": "^24.3.0",
+		"@biomejs/biome": "^2.4.8",
+		"@commitlint/cli": "^20.5.0",
+		"@commitlint/config-conventional": "^20.5.0",
+		"@mariozechner/pi-coding-agent": "^0.63.0",
+		"@mariozechner/pi-tui": "^0.63.0",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/github": "^12.0.6",
+		"@semantic-release/npm": "^13.1.5",
 		"lefthook": "^2.1.4",
-		"typescript": "^5.9.2"
-	},
-	"pi": {
-		"extensions": [
-			"./extensions"
-		]
+		"semantic-release": "^25.0.3",
+		"typescript": "^5.9.3"
 	}
 }

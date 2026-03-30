@@ -1,0 +1,19 @@
+output:
+  - failure
+  - summary
+
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}
+
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      stage_fixed: true
+      run: bunx biome check --write --no-errors-on-unmatched {staged_files}
+    lint:
+      run: bun run lint
+    typecheck:
+      run: bun run typecheck
