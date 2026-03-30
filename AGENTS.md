@@ -66,6 +66,8 @@ Verification notes:
 - Commit in small, reviewable slices during substantial work. Do not batch unrelated changes into one late commit.
 - When a task produces a stable checkpoint, commit it before starting the next distinct change.
 - Commit proactively when work is ready. Do not ask the user whether to commit unless they explicitly asked to control commits themselves.
+- When a turn leaves the repository in a changed, validated state, commit those changes before ending the turn.
+- After creating that end-of-turn commit, push the current branch to `origin` before ending the turn unless the user explicitly says not to push or remote push is unavailable.
 - Conventional commits are enforced by `commitlint` (`commitlint.config.mjs`).
 - `lefthook` pre-commit runs `oxlint --fix`, `biome check --write`, `bun run lint`, and `bun run typecheck`.
 - `lefthook` pre-push runs `bun install` and fails if it changes `bun.lock`; commit the updated lockfile before pushing.
