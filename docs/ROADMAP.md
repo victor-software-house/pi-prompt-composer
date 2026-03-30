@@ -53,8 +53,9 @@ Grouped prompts should preserve Pi-native argument parsing and substitution whil
 
 Acceptance criteria:
 
-- invocation arguments are parsed with Pi's `parseCommandArgs()` helper
-- template bodies are rendered with Pi's `substituteArgs()` helper
+- invocation arguments follow Pi's `parseCommandArgs()` behavior exactly for the targeted Pi version
+- template bodies follow Pi's `substituteArgs()` behavior exactly for the targeted Pi version
+- public Pi exports are reused directly where available; non-exported prompt helpers are copied locally rather than imported from non-public Pi internals
 - supported syntax remains Pi-native: `$1`, `$2`, `$@`, `$ARGUMENTS`, `${@:N}`, `${@:N:L}`
 - missing required arguments are inferred conservatively from the template body and collected interactively before rendering
 - `$@` and `$ARGUMENTS` alone do not force interactive collection
@@ -90,6 +91,7 @@ Acceptance criteria:
 - command output replaces the placeholder in the rendered prompt body
 - failure handling is visible and understandable to the operator
 - rendered substitution output is present in the final user message bubble
+- any helper duplicated from Pi internals is small, testable, and documented as a local copy rather than a hidden runtime dependency on Pi internals
 
 ## PPC-007: Scope-aware diagnostics and documented Pi API limits
 

@@ -120,6 +120,63 @@ These remain out of scope for the first implementation slice unless explicitly p
 - a fully programmable template language in v1
 - hidden preprocessing that the operator cannot inspect after dispatch
 
+## Code reuse policy
+
+The implementation should reuse Pi code aggressively where the public API allows it, and duplicate internal Pi logic only when there is no supported export.
+
+### Reuse decision order
+
+For every helper or behavior in this package, apply this order:
+
+1. use a stable public export from `@mariozechner/pi-coding-agent` when one exists
+2. copy a small Pi internal implementation locally when no public export exists and the logic is tightly coupled to this package
+3. extract that copied logic into a shared utility package only if a second package needs the same behavior
+
+Do not import Pi internals from `dist/core/*` or other non-public module paths at runtime. Treat internal source as reference material, not as a dependency contract.
+
+### Reuse matrix
+
+#### Reuse directly from Pi public exports
+
+These should be imported directly rather than reimplemented:
+
+- `parseFrontmatter()`
+- `stripFrontmatter()` when needed
+- `createSyntheticSourceInfo()`
+- `getAgentDir()` if direct global path resolution is needed
+- Pi TUI primitives such as `SelectList`, `Container`, `Text`, and related theme helpers if richer custom UI is built
+
+#### Copy locally from Pi internals when needed
+
+These behaviors exist in Pi but are not currently exported:
+
+- `parseCommandArgs()` from Pi's prompt-template implementation
+- `substituteArgs()` from Pi's prompt-template implementation
+- description fallback behavior used when frontmatter description is absent
+- simple prompt-path classification helpers used during prompt discovery
+
+If these are copied, keep them:
+
+- small
+- clearly attributed in code comments to the Pi version they were copied from
+- covered by tests that lock the expected behavior
+
+#### Candidate future shared utility extraction
+
+If another Pi package needs the same prompt-rendering logic, extract the duplicated helper surface into a shared library instead of letting multiple packages drift.
+
+Likely candidates:
+
+- prompt argument parsing
+- prompt argument substitution
+- description fallback extraction
+- prompt-root and scope classification helpers
+- prompt-body shell-substitution helpers
+
+A shared extraction should happen only when there is a real second consumer. Until then, local duplication is cheaper than introducing an abstract utility package too early.
+
+The current `pi-provider-utils` package proves the extraction pattern is viable, but its present scope is provider- and agent-path-focused. Prompt-rendering helpers should either live in a new focused shared package or in a newly added prompt/resource-oriented entrypoint only if multiple repos need them.
+
 ## Architectural constraints
 
 ### Constraint 1: grouped commands must be extension commands
@@ -185,8 +242,9 @@ Registry shape:
 
 Parsing rules:
 
-- use Pi's `parseFrontmatter()`
-- use Pi's description fallback behavior when frontmatter description is absent
+- use Pi's exported `parseFrontmatter()`
+- copy Pi's description fallback behavior locally if no public helper exists
+- keep the fallback behavior test-covered so it stays aligned with the Pi version this package targets
 
 ### 2. Command registration
 
@@ -228,6 +286,11 @@ Menu content should include:
 ### 4. Missing-argument collection
 
 Grouped prompts should pause and collect missing arguments before rendering.
+
+Implementation note:
+
+- copy Pi's internal `parseCommandArgs()` and `substituteArgs()` behavior locally unless Pi exports them in the target version
+- do not import non-public Pi runtime internals directly
 
 Because Pi prompt templates do not declare required args explicitly, this package must infer requirements from the template body.
 
@@ -314,6 +377,7 @@ Behavior:
 Implementation notes:
 
 - use `pi.exec('bash', ['-c', command], { timeout })`
+- if shell-substitution parsing or replacement logic becomes useful in multiple Pi packages, treat it as a candidate for shared extraction after the second real consumer appears
 - collect multiple substitutions before final replacement
 - surface failures clearly in the rendered output or via a visible error path
 - consider a notification summarizing executed substitutions
