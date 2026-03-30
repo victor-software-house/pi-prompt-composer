@@ -1,5 +1,5 @@
 {
-	"name": "@victor-software-house/pi-prompt-composer",
+	"name": "pi-prompt-composer",
 	"version": "0.1.0",
 	"description": "Folder-nested prompt routing extension for Pi.",
 	"author": "Victor Software House",
