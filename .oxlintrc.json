@@ -1,6 +1,16 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	"plugins": ["typescript"],
+	"jsPlugins": [
+		{
+			"name": "zod",
+			"specifier": "eslint-plugin-zod"
+		},
+		{
+			"name": "@limegrass/import-alias",
+			"specifier": "@limegrass/eslint-plugin-import-alias"
+		}
+	],
 	"rules": {
 		"typescript/no-floating-promises": "error",
 		"typescript/no-misused-promises": "error",
@@ -14,6 +24,36 @@
 		"typescript/no-unsafe-call": "error",
 		"typescript/no-unsafe-member-access": "error",
 		"typescript/no-unsafe-return": "error",
-		"typescript/no-unsafe-argument": "error"
+		"typescript/no-unsafe-argument": "error",
+		"zod/array-style": "error",
+		"zod/consistent-import": "error",
+		"zod/consistent-import-source": [
+			"error",
+			{
+				"sources": ["zod", "zod/mini"]
+			}
+		],
+		"zod/consistent-object-schema-type": [
+			"error",
+			{
+				"allow": ["object", "looseObject"]
+			}
+		],
+		"zod/no-any-schema": "error",
+		"zod/no-empty-custom-schema": "error",
+		"zod/no-number-schema-with-int": "error",
+		"zod/no-string-schema-with-uuid": "error",
+		"zod/no-optional-and-default-together": ["error", { "preferredMethod": "default" }],
+		"zod/no-throw-in-refine": "error",
+		"zod/no-unknown-schema": "off",
+		"zod/prefer-enum-over-literal-union": "error",
+		"zod/prefer-meta": "error",
+		"zod/prefer-meta-last": "error",
+		"zod/prefer-string-schema-with-trim": "error",
+		"zod/require-brand-type-parameter": "error",
+		"zod/require-error-message": "error",
+		"zod/require-schema-suffix": "error",
+		"zod/schema-error-property-style": "error",
+		"@limegrass/import-alias/import-alias": "error"
 	}
 }

@@ -12,12 +12,14 @@
 		"isolatedModules": true,
 		"noUncheckedIndexedAccess": true,
 		"exactOptionalPropertyTypes": true,
+		"noPropertyAccessFromIndexSignature": true,
 		"noImplicitOverride": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
 		"noEmit": true,
 		"lib": ["ES2023"],
-		"types": ["node"]
+		"types": ["node"],
+		"allowImportingTsExtensions": false
 	},
 	"include": ["extensions/**/*.ts"]
 }

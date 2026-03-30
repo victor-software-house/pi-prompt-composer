@@ -3,6 +3,13 @@
 	"files": {
 		"includes": ["extensions/**"]
 	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"formatter": {
 		"indentStyle": "tab",
 		"lineWidth": 120
@@ -10,14 +17,33 @@
 	"linter": {
 		"rules": {
 			"recommended": true,
+			"suspicious": {
+				"noExplicitAny": "error",
+				"noImplicitAnyLet": "error",
+				"noConfusingVoidType": "error",
+				"noDeprecatedImports": "error"
+			},
 			"style": {
 				"noNonNullAssertion": "error",
 				"useConst": "error",
 				"useImportType": "error",
-				"useNodejsImportProtocol": "error"
-			},
-			"suspicious": {
-				"noExplicitAny": "error"
+				"useNodejsImportProtocol": "error",
+				"useConsistentBuiltinInstantiation": {
+					"level": "error",
+					"fix": "safe"
+				},
+				"useExplicitLengthCheck": {
+					"level": "error",
+					"fix": "safe"
+				},
+				"useConsistentArrayType": {
+					"level": "error",
+					"options": {
+						"syntax": "shorthand"
+					}
+				},
+				"useThrowOnlyError": "error",
+				"noEnum": "error"
 			},
 			"correctness": {
 				"noUnusedImports": {
@@ -31,7 +57,20 @@
 				"noUnusedFunctionParameters": {
 					"level": "error",
 					"fix": "safe"
-				}
+				},
+				"noUndeclaredVariables": "error"
+			},
+			"performance": {
+				"noDelete": "error",
+				"noDynamicNamespaceImportAccess": "error"
+			},
+			"complexity": {
+				"noForEach": "error",
+				"noUselessTypeConstraint": "error"
+			},
+			"nursery": {
+				"noFloatingPromises": "error",
+				"noUnnecessaryConditions": "error"
 			}
 		}
 	},
