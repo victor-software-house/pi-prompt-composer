@@ -12,7 +12,9 @@ Implement the first useful grouped-routing slice in `extensions/index.ts`: scan 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.9, strict ESM  
-**Primary Dependencies**: `@mariozechner/pi-coding-agent` (`registerCommand`, `ctx.ui.select`, `sendUserMessage`, `parseCommandArgs`, `substituteArgs`, `parseFrontmatter`, `getPromptsDir`, `CONFIG_DIR_NAME`); Node built-ins `node:fs` and `node:path`  
+**Primary Dependencies**: `@mariozechner/pi-coding-agent` (`registerCommand`, `ctx.ui.select`, `sendUserMessage`, `parseFrontmatter`, `getAgentDir`); local reimplementations of Pi's internal `parseCommandArgs` and `substituteArgs` (from `@mariozechner/pi-coding-agent@0.64.0/core/prompt-templates`); Node built-ins `node:fs` and `node:path`  
+**Non-exported Pi internals reimplemented locally**: `parseCommandArgs`, `substituteArgs` (near-verbatim copies with source-reference comments pointing to `@mariozechner/pi-coding-agent@0.64.0` — `packages/coding-agent/src/core/prompt-templates.ts` in [badlogic/pi-mono](https://github.com/badlogic/pi-mono)); prompt root paths derived from `getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'` since `getPromptsDir()` and `CONFIG_DIR_NAME` are not publicly exported  
+**Future extraction target**: These local helpers are candidates for a shared `pi-provider-utils` npm package to avoid duplication across Pi extension repos  
 **Storage**: In-memory grouped-prompt registry rebuilt from local filesystem prompt roots on extension load/reload  
 **Testing**: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint` (no test suite yet)  
 **Target Platform**: Pi interactive extension runtime on the operator machine, reading `~/.pi/agent/prompts` and `<cwd>/.pi/prompts`  
@@ -70,7 +72,7 @@ specs/
 
 ## Planned Implementation Files
 
-- `extensions/index.ts` — add grouped prompt discovery, registry construction, duplicate resolution, command registration, autocomplete, bare-command selector flow, direct subcommand dispatch, and visible user-message sending.
+- `extensions/index.ts` — add local `parseCommandArgs()` and `substituteArgs()` reimplementations with source-reference comments; add grouped prompt discovery, registry construction, duplicate resolution, command registration, autocomplete, bare-command selector flow, direct subcommand dispatch, and visible user-message sending.
 - `README.md` — document the grouped directory convention, project-vs-user precedence, selector behavior, and the fact that grouped commands are extension commands layered over native flat prompt templates.
 - `specs/001-implement-core-grouped/*` — maintain planning artifacts and validation notes for this slice.
 
@@ -91,16 +93,17 @@ specs/
 
 ### Phase 2: Implementation slice for `/spec tasks`
 
-1. Add local types and discovery helpers in `extensions/index.ts`.
-2. Scan `~/.pi/agent/prompts` and `.pi/prompts` for first-level grouped directories.
-3. Load `_index.md` and nested prompt files with `parseFrontmatter()` and Pi-compatible description fallback.
-4. Resolve duplicate groups with project-over-user precedence and preserve scope metadata on the winning registry entries.
-5. Register one command per effective group with `getArgumentCompletions()` backed by the registry.
-6. Route `/group subcommand ...` through `parseCommandArgs()` + `substituteArgs()` and send the rendered prompt via `pi.sendUserMessage()`.
-7. Route bare `/group` through `ctx.ui.select()` and then dispatch the selected prompt.
-8. Return clear unknown-subcommand feedback listing available nested prompts.
-9. Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint`.
-10. Update `README.md` if the implementation changes operator-visible behavior from current docs.
+1. Add local reimplementations of `parseCommandArgs()` and `substituteArgs()` in `extensions/index.ts`, near-verbatim from Pi's `core/prompt-templates.ts`, with comments referencing `@mariozechner/pi-coding-agent@0.64.0` source paths and a note about future extraction to `pi-provider-utils`.
+2. Add local types and discovery helpers in `extensions/index.ts`.
+3. Scan prompt roots (`getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'`) for first-level grouped directories.
+4. Load `_index.md` and nested prompt files with `parseFrontmatter()` (imported from Pi) and Pi-compatible description fallback.
+5. Resolve duplicate groups with project-over-user precedence and preserve scope metadata on the winning registry entries.
+6. Register one command per effective group with `getArgumentCompletions()` backed by the registry.
+7. Route `/group subcommand ...` through local `parseCommandArgs()` + `substituteArgs()` and send the rendered prompt via `pi.sendUserMessage()`.
+8. Route bare `/group` through `ctx.ui.select()` and then dispatch the selected prompt.
+9. Return clear unknown-subcommand feedback listing available nested prompts.
+10. Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint`.
+11. Update `README.md` if the implementation changes operator-visible behavior from current docs.
 
 ## Validation Strategy
 

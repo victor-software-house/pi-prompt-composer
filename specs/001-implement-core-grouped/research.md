@@ -1,15 +1,21 @@
 # Research: Core Grouped Prompt Routing
 
-## Decision 1: Build grouped discovery directly in `extensions/index.ts` with Pi public helpers
+## Decision 1: Build grouped discovery directly in `extensions/index.ts`, reimplementing Pi's internal helpers locally
 
-- **Decision**: Implement first-level directory scanning and prompt-file loading in `extensions/index.ts`, using Pi's public `parseFrontmatter()`, `parseCommandArgs()`, `substituteArgs()`, `getPromptsDir()`, and `CONFIG_DIR_NAME` helpers instead of custom parsers or non-public internals.
+- **Decision**: Implement first-level directory scanning and prompt-file loading in `extensions/index.ts`. Import `parseFrontmatter()` and `getAgentDir()` from `@mariozechner/pi-coding-agent` (the only relevant public exports). Reimplement `parseCommandArgs()` and `substituteArgs()` locally as near-verbatim copies of Pi's internal implementations, with source-reference comments. Derive prompt roots from `getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'` since `getPromptsDir()` and `CONFIG_DIR_NAME` are not publicly exported.
 - **Rationale**:
   - The repository currently has a single runtime entrypoint: `extensions/index.ts`.
-  - Pi already exposes the exact prompt helpers needed for frontmatter parsing and argument substitution.
+  - Only `parseFrontmatter`, `stripFrontmatter`, and `getAgentDir` are exported from `@mariozechner/pi-coding-agent@0.64.0`. The helpers `parseCommandArgs`, `substituteArgs`, `getPromptsDir`, `CONFIG_DIR_NAME`, `loadPromptTemplates`, and `expandPromptTemplate` are internal to `core/prompt-templates.js` and `config.js` respectively.
   - Pi's own prompt-template loader uses straightforward filesystem access and non-recursive scanning, which matches this feature's limited scope.
+  - The `@ifi/pi-spec` extension (a production Pi extension) follows the same pattern: it imports only public types and APIs, does its own tokenization, and calls `pi.sendUserMessage()` for dispatch.
+- **Source references for reimplemented helpers**:
+  - `parseCommandArgs`: `@mariozechner/pi-coding-agent@0.64.0` — `packages/coding-agent/src/core/prompt-templates.ts` ([GitHub: badlogic/pi-mono](https://github.com/badlogic/pi-mono))
+  - `substituteArgs`: same module, same version
+  - `CONFIG_DIR_NAME` (`.pi`): `@mariozechner/pi-coding-agent@0.64.0` — `packages/coding-agent/src/config.ts`
+- **Future extraction**: These reimplemented helpers are candidates for a shared `pi-provider-utils` package (public on npm) to avoid duplication across Pi extension packages. Until that package exists, keep the local copies with clear provenance comments so extraction is mechanical.
 - **Alternatives considered**:
   - **Use `loadPromptTemplates()` directly**: rejected because it only loads flat `.md` templates and does not expose grouped directory semantics.
-  - **Import non-public Pi internals for grouped behavior**: rejected because the constitution requires Pi-native compatibility through public helpers where possible.
+  - **Import non-public Pi internals via deep subpath**: rejected because deep imports into `dist/core/` are fragile, undocumented, and may break across Pi versions.
   - **Create a new `src/` runtime module for the first slice**: rejected because the repo is scaffold-first and the requested slice fits in the current entrypoint.
 
 ## Decision 2: Treat only first-level directories with at least one runnable nested prompt as groups
@@ -57,8 +63,8 @@
 
 - **Decision**:
   - Bare `/group` opens `ctx.ui.select()` with one item per nested prompt in the effective group.
-  - `/group subcommand ...` parses the argument string with `parseCommandArgs()`; the first parsed token is the nested prompt name and the remaining tokens are prompt arguments.
-  - The chosen prompt body is rendered with `substituteArgs()` and dispatched with `pi.sendUserMessage()` so the operator sees the final rendered message.
+  - `/group subcommand ...` parses the argument string with a local `parseCommandArgs()` (reimplemented from Pi internals); the first parsed token is the nested prompt name and the remaining tokens are prompt arguments.
+  - The chosen prompt body is rendered with a local `substituteArgs()` (reimplemented from Pi internals) and dispatched with `pi.sendUserMessage()` so the operator sees the final rendered message.
   - If the agent is already streaming, dispatch should use `deliverAs: 'followUp'` to avoid `sendUserMessage()` throwing.
 - **Rationale**:
   - `ctx.ui.select()` is the simplest public Pi UI for a first useful selector flow.

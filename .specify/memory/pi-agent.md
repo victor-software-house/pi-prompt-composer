@@ -63,9 +63,16 @@ bun run lint
 - Duplicate group names resolve project scope over user scope.
 - Grouped commands intentionally remain extension commands, which lets them take
   precedence over conflicting flat prompt-template names.
-- Planned command handlers should rely on Pi public helpers and APIs:
-  `parseFrontmatter`, `parseCommandArgs`, `substituteArgs`, `ctx.ui.select`,
-  and `pi.sendUserMessage`.
+- Planned command handlers use `parseFrontmatter` and `getAgentDir` from Pi's
+  public API. `parseCommandArgs` and `substituteArgs` are reimplemented locally
+  as near-verbatim copies of Pi's internal `core/prompt-templates.ts`
+  (`@mariozechner/pi-coding-agent@0.64.0`), with source-reference comments.
+  Prompt roots are derived from `getAgentDir() + '/prompts'` and
+  `process.cwd() + '/.pi/prompts'` since `getPromptsDir()` and
+  `CONFIG_DIR_NAME` are not publicly exported.
+- These local helpers are candidates for future extraction to a shared
+  `pi-provider-utils` npm package.
+- Command dispatch uses `pi.sendUserMessage()` and `ctx.ui.select()`.
 
 ## Recent Changes
 

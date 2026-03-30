@@ -81,10 +81,10 @@ Preferred order:
 
 Behavior:
 
-1. Parse arguments with Pi's `parseCommandArgs()`.
+1. Parse arguments with a local `parseCommandArgs()` (reimplemented near-verbatim from `@mariozechner/pi-coding-agent@0.64.0` internal `core/prompt-templates.ts`).
 2. Treat the first parsed token as the nested prompt name.
 3. Treat remaining parsed tokens as prompt arguments.
-4. Render the prompt body with Pi's `substituteArgs()`.
+4. Render the prompt body with a local `substituteArgs()` (same source provenance).
 5. Send the rendered content as a visible user message with `pi.sendUserMessage()`.
 
 ### Bare command selection
