@@ -1,58 +1,125 @@
 # ROADMAP
 
-This roadmap implements the product-level priorities defined in `FEATURE-SET.md`.
+This roadmap implements the product-level priorities defined in `FEATURE-SET.md` and the deeper design in `IMPLEMENTATION-PLAN.md`.
 
-## PPC-001: Directory scanner
+## PPC-001: Directory scanner and grouped prompt registry
 
-Scan `~/.pi/agent/prompts/` and `.pi/prompts/` for subdirectories containing `.md` files. Build an in-memory registry of grouped commands, each mapping a directory name to its set of subcommand templates.
+Scan `~/.pi/agent/prompts/` and `.pi/prompts/` for prompt subdirectories and build an in-memory grouped-prompt registry.
+
+Scope of scanning:
+
+- only subdirectories participate in grouped routing
+- flat `.md` prompt files remain Pi-native and are ignored by this package
+- `_index.md` is optional group metadata
+- other `.md` files become subcommands
+- v1 supports one group level: `/group subcommand`
 
 Acceptance criteria:
 
 - discovers subdirectories in both global and project prompt locations
-- loads `.md` files with frontmatter parse (reuse Pi's `parseFrontmatter`)
-- ignores flat `.md` files (those are handled natively by Pi)
-- re-scans on `session_start` with reason `reload`
+- loads `.md` files with Pi's `parseFrontmatter()` helper
+- derives descriptions from frontmatter or first non-empty body line, matching Pi behavior
+- records internal scope metadata (`user` or `project`) for each group and subcommand
+- ignores flat `.md` files because Pi handles them natively
+- rebuilds the registry on startup and reload without stale duplicate state
 
-## PPC-002: Command registration
+## PPC-002: Command registration and autocomplete
 
 For each discovered directory, register a single Pi extension command via `pi.registerCommand()`. The command name matches the directory name.
 
 Acceptance criteria:
 
-- one `/command` per subdirectory
-- `getArgumentCompletions` returns subcommand names from the directory listing (excluding `_index.md`)
-- `description` pulled from `_index.md` frontmatter if present, otherwise from the directory name
-- does not conflict with flat prompt templates of the same name (extension commands take priority)
+- one `/group` extension command per discovered prompt directory
+- `getArgumentCompletions()` returns subcommand names from the directory listing, excluding `_index.md`
+- command description prefers `_index.md` frontmatter description, then `_index.md` first non-empty body line, then the directory name
+- extension commands intentionally take precedence over flat prompt templates with the same name
+- command registration and docs explicitly acknowledge that Pi will report these as extension commands because the public API does not allow per-command `sourceInfo` overrides
 
-## PPC-003: Subcommand dispatch, interactive selection, and arg collection
+## PPC-003: Subcommand dispatch and interactive bare-command selection
 
-Handler resolves the target prompt from either a direct subcommand or an interactive menu selection, collects any missing arguments from the operator, runs arg substitution on the body, and sends the expanded text as a user message via `pi.sendUserMessage()`.
+Command handlers resolve the target prompt from either a direct subcommand or an interactive selector opened from bare `/group`.
 
 Acceptance criteria:
 
-- `/superset create` loads `superset/create.md`
+- `/superset create` resolves `superset/create.md`
 - `/superset` with no subcommand opens an interactive menu listing the nested prompts
-- selecting an option from the menu loads the matching `.md` template
-- if a selected or directly invoked prompt expects missing arguments, the extension prompts and waits for operator input before expansion, following the same interaction pattern as `pi-spec` `/spec init`
-- unknown subcommand shows error with available options
-- expanded text renders as rich Markdown in the user message bubble (same as native prompt templates)
-- arg syntax remains compatible with Pi: `$1`, `$@`, `${@:N}`, `${@:N:L}`
+- selecting an option from the menu resolves the matching `.md` template
+- unknown subcommand shows an error with available options
+- selector UI shows useful labels and descriptions for nested prompts
 
-## PPC-004: Scope and source info
+## PPC-004: Pi-native argument semantics and guided argument collection
 
-Preserve correct scope attribution so `/commands` listing shows the right source and scope for grouped commands.
+Grouped prompts should preserve Pi-native argument parsing and substitution while collecting missing arguments before rendering.
 
 Acceptance criteria:
 
-- commands from `~/.pi/agent/prompts/*/` show scope `user`
-- commands from `.pi/prompts/*/` show scope `project`
-- description shown in autocomplete matches `_index.md` frontmatter description
+- invocation arguments are parsed with Pi's `parseCommandArgs()` helper
+- template bodies are rendered with Pi's `substituteArgs()` helper
+- supported syntax remains Pi-native: `$1`, `$2`, `$@`, `$ARGUMENTS`, `${@:N}`, `${@:N:L}`
+- missing required arguments are inferred conservatively from the template body and collected interactively before rendering
+- `$@` and `$ARGUMENTS` alone do not force interactive collection
+- rendered output after argument substitution matches Pi-native semantics as closely as the public extension API allows
 
-## PPC-005: Documentation and example prompts
+## PPC-005: Render pipeline and visible user-message dispatch
 
-Ship example prompt directories demonstrating the pattern. Document the directory convention, interactive menu behavior, guided input flow, and arg substitution rules.
+Introduce a package-owned rendering pipeline that separates Pi-native substitution from extension-owned preprocessing, then dispatch the final result as a visible user message.
 
 Acceptance criteria:
 
-- `README.md` covers install, usage, directory convention, menu behavior, and arg syntax
-- at least one example prompt directory included (e.g., `examples/superset/`)
+- rendering order is documented and implemented as: load template -> Pi-native arg substitution -> package-native preprocessing -> dispatch
+- the final rendered prompt is sent with `pi.sendUserMessage()`
+- the operator sees the actual expanded prompt in the conversation history
+- Markdown in the rendered prompt appears as normal user-message content
+- flat native Pi prompt templates continue to work unchanged outside grouped prompt directories
+
+## PPC-006: Prompt-body shell substitution
+
+Add shell command substitution inside grouped prompt bodies as a package-native preprocessing feature.
+
+Planned syntax:
+
+```text
+!`command`
+```
+
+Acceptance criteria:
+
+- shell substitutions run after Pi-native argument rendering and before dispatch
+- multiple substitutions in one prompt body are supported
+- substitutions execute with bounded timeouts through Pi's extension execution APIs
+- command output replaces the placeholder in the rendered prompt body
+- failure handling is visible and understandable to the operator
+- rendered substitution output is present in the final user message bubble
+
+## PPC-007: Scope-aware diagnostics and documented Pi API limits
+
+Surface grouped prompt scope in package-owned UX while documenting where Pi public APIs do not expose the same metadata.
+
+Acceptance criteria:
+
+- internal registry distinguishes user-scoped and project-scoped grouped prompts
+- package-owned selector UI, debug output, or diagnostics can surface that scope when useful
+- docs clearly state that grouped commands appear as extension commands in Pi's built-in command inventory due to public API limits
+- docs do not claim grouped commands are native Pi prompt commands internally
+
+## PPC-008: Documentation and example prompts
+
+Ship example prompt directories and document both Pi-native semantics and package-native preprocessing behavior.
+
+Acceptance criteria:
+
+- `docs/IMPLEMENTATION-PLAN.md` records the design, constraints, render pipeline, and implementation slices
+- `docs/FEATURE-SET.md` distinguishes Pi-native semantics from package-native preprocessing
+- `README.md` covers install, usage, directory convention, menu behavior, argument rules, and rendered-output behavior
+- at least one realistic grouped prompt example is included
+- docs clearly mark future conditional rendering as out of scope for the first useful release
+
+## Deferred work
+
+These are explicit follow-on items, not first-release requirements:
+
+- deeper nesting beyond `/group subcommand`
+- aliases or alternate command names
+- conditional rendering
+- additional package-native render variables
+- supporting-file conventions for grouped prompts beyond `_index.md`
