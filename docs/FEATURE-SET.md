@@ -2,11 +2,9 @@
 
 ## Purpose
 
-`pi-prompt-composer` adds one capability to Pi:
+`pi-prompt-composer` makes prompt directories behave like grouped slash commands.
 
-- prompt directories behave like grouped slash commands
-
-The package should stay simple. It should organize prompts better without introducing a new prompt language, a new UI model, or a separate command system.
+It should improve prompt organization without introducing a new prompt language, UI model, or command system.
 
 ## Core promise
 
@@ -39,100 +37,56 @@ Expected behavior:
 
 ## Design principles
 
-### Minimal mental model
-
-The only new idea should be:
-
-- a prompt folder becomes a command group
-
-### Native compatibility first
-
-Grouped prompts should reuse Pi behavior:
-
-- same frontmatter
-- same argument substitution
-- same markdown rendering
-- same user-message delivery model
-
-### Add structure, not complexity
-
-This package should solve prompt organization and invocation.
-
-It should not become a general command framework.
-
-### Explicit scope and predictable behavior
-
-Grouped prompts should preserve source scope and fail clearly when a command is incomplete or unknown.
+- **Minimal mental model** — a prompt folder becomes a command group.
+- **Native compatibility first** — reuse Pi frontmatter, arg substitution, markdown rendering, and user-message delivery.
+- **Add structure, not complexity** — improve organization and invocation without becoming a general command framework.
+- **Predictable behavior** — preserve scope and fail clearly when a command is incomplete or unknown.
 
 ## Priorities
 
 ### Priority 1: Core grouped prompt routing
 
-These features define the package.
+1.1 **Folder-to-command grouping** — A prompt directory becomes one slash command group.
 
-1.1 **Folder-to-command grouping**
-- A prompt directory becomes one slash command group.
+1.2 **File-to-subcommand mapping** — Markdown files inside the directory become subcommands.
 
-1.2 **File-to-subcommand mapping**
-- Markdown files inside the directory become subcommands.
+1.3 **Interactive bare command menu** — Bare `/command` opens a menu where each nested prompt is an option.
 
-1.3 **Interactive bare command menu**
-- Bare `/command` opens an interactive menu where each nested prompt is an option.
+1.4 **Guided argument collection** — If a prompt is missing required arguments, the extension asks for them and waits before expansion.
 
-1.4 **Guided argument collection**
-- If a selected or directly invoked prompt expects missing arguments, the extension should ask for them and wait for operator input before expansion.
+1.5 **Pi-native prompt compatibility** — Frontmatter, args, markdown, and message delivery stay Pi-compatible.
 
-1.5 **Pi-native prompt compatibility**
-- Frontmatter, args, markdown, and message delivery stay Pi-compatible.
-
-1.6 **Coexistence with flat prompts**
-- Native flat `.md` prompts keep working unchanged.
+1.6 **Coexistence with flat prompts** — Native flat `.md` prompts keep working unchanged.
 
 ### Priority 2: Discoverability and operator UX
 
-These features make the package usable in daily work.
+2.1 **Subcommand autocomplete** — `/command <tab>` shows available subcommands.
 
-2.1 **Subcommand autocomplete**
-- `/command <tab>` shows available subcommands.
+2.2 **Useful command descriptions** — Prefer metadata from `_index.md`.
 
-2.2 **Useful command descriptions**
-- Prefer metadata from `_index.md`.
+2.3 **Helpful error handling** — Unknown subcommands and missing defaults should guide the operator.
 
-2.3 **Helpful error handling**
-- Unknown subcommands and missing defaults should guide the operator.
-
-2.4 **Correct scope attribution**
-- Commands should preserve whether they come from user or project prompts.
+2.4 **Correct scope attribution** — Commands preserve whether they come from user or project prompts.
 
 ### Priority 3: Reliability and runtime behavior
 
-These features make the package trustworthy.
+3.1 **Prompt directory scanning** — Discover grouped prompt directories from supported prompt roots.
 
-3.1 **Prompt directory scanning**
-- Discover grouped prompt directories from supported prompt roots.
+3.2 **Reload-aware re-scan** — Refresh command state on reload.
 
-3.2 **Reload-aware re-scan**
-- Refresh command state on reload.
-
-3.3 **Deterministic conflict handling**
-- Command precedence must be explicit and predictable.
+3.3 **Deterministic conflict handling** — Command precedence must be explicit and predictable.
 
 ### Priority 4: Documentation and adoption
 
-These features make the package understandable.
+4.1 **Clear directory convention docs** — Explain folders, subcommands, menu behavior, and guided input.
 
-4.1 **Clear directory convention docs**
-- Explain folders, subcommands, menu behavior, and guided input.
+4.2 **Example grouped prompts** — Include at least one realistic command group.
 
-4.2 **Example grouped prompts**
-- Include at least one realistic command group.
-
-4.3 **Authoring guidance**
-- Separate Pi-native behavior from package-specific behavior.
+4.3 **Authoring guidance** — Separate Pi-native behavior from package-specific behavior.
 
 ## Non-goals for the first version
 
-Keep these out of scope for the initial release:
+Keep these out of scope:
 
 - deep multi-level nesting such as `/a b c`
 - aliases or alternate command names
@@ -141,9 +95,9 @@ Keep these out of scope for the initial release:
 - dynamic generated subcommands
 - grouped-prompt-specific permission systems
 
-## How this should guide the roadmap
+## Roadmap guidance
 
-The roadmap should implement these phases in order:
+Implement these phases in order:
 
 1. **Core routing**
 2. **UX and discoverability**
