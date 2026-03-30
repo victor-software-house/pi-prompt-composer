@@ -1,0 +1,55 @@
+{
+	"name": "@victor-software-house/pi-prompt-composer",
+	"version": "0.1.0",
+	"description": "Folder-nested prompt routing extension for Pi.",
+	"author": "Victor Software House",
+	"type": "module",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"pi-extension",
+		"prompt-templates",
+		"slash-commands"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/victor-software-house/pi-prompt-composer.git"
+	},
+	"homepage": "https://github.com/victor-software-house/pi-prompt-composer#readme",
+	"bugs": {
+		"url": "https://github.com/victor-software-house/pi-prompt-composer/issues"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"files": [
+		"extensions",
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"prepare": "lefthook install"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-coding-agent": "*",
+		"@mariozechner/pi-tui": "*"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.0",
+		"@mariozechner/pi-coding-agent": "*",
+		"@mariozechner/pi-tui": "*",
+		"@types/node": "^24.3.0",
+		"lefthook": "^2.1.4",
+		"typescript": "^5.9.2"
+	},
+	"pi": {
+		"extensions": [
+			"./extensions"
+		]
+	}
+}
