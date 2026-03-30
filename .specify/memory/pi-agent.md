@@ -23,8 +23,12 @@ extensions/
 │   └── pi-agent.md
 └── templates/
 
+docs/
+├── FEATURE-SET.md
+├── IMPLEMENTATION-PLAN.md
+└── ROADMAP.md
+
 README.md
-ROADMAP.md
 AGENTS.md
 package.json
 ```
@@ -48,12 +52,29 @@ bun run lint
 - Treat flat `.md` prompt templates as Pi-native behavior and only layer
   directory-based routing on top.
 
+## Grouped Prompt Routing Notes
+
+- The first implementation slice stays in `extensions/index.ts`; no new runtime
+  source directories are planned for this feature.
+- Grouped prompt discovery is planned around two prompt roots:
+  `~/.pi/agent/prompts` and `<cwd>/.pi/prompts`.
+- Grouped routing scans only first-level directories; `_index.md` is metadata or
+  help content, while other direct `.md` files become runnable subcommands.
+- Duplicate group names resolve project scope over user scope.
+- Grouped commands intentionally remain extension commands, which lets them take
+  precedence over conflicting flat prompt-template names.
+- Planned command handlers should rely on Pi public helpers and APIs:
+  `parseFrontmatter`, `parseCommandArgs`, `substituteArgs`, `ctx.ui.select`,
+  and `pi.sendUserMessage`.
+
 ## Recent Changes
 
 - Native `/spec` scaffolding was initialized under `.specify/`.
 - The repository constitution was adopted in `.specify/memory/constitution.md`.
 - `AGENTS.md` was tightened to reflect scaffold-first reality, validation
   commands, and commit discipline.
+- `/spec plan` for `001-implement-core-grouped` added research, data model,
+  quickstart, and grouped-command contract artifacts for the first useful slice.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
