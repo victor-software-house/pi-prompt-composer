@@ -48,7 +48,11 @@ bun run lint
 - Use single quotes for imports.
 - Use `import type` for type-only imports.
 - Do not include `.ts` or `.js` file extensions in import paths.
-- Reuse Pi utilities for prompt parsing and substitution when available.
+- Reuse Pi utilities for prompt parsing and substitution when they are
+  publicly available.
+- When required Pi behavior exists only in non-exported internals, faithfully
+  reimplement it with source-provenance comments that identify the upstream Pi
+  package version and internal module path.
 - Treat flat `.md` prompt templates as Pi-native behavior and only layer
   directory-based routing on top.
 
