@@ -1,4 +1,6 @@
-# Roadmap
+# ROADMAP
+
+This roadmap implements the product-level priorities defined in `FEATURE-SET.md`.
 
 ## PPC-001: Directory scanner
 

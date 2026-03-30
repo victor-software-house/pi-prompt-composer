@@ -7,9 +7,10 @@ Pi extension package for folder-nested prompt routing.
 Read these in order:
 
 1. `README.md` — human-facing package purpose, install shape, and current status
-2. `ROADMAP.md` — ordered work items and acceptance criteria
-3. `extensions/index.ts` — current extension entrypoint and implementation truth
-4. `package.json`, `biome.json`, `tsconfig.json`, `lefthook.yml`, `release.config.mjs` — commands, lint/type rules, hooks, and release flow
+2. `docs/FEATURE-SET.md` — product-level scope, priorities, and non-goals
+3. `docs/ROADMAP.md` — ordered work items and acceptance criteria
+4. `extensions/index.ts` — current extension entrypoint and implementation truth
+5. `package.json`, `biome.json`, `tsconfig.json`, `lefthook.yml`, `release.config.mjs` — commands, lint/type rules, hooks, and release flow
 
 ## Current repo state
 
@@ -30,9 +31,10 @@ Read these in order:
 
 - Keep `README.md` for human onboarding and usage. Keep `AGENTS.md` focused on agent-operational guidance.
 - Update `README.md` when operator-facing install, usage, or prompt-directory behavior changes.
-- Update `ROADMAP.md` when acceptance criteria, execution order, or status meaningfully changes.
+- Update `docs/FEATURE-SET.md` when product priorities, scope, or non-goals change.
+- Update `docs/ROADMAP.md` when acceptance criteria, execution order, or status meaningfully changes.
 - Do not invent workflow rules that are not backed by repo files, scripts, or committed docs.
-- Do not add nested `AGENTS.md` files until a real subtree needs different rules. This repo does not need one yet.
+- Keep canonical docs under `docs/` unless they are `README.md` or `AGENTS.md`.
 
 ## Verification
 

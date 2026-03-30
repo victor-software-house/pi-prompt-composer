@@ -20,7 +20,7 @@ Each `.md` file uses the same frontmatter and `$1`/`$@` arg syntax as native Pi 
 
 ## Status
 
-Scaffold only. See `ROADMAP.md` for the implementation plan.
+Scaffold only. See `docs/FEATURE-SET.md` for the product feature model and `docs/ROADMAP.md` for the implementation plan.
 
 ## Package shape
 
