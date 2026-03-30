@@ -32,7 +32,9 @@
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"lint": "biome check .",
+		"lint": "bun run lint:biome && bun run lint:oxlint",
+		"lint:biome": "biome check .",
+		"lint:oxlint": "oxlint --import-plugin --type-aware --tsconfig=./tsconfig.json .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"prepare": "lefthook install"
@@ -52,6 +54,8 @@
 		"@semantic-release/github": "^12.0.6",
 		"@semantic-release/npm": "^13.1.5",
 		"lefthook": "^2.1.4",
+		"oxlint": "^1.56.0",
+		"oxlint-tsgolint": "^0.17.1",
 		"semantic-release": "^25.0.3",
 		"typescript": "^5.9.3"
 	}
