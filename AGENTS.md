@@ -1,54 +1,68 @@
 # pi-prompt-composer
 
-Folder-nested prompt routing extension for Pi.
+Pi extension package for folder-nested prompt routing.
 
 ## Orient quickly
 
-1. `README.md` — package scope and install shape
-2. `ROADMAP.md` — ordered work items with acceptance criteria
+Read these in order:
 
-## Repo shape
+1. `README.md` — human-facing package purpose, install shape, and current status
+2. `ROADMAP.md` — ordered work items and acceptance criteria
+3. `extensions/index.ts` — current extension entrypoint and implementation truth
+4. `package.json`, `biome.json`, `tsconfig.json`, `lefthook.yml`, `release.config.mjs` — commands, lint/type rules, hooks, and release flow
 
-- Extension entrypoint: `extensions/index.ts`
-- Implementation: `src/` (not yet created)
+## Current repo state
+
+- This repo is still scaffold-first. Do not describe roadmap items as implemented unless they exist in `extensions/index.ts` or other committed source files.
+- `extensions/index.ts` is the only code entrypoint today.
+- `src/` and example prompt directories are planned, not current. Create guidance for them only after those paths exist.
+
+## Implementation constraints
+
+- Reuse Pi utilities such as `parseCommandArgs`, `substituteArgs`, and `parseFrontmatter` instead of reimplementing parser behavior.
+- Extension-registered commands must take precedence over native flat prompt templates with the same name.
+- Expanded prompt content must be sent as Pi user-message content, not through a custom render path.
+- `_index.md` is the fallback for bare `/command` invocations.
+- Flat `.md` prompt templates remain Pi-native behavior. This package should only add directory-based routing on top.
+- Preserve user vs project prompt scope when surfacing command metadata.
 
 ## Working rules
 
-- Reuse Pi's exported utilities (`parseCommandArgs`, `substituteArgs`, `parseFrontmatter`) instead of reimplementing
-- Extension commands registered here take priority over native flat prompt templates with the same name
-- Expanded prompt text must produce `{ role: 'user', content: [{ type: 'text', text }] }` — the same session entry shape as native prompt templates
-- The TUI renders user messages as rich Markdown via `UserMessageComponent`. No custom renderer needed.
-- `_index.md` is the fallback for bare `/command` invocations
-- Flat `.md` files in prompts directories are not touched — Pi handles those natively
-
-## Auto-fix before manual fix
-
-Never manually fix what tooling can auto-fix. Run `bun run fix` before committing:
-
-```bash
-bun run fix        # oxlint --fix then biome --write (combined)
-bun run fix:oxlint # oxlint auto-fixes only
-bun run fix:biome  # biome format + lint fixes only
-bun run format     # biome format only
-```
-
-The pre-commit hook runs `oxlint --fix` then `biome check --write` on staged files automatically. If you see lint errors during development, run `bun run fix` first — only investigate what remains after auto-fix.
-
-DO NOT manually rewrite code to satisfy a lint rule that has an auto-fix. Let the tooling handle it.
+- Keep `README.md` for human onboarding and usage. Keep `AGENTS.md` focused on agent-operational guidance.
+- Update `README.md` when operator-facing install, usage, or prompt-directory behavior changes.
+- Update `ROADMAP.md` when acceptance criteria, execution order, or status meaningfully changes.
+- Do not invent workflow rules that are not backed by repo files, scripts, or committed docs.
+- Do not add nested `AGENTS.md` files until a real subtree needs different rules. This repo does not need one yet.
 
 ## Verification
 
+Run these from the repo root:
+
 ```bash
-bun run typecheck  # tsc --noEmit
-bun run lint       # biome check + oxlint (type-aware)
+bun install
+bun run fix
+bun run typecheck
+bun run lint
 ```
 
-Run both before committing. The pre-commit hook enforces this, but catch issues early.
+Verification notes:
 
-## Import rules
+- Run `bun run fix` before manual lint cleanup. `oxlint` and `biome` already auto-fix part of the surface area.
+- There is no test suite yet. If you add tests, add the command to `package.json`, then document it in both `README.md` and this file.
+- When touching packaging or release files, verify `package.json`, `bun.lock`, `CHANGELOG.md`, and `release.config.mjs` stay aligned.
 
-- Single quotes for all imports
-- No `.ts` or `.js` file extensions in import paths
-- Import sorting enforced by biome `organizeImports`
-- Use `import type` for type-only imports (enforced by biome `useImportType`)
-- Import aliases enforced by `@limegrass/import-alias` via oxlint (when path aliases are configured)
+## Style and typing
+
+- TypeScript is strict. Fix type errors directly; do not weaken types to get green checks.
+- Use single quotes for imports.
+- Do not include `.ts` or `.js` file extensions in import paths.
+- Use `import type` for type-only imports.
+
+## Git and release workflow
+
+- Commit in small, reviewable slices during substantial work. Do not batch unrelated changes into one late commit.
+- When a task produces a stable checkpoint, commit it before starting the next distinct change.
+- Conventional commits are enforced by `commitlint` (`commitlint.config.mjs`).
+- `lefthook` pre-commit runs `oxlint --fix`, `biome check --write`, `bun run lint`, and `bun run typecheck`.
+- `lefthook` pre-push runs `bun install` and fails if it changes `bun.lock`; commit the updated lockfile before pushing.
+- Releases are handled by `semantic-release` from `main` and update `package.json`, `bun.lock`, and `CHANGELOG.md`.
