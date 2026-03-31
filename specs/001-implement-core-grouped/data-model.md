@@ -2,7 +2,7 @@
 
 ## Overview
 
-The first useful slice needs a runtime-only model for scanning prompt roots, representing grouped directories, resolving precedence, and dispatching nested prompts without changing flat Pi prompt templates.
+The first useful slice needs a runtime-only model for scanning prompt roots, representing grouped directories, warning on duplicates, and dispatching nested prompts without changing flat Pi prompt templates.
 
 ## Entities
 
@@ -84,7 +84,7 @@ Represents the single operator-visible grouped command after duplicate resolutio
 
 - One `Prompt Root` contains zero or more `Prompt Group Candidate` records.
 - One `Prompt Group Candidate` contains zero or more `Nested Prompt` records.
-- One `Effective Prompt Group` is selected from at most one winning `Prompt Group Candidate` per group name.
+- One `Effective Prompt Group` is registered per `Prompt Group Candidate` that passes the hard gate. When duplicate names exist, both register with a warning and Pi's command registration order determines which is effective.
 
 ## State Flow
 

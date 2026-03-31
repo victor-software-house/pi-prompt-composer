@@ -1,8 +1,9 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 -> 1.0.1
+- Version change: 1.0.1 -> 1.0.2
 - Modified principles:
-  - Clarified II. Pi-Native Compatibility for non-exported Pi internals
+  - Updated II. Pi-Native Compatibility: _index.md is now the group-level
+    metadata marker (type: group) rather than a bare-command fallback
 - Templates requiring updates:
   - ✅ .specify/templates/constitution-template.md
   - ✅ .specify/memory/pi-agent.md
@@ -32,7 +33,8 @@ Pi behavior exists only in non-exported internals, implementations MUST
 faithfully reimplement that behavior, keep the result compatible with Pi-native
 semantics, and add source-provenance comments that identify the upstream Pi
 package version and internal module path. Flat `.md` prompt templates MUST
-remain Pi-native, `_index.md` MUST be the bare-command fallback,
+remain Pi-native, `_index.md` with `type: group` frontmatter MUST be the
+group-level metadata marker for grouped prompt directories,
 extension-registered commands MUST take precedence over conflicting flat prompt
 templates, and user-versus-project prompt scope MUST remain correct wherever
 command metadata is surfaced.
@@ -119,4 +121,4 @@ Compliance review is required during `/spec plan`, during `/spec analyze`, and
 before merge for any change that affects code, workflow templates, release
 configuration, or operator-facing behavior.
 
-**Version**: 1.0.1 | **Ratified**: 2026-03-30 | **Last Amended**: 2026-03-30
+**Version**: 1.0.2 | **Ratified**: 2026-03-30 | **Last Amended**: 2026-03-31

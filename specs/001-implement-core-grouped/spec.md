@@ -50,7 +50,7 @@ As an operator, I want bare `/group` to show me the available nested prompts so 
 
 1. **Given** a prompt group contains multiple nested prompts, **When** the operator enters `/group` with no subcommand, **Then** the system displays an interactive list of available nested prompts.
 2. **Given** the operator is shown the interactive list, **When** the operator selects one nested prompt, **Then** the system routes to the matching prompt file and sends the rendered prompt text as a visible user message.
-3. **Given** the operator is shown the interactive list, **When** nested prompts are presented, **Then** each selector item shows the normalized subcommand name and its required description.
+3. **Given** the operator is shown the interactive list, **When** nested prompts are presented, **Then** each selector item shows the normalized subcommand name and its description (frontmatter or fallback).
 
 ---
 
@@ -69,8 +69,7 @@ As a prompt author, I want to place grouped prompts in supported user or project
 
 ### Edge Cases
 
-- A directory without `_index.md` or without `type: group` frontmatter in `_index.md` is not recognized as a prompt group.
-- A prompt directory that contains only `_index.md` and no direct runnable nested prompt files does not become a grouped command.
+- A directory without `_index.md` or without `type: group` frontmatter in `_index.md` is not recognized as a prompt group. A directory that contains only `_index.md` and no direct runnable nested prompt files does not become a grouped command either.
 - An unknown subcommand entered after a valid group name returns package-owned feedback that names the group, echoes the unknown subcommand, and lists the available nested prompt options.
 - When the same group name exists in both supported prompt roots, the system warns per FR-012a. No package-owned precedence is enforced.
 - `_index.md` MUST include `type: group` frontmatter to mark the directory as a prompt group. A directory without `_index.md` or without `type: group` is not a prompt group.

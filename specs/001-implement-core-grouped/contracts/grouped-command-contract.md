@@ -37,7 +37,7 @@ A directory becomes a grouped command candidate when all of the following are tr
 
 ### Group command name
 
-- Source: first-level directory name
+- Source: first-level directory name, used as-is (no normalization applied).
 - Registered as: `/<group>`
 
 ### Nested prompt name
@@ -46,6 +46,7 @@ A directory becomes a grouped command candidate when all of the following are tr
 - Invoked as: `/<group> <subcommand>`
 - Normalization example: `My Summary.md` → `my-summary`.
 - After normalization, subcommand names should not require quoting under normal usage.
+- When a `name` override is provided in nested prompt frontmatter, it is used verbatim (no kebab-case normalization applied).
 
 ## Description Contract
 
