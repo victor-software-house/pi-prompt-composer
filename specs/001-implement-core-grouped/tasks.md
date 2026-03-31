@@ -19,7 +19,7 @@
 - Operator-facing docs stay in `README.md`
 - Validation scenarios live in `specs/001-implement-core-grouped/quickstart.md`
 - Repo validation commands are defined in `package.json`
-- Grouped prompt metadata is defined in prompt frontmatter: `_index.md` requires `description`; nested prompts require `description` plus `args[]` entries with `name`, `required`, and `hint`
+- `_index.md` must have `type: group` frontmatter (hard gate). `description` is recommended (warn + fallback). Nested prompt `description` is recommended (warn + fallback). `args` is optional. `name` override is optional. Never skip prompts for metadata issues.
 
 ---
 
@@ -39,9 +39,9 @@
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
 - [ ] T003 Add local `parseCommandArgs()` and `substituteArgs()` reimplementations with source-provenance comments in `extensions/index.ts`.
-- [ ] T004 Add grouped prompt runtime types plus frontmatter-schema parsing helpers for prompt roots, groups, nested prompts, and nested `args` hint metadata in `extensions/index.ts`.
+- [ ] T004 Add grouped prompt runtime types plus frontmatter parsing helpers in `extensions/index.ts`. `_index.md` requires `type: group` (hard gate). `description` on groups/prompts is recommended (warn + fallback to directory/file name). `args` on nested prompts is optional (silent if absent, warn if malformed). `name` override on nested prompts is optional.
 - [ ] T005 Add filesystem discovery helpers that scan `~/.pi/agent/prompts` and `<cwd>/.pi/prompts` for first-level grouped prompt candidates in `extensions/index.ts`, while ignoring non-markdown files, deeper nested directories, and invalid empty groups.
-- [ ] T006 Build the effective grouped-command registry with project-over-user precedence, preserved scope metadata, normalized lowercase kebab-case subcommand names, and invalid-metadata handling rules in `extensions/index.ts`.
+- [ ] T006 Build the grouped-command registry with normalized lowercase kebab-case subcommand names, preserved scope metadata, and duplicate-name warnings (no package-owned precedence) in `extensions/index.ts`.
 
 **Checkpoint**: Foundation ready. Grouped prompt data can now be used by story-specific command flows.
 
@@ -56,8 +56,8 @@
 ### Implementation for User Story 1
 
 - [ ] T007 [US1] Register one extension command per effective grouped prompt in `extensions/index.ts`.
-- [ ] T008 [US1] Implement direct `/group subcommand ...` parsing, normalized nested-prompt lookup, and required grouped metadata loading in `extensions/index.ts`.
-- [ ] T009 [US1] Render grouped prompt bodies with Pi-compatible argument substitution, surface `args[]`-based hint metadata to the operator without guided collection, and dispatch them with `pi.sendUserMessage()` follow-up handling in `extensions/index.ts`.
+- [ ] T008 [US1] Implement direct `/group subcommand ...` parsing and normalized nested-prompt lookup in `extensions/index.ts`.
+- [ ] T009 [US1] Render grouped prompt bodies with Pi-compatible argument substitution and dispatch with `pi.sendUserMessage()` follow-up handling in `extensions/index.ts`.
 - [ ] T010 [US1] Add package-owned unknown-subcommand feedback in `extensions/index.ts` that names the group, echoes the unknown subcommand, and lists the available nested prompts.
 - [ ] T011 [US1] Validate the direct-dispatch and invalid-subcommand scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
 
@@ -75,8 +75,8 @@
 
 - [ ] T012 [US2] Add nested-prompt autocomplete through `getArgumentCompletions()` in `extensions/index.ts` using normalized lowercase kebab-case subcommand names.
 - [ ] T013 [US2] Implement the bare `/group` selector flow with `ctx.ui.select()` and selected-prompt dispatch in `extensions/index.ts`.
-- [ ] T014 [US2] Use required `_index.md` and nested prompt descriptions plus `args[]` hint metadata in the grouped selector and grouped-command UX within `extensions/index.ts`.
-- [ ] T015 [US2] Validate the bare-command discovery scenario from `specs/001-implement-core-grouped/quickstart.md`, including selector labels and argument hints, against the implementation in `extensions/index.ts`.
+- [ ] T014 [US2] Use group and nested prompt descriptions (frontmatter or fallback) plus optional `args` hint metadata in the grouped selector and autocomplete UX within `extensions/index.ts`.
+- [ ] T015 [US2] Validate the bare-command discovery scenario from `specs/001-implement-core-grouped/quickstart.md`, including selector labels, argument hints, and unsubstituted-placeholder dispatch, against the implementation in `extensions/index.ts`.
 
 **Checkpoint**: User Story 2 should now make grouped prompts discoverable without memorizing subcommands.
 
@@ -84,16 +84,16 @@
 
 ## Phase 5: User Story 3 - Organize prompts by folder without breaking existing prompts (Priority: P3)
 
-**Goal**: Support grouped prompt folders in both prompt roots while preserving flat prompt behavior and deterministic project-over-user precedence.
+**Goal**: Support grouped prompt folders in both prompt roots while preserving flat prompt behavior, warning on duplicate group names, and applying lenient metadata handling.
 
 **Independent Test**: Add grouped prompt directories beside existing flat prompt files in both supported roots, reload discovery, and confirm grouped commands appear while non-conflicting flat prompts continue to work unchanged.
 
 ### Implementation for User Story 3
 
 - [ ] T016 [US3] Ensure grouped discovery ignores root-level flat `.md` prompts, deeper nested directories, non-markdown files, invalid grouped metadata, and empty groups in `extensions/index.ts`.
-- [ ] T017 [US3] Preserve winning scope metadata for duplicate groups, rely on Pi-native listing markers such as `[u]` and `[p]` where available, and limit package-owned scope surfacing to fallback diagnostics in `extensions/index.ts`.
+- [ ] T017 [US3] Warn on duplicate group names across scopes, preserve scope metadata in the registry, and do not enforce package-owned precedence in `extensions/index.ts`.
 - [ ] T018 [US3] Rebuild grouped prompt discovery during extension load or reload so added, removed, invalid, and overridden prompt groups refresh predictably in `extensions/index.ts`.
-- [ ] T019 [US3] Validate coexistence, duplicate-precedence, same-name flat-prompt conflict, and listing-level scope-marker scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
+- [ ] T019 [US3] Validate coexistence, duplicate-warning, same-name flat-prompt conflict, and metadata-fallback scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
 
 **Checkpoint**: All three user stories should now work without breaking unrelated flat prompt templates.
 
@@ -103,7 +103,7 @@
 
 **Purpose**: Final documentation and required repo-wide validation.
 
-- [ ] T020 Update grouped prompt usage, required frontmatter schema, argument hints, precedence, selector behavior, and visible user-message dispatch guidance in `README.md`.
+- [ ] T020 Update grouped prompt usage, frontmatter schema (`type: group` gate, recommended `description`, optional `args`/`name`), argument hints, duplicate-warning behavior, selector behavior, and visible user-message dispatch guidance in `README.md`.
 - [ ] T021 Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint` from `package.json` before completion.
 - [ ] T022 Run the full operator validation flow documented in `specs/001-implement-core-grouped/quickstart.md` after all implementation tasks are complete.
 

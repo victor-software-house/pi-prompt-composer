@@ -34,4 +34,4 @@
 
 - Validation completed in one pass after drafting.
 - The spec intentionally defers guided missing-argument collection, shell substitution, and deeper nesting to later features.
-- The spec records one planning assumption for duplicate group names: project-scoped groups take precedence over user-scoped groups.
+- The spec records that duplicate group names across scopes emit a warning with no package-owned precedence enforced.

@@ -14,6 +14,7 @@ Create `~/.pi/agent/prompts/review/` with:
 
 ```md
 ---
+type: group
 description: Review workflows
 ---
 Run one of the review prompts.
@@ -41,6 +42,7 @@ Create `.pi/prompts/review/` in this repository with:
 
 ```md
 ---
+type: group
 description: Repo-local review workflows
 ---
 Use the project-scoped review prompts.
@@ -138,13 +140,13 @@ Expected result:
 - `fix.md` inside the grouped `review/` directory is selected.
 - The flat `review.md` prompt is not dispatched for this command.
 
-## 7. Validate duplicate precedence
+## 7. Validate duplicate warning
 
 With both user and project `review/` groups present, verify:
 
-- `/review` uses the project-scoped description and nested prompts.
-- User-scoped `review/summary.md` is not merged into the effective project group.
-- If Pi surfaces scope markers in grouped command listings, the winning command is labeled with compact markers such as `[p]` or `[u]` at the listing level.
+- The system emits a warning about the duplicate `review` group name.
+- Both groups are registered — Pi's own command registration order determines which wins.
+- User-scoped `review/summary.md` is not merged into the project group.
 
 ## 8. Validate unknown-subcommand feedback
 
@@ -158,64 +160,81 @@ Expected result:
 
 - Pi shows corrective feedback naming the valid nested prompts for `/review`.
 
-## 9. Validate required grouped metadata and argument hints
+## 9. Validate metadata handling and argument hints
 
-Verify that grouped prompt metadata is author-provided and not derived:
+Verify lenient metadata handling:
 
-- `_index.md` must include `description`.
-- Nested prompt files must include `description` and `args[]` items with `name`, `required`, and `hint`.
-- Grouped UX shows the prompt description and exposes the configured argument hints as parenthetical hints in selector items and autocomplete (e.g., `fix — Propose a fix (issue, constraints?)`).
+- `_index.md` must include `type: group` (hard gate).
+- `description` on `_index.md` and nested prompts is recommended; when missing, the system warns and uses directory/file name as fallback.
+- `args` array on nested prompts is optional; when present, show hints in selector and autocomplete (e.g., `fix [issue, constraints?] Propose a fix`).
 - Bare-command selector dispatch sends the prompt body with unsubstituted placeholders when no arguments are provided, consistent with NG-001.
 
-### 9a. Validate invalid metadata is skipped with diagnostics
+### 9a. Validate missing description warns but still registers
 
-Create a group directory with an invalid nested prompt to verify skip+diagnostic behavior:
+Create a group directory with a nested prompt missing its description:
 
-1. Create `.pi/prompts/broken/` with a valid `_index.md`:
-
-```md
----
-description: Broken test group
----
-```
-
-2. Add `good.md` with valid metadata:
+1. Create `.pi/prompts/lenient/` with `_index.md`:
 
 ```md
 ---
-description: A good prompt
-args:
-  - name: input
-    required: true
-    hint: Some input
+type: group
 ---
-Do something with $1
 ```
 
-3. Add `bad.md` with **missing** `args` array:
+2. Add `nodesc.md` with no description:
 
 ```md
----
-description: A bad prompt with no args
----
-This prompt has no args metadata.
+Do something.
 ```
 
-4. Reload Pi and verify:
-   - The `/broken` grouped command is registered (because `good.md` is valid).
-   - `bad.md` is **not** listed as a subcommand.
-   - A diagnostic notification was emitted identifying `bad.md` and the reason it was skipped.
-
-5. Now remove `good.md` so only `bad.md` remains. Reload and verify:
-   - The `/broken` grouped command is **not** registered (zero valid nested prompts).
-   - A diagnostic notification was emitted identifying the skipped directory.
+3. Reload Pi and verify:
+   - The `/lenient` grouped command is registered.
+   - A warning was emitted about `_index.md` missing `description` (falls back to `lenient`).
+   - A warning was emitted about `nodesc.md` missing `description` (falls back to `nodesc`).
+   - `nodesc` appears as a subcommand in the selector.
 
 ### 9b. Validate missing `_index.md` skips the group
 
-Create `.pi/prompts/noindex/` with a valid nested prompt but **no** `_index.md`. Reload and verify:
+Create `.pi/prompts/noindex/` with a nested prompt but **no** `_index.md`. Reload and verify:
 
-- The `/noindex` grouped command is **not** registered.
-- A diagnostic notification was emitted identifying the missing `_index.md`.
+- The `/noindex` grouped command is **not** registered (no `type: group` marker).
+
+### 9c. Validate `_index.md` without `type: group` skips the group
+
+Create `.pi/prompts/nomarker/` with `_index.md` that has no `type: group`:
+
+```md
+---
+description: Not a group
+---
+```
+
+Reload and verify:
+
+- The `/nomarker` grouped command is **not** registered.
+
+### 9d. Validate malformed `args` warns but still registers
+
+Create a nested prompt with malformed `args`:
+
+```md
+---
+type: group
+---
+```
+
+```md
+---
+description: Prompt with bad args
+args: not-an-array
+---
+Do something.
+```
+
+Reload and verify:
+
+- The prompt is registered as a subcommand.
+- A warning was emitted about malformed `args` (treated as absent — no argument hints shown).
 
 ## 10. Run repository validation
 

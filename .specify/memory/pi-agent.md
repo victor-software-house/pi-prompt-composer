@@ -62,9 +62,15 @@ bun run lint
   source directories are planned for this feature.
 - Grouped prompt discovery is planned around two prompt roots:
   `~/.pi/agent/prompts` and `<cwd>/.pi/prompts`.
-- Grouped routing scans only first-level directories; `_index.md` is metadata or
-  help content, while other direct `.md` files become runnable subcommands.
-- Duplicate group names resolve project scope over user scope.
+- Grouped routing scans only first-level directories; `_index.md` with
+  `type: group` frontmatter is the hard gate for group recognition; other
+  direct `.md` files become runnable subcommands.
+- `description` on `_index.md` and nested prompts is recommended (warn + fallback
+  to directory/file name). `args` array on nested prompts is optional (silent if
+  absent, warn if malformed). `name` override on nested prompts is optional.
+  Nested prompts are never skipped for metadata issues.
+- Duplicate group names across scopes emit a warning but no package-owned
+  precedence is enforced. Pi's command registration order determines which wins.
 - Grouped commands intentionally remain extension commands, which lets them take
   precedence over conflicting flat prompt-template names.
 - Planned command handlers use `parseFrontmatter` and `getAgentDir` from Pi's

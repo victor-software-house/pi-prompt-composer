@@ -28,18 +28,20 @@ Represents one runnable markdown prompt file inside a group directory.
 |---|---|---|
 | `name` | `string` | Subcommand name, derived from the filename stem and normalized to lowercase kebab-case. |
 | `filePath` | `string` | Absolute path to the `.md` file. |
-| `description` | `string` | Required `frontmatter.description` used in grouped UX. |
-| `args` | `{ name: string; required: boolean; hint: string }[]` | Required operator-visible argument guidance metadata from frontmatter. |
+| `description` | `string` | Frontmatter `description`, or filename stem fallback (with warning). |
+| `args` | `{ name: string; required: boolean; hint: string }[] \| undefined` | Optional operator-visible argument guidance metadata from frontmatter. |
 | `content` | `string` | Prompt body after frontmatter stripping and before argument substitution. |
 | `scope` | `'user' | 'project'` | Originating prompt-root scope. |
 | `groupName` | `string` | Parent grouped command name. |
 
 **Validation rules**
 - Must be a `.md` file directly inside a first-level group directory.
-- `frontmatter.description` is required.
-- `frontmatter.args` is required and each item must define `name`, `required`, and `hint`.
 - `_index.md` is never a runnable nested prompt.
 - Non-markdown files and deeper directories are ignored.
+- `frontmatter.description` is recommended; when missing, warn and use filename stem.
+- `frontmatter.args` is optional; when present, each item must define `name`, `required`, and `hint`; when present but malformed, warn and treat as absent.
+- `frontmatter.name` is optional; when present, overrides the filename stem as the subcommand name.
+- **Never skip a nested prompt** for missing or malformed metadata.
 
 ### 3. Prompt Group Candidate
 
@@ -50,14 +52,16 @@ Represents a first-level directory discovered in one prompt root before preceden
 | `name` | `string` | Group command name, derived from the directory name. |
 | `directoryPath` | `string` | Absolute path to the group directory. |
 | `scope` | `'user' | 'project'` | Originating prompt-root scope. |
-| `description` | `string` | Required `_index.md` `frontmatter.description` used for group-level metadata. |
+| `type` | `'group'` | Required `_index.md` frontmatter marker. Must be `'group'` for directory recognition. |
+| `description` | `string` | `_index.md` `frontmatter.description`, or directory name fallback (with warning). |
 | `indexPath` | `string \| undefined` | Expected `_index.md` path for metadata/help. |
 | `prompts` | `NestedPrompt[]` | Runnable nested prompts in this directory. |
 
 **Validation rules**
+- `_index.md` must exist with `type: group` in frontmatter (hard gate).
 - A candidate only becomes actionable when `prompts.length > 0`.
-- `_index.md` must exist with `description` metadata for grouped UX.
-- Invalid grouped metadata is skipped or surfaced through package-owned diagnostics according to implementation.
+- `description` is recommended; when missing, warn and use directory name.
+- Every `.md` file (except `_index.md`) is registered as a nested prompt regardless of its metadata quality.
 
 ### 4. Effective Prompt Group
 
@@ -66,14 +70,14 @@ Represents the single operator-visible grouped command after duplicate resolutio
 | Field | Type | Description |
 |---|---|---|
 | `name` | `string` | Registered slash-command name. |
-| `scope` | `'user' | 'project'` | Winning scope after precedence resolution. |
+| `scope` | `'user' | 'project'` | Scope of the group that was registered (for diagnostics). |
 | `directoryPath` | `string` | Winning group directory path. |
-| `description` | `string` | Group description used for command registration and selector UX. |
+| `description` | `string` | Group description (frontmatter or fallback) used for command registration and selector UX. |
 | `promptsByName` | `Map<string, NestedPrompt>` | Nested prompts keyed by subcommand name. |
 | `promptNames` | `string[]` | Stable nested prompt names for autocomplete and errors. |
 
 **Validation rules**
-- Duplicate names resolve to the project-scoped candidate over the user-scoped candidate.
+- When duplicate names exist, the system warns but does not enforce package-owned precedence. Pi's command registration order determines which wins.
 - The model does not merge prompts across scopes for the same group name.
 
 ## Relationships

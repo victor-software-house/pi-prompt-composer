@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement the first useful grouped-routing slice in `extensions/index.ts`: scan Pi's user and project prompt roots for first-level prompt directories, require grouped prompt metadata through `_index.md` and nested prompt frontmatter, build an in-memory registry with scope metadata and project-over-user precedence, register one extension command per effective group, offer subcommand autocomplete, resolve `/group subcommand` and bare `/group` selector flows, surface required descriptions plus `args`-based argument hints in grouped UX, render prompt bodies with Pi's native argument helpers, and send the final rendered prompt as a visible user message without changing flat prompt-template behavior.
+Implement the first useful grouped-routing slice in `extensions/index.ts`: scan Pi's user and project prompt roots for first-level prompt directories marked by `_index.md` with `type: group` frontmatter, build an in-memory registry with scope metadata and lenient frontmatter handling (warn + fallback for missing descriptions, optional `args`), warn on duplicate group names without enforcing precedence, register one extension command per discovered group, offer subcommand autocomplete, resolve `/group subcommand` and bare `/group` selector flows, surface descriptions and optional `args`-based argument hints in grouped UX, render prompt bodies with Pi's native argument helpers, and send the final rendered prompt as a visible user message without changing flat prompt-template behavior.
 
 ## Technical Context
 
@@ -15,12 +15,12 @@ Implement the first useful grouped-routing slice in `extensions/index.ts`: scan 
 **Primary Dependencies**: `@mariozechner/pi-coding-agent` (`registerCommand`, `ctx.ui.select`, `sendUserMessage`, `parseFrontmatter`, `getAgentDir`); local reimplementations of Pi's internal `parseCommandArgs` and `substituteArgs` (from `@mariozechner/pi-coding-agent@0.64.0/core/prompt-templates`); Node built-ins `node:fs` and `node:path`  
 **Non-exported Pi internals reimplemented locally**: `parseCommandArgs`, `substituteArgs` (near-verbatim copies with source-reference comments pointing to `@mariozechner/pi-coding-agent@0.64.0` — `packages/coding-agent/src/core/prompt-templates.ts` in [badlogic/pi-mono](https://github.com/badlogic/pi-mono)); prompt root paths derived from `getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'` since `getPromptsDir()` and `CONFIG_DIR_NAME` are not publicly exported  
 **Future extraction target**: These local helpers are candidates for a shared `pi-provider-utils` npm package to avoid duplication across Pi extension repos  
-**Storage**: In-memory grouped-prompt registry rebuilt from local filesystem prompt roots on extension load/reload  
+**Storage**: In-memory grouped-prompt registry rebuilt from local filesystem prompt roots on extension load/reload; `_index.md` with `type: group` frontmatter is the hard gate for group recognition  
 **Testing**: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint` (no test suite yet)  
 **Target Platform**: Pi interactive extension runtime on the operator machine, reading `~/.pi/agent/prompts` and `<cwd>/.pi/prompts`  
 **Project Type**: Single-package Pi extension library  
 **Performance Guidance**: Limit discovery to two prompt roots and one directory level; use prebuilt in-memory maps for autocomplete and dispatch; avoid per-keystroke rescans. This is implementation guidance only — the spec explicitly excludes numeric latency thresholds for this slice.  
-**Constraints**: Preserve flat prompt behavior; grouped commands remain extension commands; support exactly `/group subcommand`; first slice excludes guided argument collection beyond schema-defined hints and package-native preprocessing; selector UI only accepts `string[]`; public Pi APIs do not allow overriding command `sourceInfo`; Pi-native listing behavior may own scope markers such as `[u]` / `[p]` where available  
+**Constraints**: Preserve flat prompt behavior; grouped commands remain extension commands; support exactly `/group subcommand`; first slice excludes guided argument collection beyond schema-defined hints and package-native preprocessing; selector UI only accepts `string[]`; public Pi APIs do not allow overriding command `sourceInfo`; duplicate group names are warned but not resolved by the package; `description` and `args` are lenient (warn+fallback, never skip prompts)  
 **Scale/Scope**: Two prompt roots, first-level directories only, expected tens to low hundreds of grouped prompts and nested prompt files per session
 
 ## Constitution Check
@@ -73,7 +73,7 @@ specs/
 ## Planned Implementation Files
 
 - `extensions/index.ts` — add local `parseCommandArgs()` and `substituteArgs()` reimplementations with source-reference comments; add grouped prompt discovery, registry construction, duplicate resolution, required frontmatter parsing and validation, command registration, autocomplete, bare-command selector flow, argument-hint surfacing, direct subcommand dispatch, and visible user-message sending.
-- `README.md` — document the grouped directory convention, required `_index.md` and nested prompt frontmatter schema, project-vs-user precedence, selector behavior, argument hints, and the fact that grouped commands are extension commands layered over native flat prompt templates.
+- `README.md` — document the grouped directory convention, `_index.md` `type: group` gate, recommended vs optional frontmatter fields, duplicate-warning behavior, selector behavior, argument hints, and the fact that grouped commands are extension commands layered over native flat prompt templates.
 - `specs/001-implement-core-grouped/*` — maintain planning artifacts and validation notes for this slice.
 
 ## Implementation Phases
@@ -96,12 +96,12 @@ specs/
 1. Add local reimplementations of `parseCommandArgs()` and `substituteArgs()` in `extensions/index.ts`, near-verbatim from Pi's `core/prompt-templates.ts`, with comments referencing `@mariozechner/pi-coding-agent@0.64.0` source paths and a note about future extraction to `pi-provider-utils`.
 2. Add local types and discovery helpers in `extensions/index.ts`.
 3. Scan prompt roots (`getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'`) for first-level grouped directories.
-4. Load `_index.md` and nested prompt files with `parseFrontmatter()` (imported from Pi), require grouped metadata (`description` on `_index.md`; `description` + `args[]` on nested prompts), and define how invalid grouped metadata is skipped or reported.
-5. Resolve duplicate groups with project-over-user precedence, preserve scope metadata on the winning registry entries, and rely on Pi-native grouped command listing markers such as `[u]` / `[p]` where available; otherwise limit scope surfacing to package-owned diagnostics in this slice.
+4. Load `_index.md` and nested prompt files with `parseFrontmatter()` (imported from Pi). `_index.md` must have `type: group` (hard gate). `description` is recommended on both `_index.md` and nested prompts (warn + fallback to directory/file name). `args` is optional on nested prompts (silent if absent, warn if malformed). `name` override on nested prompts is optional. Never skip a nested prompt for metadata issues.
+5. Warn on duplicate group names across scopes but do not enforce package-owned precedence. Preserve scope metadata in registry entries for diagnostics.
 6. Register one command per effective group with `getArgumentCompletions()` backed by the registry and normalized lowercase kebab-case subcommand names.
-7. Route `/group subcommand ...` through local `parseCommandArgs()` + `substituteArgs()`, and use nested prompt `args` metadata to surface operator-visible argument hints without adding guided collection.
+7. Route `/group subcommand ...` through local `parseCommandArgs()` + `substituteArgs()`, and use optional nested prompt `args` metadata to surface operator-visible argument hints without adding guided collection.
 8. Route bare `/group` through `ctx.ui.select()` and show the normalized subcommand name plus required description for each selector item before dispatch.
-9. Return clear unknown-subcommand feedback listing available nested prompts and any package-owned metadata-validation feedback needed for invalid grouped prompt files.
+9. Return clear unknown-subcommand feedback listing available nested prompts.
 10. Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint`.
 11. Update `README.md` if the implementation changes operator-visible behavior from current docs.
 
@@ -114,7 +114,7 @@ specs/
   - Nested prompt metadata exposes `args`-based hints to operators without introducing guided argument collection.
   - Unknown subcommand shows the available alternatives.
   - A grouped command name that matches a flat prompt still resolves to the extension command.
-  - Duplicate group names across user and project roots resolve consistently to the project-scoped group, and listing-level scope markers rely on Pi-native behavior where available.
+  - Duplicate group names across user and project roots emit a warning; no package-owned precedence is enforced.
 
 ## Complexity Tracking
 

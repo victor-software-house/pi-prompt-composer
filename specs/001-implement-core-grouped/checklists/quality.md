@@ -23,7 +23,7 @@
 
 ## Consistency and Compatibility
 
-- [x] CHK010 Do the precedence rules stay consistent across grouped-vs-flat command conflicts and duplicate group names across user and project prompt roots? [Consistency, Spec §CC-004, Spec §FR-013, Spec §Assumptions]
+- [x] CHK010 Do the duplicate-warning and grouped-vs-flat command conflict rules stay consistent across all sections? [Consistency, Spec §CC-004, Spec §FR-013, Spec §Assumptions]
 - [x] CHK011 Are scope-tracking requirements aligned with the commitment to keep user-scoped and project-scoped prompts distinguishable in package-owned UX or diagnostics? [Consistency, Spec §FR-012, Spec §CC-005]
 - [x] CHK012 Does the spec consistently define `_index.md` as descriptive or fallback content rather than a runnable nested prompt across all sections that reference grouped behavior? [Consistency, Spec §CC-003, Spec §FR-002, Spec §FR-010]
 - [x] CHK013 Are the stated non-goals consistent with the requirements and edge cases around missing prompt arguments, so reviewers can tell what current prompt-template behavior still applies? [Consistency, Spec §NG-001, Spec §FR-007, Spec §Edge Cases]

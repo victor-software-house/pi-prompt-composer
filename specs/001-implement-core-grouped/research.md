@@ -30,32 +30,36 @@
   - **Error on non-markdown files or nested directories**: rejected for the first slice because ignoring unsupported content is simpler and predictable.
   - **Allow deeper nested directories**: rejected because deeper nesting is an explicit non-goal.
 
-## Decision 3: Use deterministic precedence rules without merging scopes
+## Decision 3: Warn on duplicate group names, do not enforce precedence
 
-- **Decision**: Resolve duplicate group names by selecting the project-scoped group over the user-scoped group. Keep the winning group's scope metadata in the registry and in package-owned UX. Do not merge nested prompts from both scopes into one effective group.
+- **Decision**: When the same group name exists in both prompt roots, warn about the conflict but do not enforce package-owned precedence. Pi's own command registration order determines which wins. Scope metadata is preserved in the registry for diagnostics.
 - **Rationale**:
-  - The spec already assumes project-local behavior should win inside the active repository.
-  - A single winner is easier to reason about than a cross-scope merge.
-  - Pi already gives extension commands precedence over flat prompt templates because extension commands execute before prompt-template expansion.
+  - Keeping precedence logic out of the package simplifies the implementation and avoids second-guessing Pi's own command resolution.
+  - A warning gives the operator enough information to resolve the conflict themselves.
+  - Cross-scope merging is still explicitly out of scope.
 - **Alternatives considered**:
-  - **Merge user and project groups with the same name**: rejected because merged behavior would blur scope ownership and complicate diagnostics.
-  - **Prefer user scope over project scope**: rejected because it makes repository-local prompt behavior harder to override intentionally.
-  - **Expose two commands for the same group name**: rejected because the spec requires one effective operator-visible grouped command.
+  - **Enforce project-over-user precedence**: rejected to keep the package simpler and avoid duplicating Pi's command resolution.
+  - **Merge user and project groups with the same name**: rejected because merged behavior would blur scope ownership.
+  - **Silently ignore duplicates**: rejected because operators need to know about the conflict.
 
-## Decision 4: Require frontmatter descriptions; normalize subcommand names to lowercase kebab-case
+## Decision 4: Lenient frontmatter with fallbacks and warnings; normalize subcommand names to lowercase kebab-case
 
 - **Decision**:
+  - `_index.md` with `type: group` frontmatter is the hard gate for group recognition.
   - Group command names come from the first-level directory name.
-  - Nested prompt subcommand names come from the markdown filename stem, normalized to lowercase kebab-case.
-  - `_index.md` provides the group description via `frontmatter.description` (required — no fallback). A group directory without a valid `_index.md` description is skipped during discovery.
-  - Nested prompts provide their description via `frontmatter.description` (required — no fallback). A nested prompt file missing `description` is skipped during discovery.
+  - Nested prompt subcommand names come from the markdown filename stem, normalized to lowercase kebab-case, or from an optional `name` frontmatter override.
+  - `description` on `_index.md` is recommended; when missing, warn and fall back to the directory name.
+  - `description` on nested prompts is recommended; when missing, warn and fall back to the filename stem.
+  - `args` array on nested prompts is optional; when present, show argument hints; when absent, no hints and no warning; when present but malformed, warn and treat as absent.
+  - Nested prompts are always registered — metadata issues never prevent registration, only degrade UX.
 - **Rationale**:
-  - The spec clarification session explicitly chose required descriptions over fallback derivation, because author-provided descriptions are higher quality and avoid ambiguity in grouped UX.
-  - Lowercase kebab-case normalization was decided in the spec (FR-003a) to provide consistent, predictable subcommand entry regardless of how authors capitalize or space filenames on disk.
-  - Skipping invalid metadata with a diagnostic notification keeps discovery resilient while surfacing authoring mistakes.
+  - `type: group` is a clear opt-in marker that prevents accidental group registration from arbitrary directories.
+  - Lenient registration with warnings is simpler and more forgiving than skipping prompts for metadata issues.
+  - Lowercase kebab-case normalization (FR-003a) provides consistent, predictable subcommand entry.
+  - Warnings give prompt authors actionable feedback without breaking their workflow.
 - **Alternatives considered**:
-  - **Allow description fallback from body text or filename**: rejected because the spec clarification explicitly required frontmatter descriptions.
-  - **Use raw filesystem stems without normalization**: rejected because the spec requires kebab-case normalization (FR-003a) for operator-facing consistency.
+  - **Require frontmatter descriptions everywhere (skip on missing)**: rejected because it blocks registration for cosmetic metadata issues.
+  - **Use raw filesystem stems without normalization**: rejected because the spec requires kebab-case normalization for operator-facing consistency.
   - **Treat `_index.md` as a runnable nested prompt**: rejected because it conflicts with the compatibility commitments.
 
 ## Decision 5: Use the built-in selector for bare `/group` and visible user-message dispatch for execution

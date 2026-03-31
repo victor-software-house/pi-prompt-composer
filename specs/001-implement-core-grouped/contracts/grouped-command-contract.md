@@ -16,8 +16,8 @@ Define the operator-visible contract for the first useful grouped prompt routing
 A directory becomes a grouped command candidate when all of the following are true:
 
 1. It is a first-level directory directly under one supported prompt root.
-2. It contains at least one `.md` file other than `_index.md`.
-3. At least one of those `.md` files can be loaded as a nested prompt.
+2. It contains an `_index.md` with `type: group` in frontmatter.
+3. It contains at least one `.md` file other than `_index.md`.
 
 ### Ignored content
 
@@ -26,11 +26,12 @@ A directory becomes a grouped command candidate when all of the following are tr
 - Directories nested deeper than `<root>/<group>/...`
 - `_index.md` as a runnable prompt target
 
-### Invalid metadata handling
+### Metadata handling
 
-- A group directory without `_index.md` or with `_index.md` lacking `description` frontmatter is skipped during discovery with a diagnostic notification.
-- A nested prompt file missing `description` frontmatter or with a missing/malformed `args` array is skipped during discovery with a diagnostic notification.
-- If all nested prompts in a group are skipped due to invalid metadata, the group itself is not registered.
+- **Hard gate**: `_index.md` must exist with `type: group` frontmatter. Without this, the directory is not a prompt group.
+- **Soft (warn + fallback)**: `description` on `_index.md` — warn if missing, fall back to directory name. `description` on nested prompts — warn if missing, fall back to filename stem.
+- **Optional (silent)**: `args` array on nested prompts — show hints if present, nothing if absent, warn only if present but malformed. `name` override on nested prompts — use if present, otherwise filename stem (kebab-case).
+- **Never skip a nested prompt** for missing or malformed metadata. Every `.md` file (except `_index.md`) is always registered.
 
 ## Naming Contract
 
@@ -50,21 +51,21 @@ A directory becomes a grouped command candidate when all of the following are tr
 
 ### Group description
 
-- Source: `_index.md` frontmatter `description` (required).
-- A group directory without `_index.md` or with `_index.md` lacking a `description` field is skipped during discovery and not registered as a grouped command. The extension emits a diagnostic notification identifying the skipped directory.
+- Source: `_index.md` frontmatter `description`.
+- Fallback: directory name (with a warning).
 
 ### Nested prompt description
 
-- Source: prompt frontmatter `description` (required).
-- A nested prompt file missing `description` frontmatter is skipped during discovery and excluded from its group's runnable prompts. The extension emits a diagnostic notification identifying the skipped file.
+- Source: prompt frontmatter `description`.
+- Fallback: filename stem (with a warning).
 
 ## Precedence Contract
 
 ### Duplicate group names across scopes
 
-- Project scope wins over user scope.
-- Only one effective grouped command is registered for a given group name.
-- The winning scope remains available in package-owned UX and registry data.
+- The system warns about the conflict.
+- No package-owned precedence logic is enforced — Pi's own command registration order determines which wins.
+- Scope metadata is preserved in registry data for diagnostic purposes.
 
 ### Grouped command vs flat prompt conflict
 
@@ -97,7 +98,7 @@ Behavior:
 Behavior:
 
 1. Open a selector listing nested prompt options for the effective group.
-2. Each selector item shows the normalized subcommand name and its required description. When a nested prompt declares required arguments in its `args` metadata, the selector item appends a parenthetical hint listing those argument names (e.g., `fix — Propose a fix (issue, constraints?)`).
+2. Each selector item shows the subcommand name and its description (frontmatter or fallback). When a nested prompt declares arguments in its `args` metadata, the selector item appends a parenthetical hint listing those argument names (e.g., `fix [issue, constraints?] Propose a fix`).
 3. Resolve the selected option back to the matching nested prompt.
 4. Render and dispatch it as a visible user message. If the selected prompt requires arguments and none were provided, the prompt body is sent with unsubstituted placeholders, consistent with NG-001 (no guided argument collection in this slice).
 
@@ -108,7 +109,7 @@ Behavior:
 ## Autocomplete Contract
 
 - `getArgumentCompletions()` returns nested prompt names filtered by the current prefix.
-- Each completion item includes the subcommand name and its required description. When a nested prompt declares required arguments, the completion description appends a parenthetical hint listing those argument names.
+- Each completion item includes the subcommand name and its description (frontmatter or fallback). When a nested prompt declares arguments in `args` metadata, the completion appends a hint listing those argument names.
 - This first slice only guarantees subcommand completion, not prompt-argument completion.
 
 ## Error Contract
