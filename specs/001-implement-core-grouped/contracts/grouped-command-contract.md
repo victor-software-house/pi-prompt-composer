@@ -26,6 +26,12 @@ A directory becomes a grouped command candidate when all of the following are tr
 - Directories nested deeper than `<root>/<group>/...`
 - `_index.md` as a runnable prompt target
 
+### Invalid metadata handling
+
+- A group directory without `_index.md` or with `_index.md` lacking `description` frontmatter is skipped during discovery with a diagnostic notification.
+- A nested prompt file missing `description` frontmatter or with a missing/malformed `args` array is skipped during discovery with a diagnostic notification.
+- If all nested prompts in a group are skipped due to invalid metadata, the group itself is not registered.
+
 ## Naming Contract
 
 ### Group command name
@@ -35,27 +41,22 @@ A directory becomes a grouped command candidate when all of the following are tr
 
 ### Nested prompt name
 
-- Source: markdown filename stem
+- Source: markdown filename stem, normalized to lowercase kebab-case.
 - Invoked as: `/<group> <subcommand>`
-- If the subcommand name contains spaces, direct invocation must quote it so Pi's `parseCommandArgs()` keeps it as one token.
+- Normalization example: `My Summary.md` → `my-summary`.
+- After normalization, subcommand names should not require quoting under normal usage.
 
 ## Description Contract
 
 ### Group description
 
-Preferred order:
-
-1. `_index.md` frontmatter `description`
-2. First non-empty body line in `_index.md`
-3. Group directory name
+- Source: `_index.md` frontmatter `description` (required).
+- A group directory without `_index.md` or with `_index.md` lacking a `description` field is skipped during discovery and not registered as a grouped command. The extension emits a diagnostic notification identifying the skipped directory.
 
 ### Nested prompt description
 
-Preferred order:
-
-1. Prompt frontmatter `description`
-2. First non-empty body line in the prompt body
-3. Filename stem
+- Source: prompt frontmatter `description` (required).
+- A nested prompt file missing `description` frontmatter is skipped during discovery and excluded from its group's runnable prompts. The extension emits a diagnostic notification identifying the skipped file.
 
 ## Precedence Contract
 
@@ -96,8 +97,9 @@ Behavior:
 Behavior:
 
 1. Open a selector listing nested prompt options for the effective group.
-2. Resolve the selected option back to the matching nested prompt.
-3. Render and dispatch it as a visible user message.
+2. Each selector item shows the normalized subcommand name and its required description. When a nested prompt declares required arguments in its `args` metadata, the selector item appends a parenthetical hint listing those argument names (e.g., `fix — Propose a fix (issue, constraints?)`).
+3. Resolve the selected option back to the matching nested prompt.
+4. Render and dispatch it as a visible user message. If the selected prompt requires arguments and none were provided, the prompt body is sent with unsubstituted placeholders, consistent with NG-001 (no guided argument collection in this slice).
 
 ### Busy-session behavior
 
@@ -106,6 +108,7 @@ Behavior:
 ## Autocomplete Contract
 
 - `getArgumentCompletions()` returns nested prompt names filtered by the current prefix.
+- Each completion item includes the subcommand name and its required description. When a nested prompt declares required arguments, the completion description appends a parenthetical hint listing those argument names.
 - This first slice only guarantees subcommand completion, not prompt-argument completion.
 
 ## Error Contract

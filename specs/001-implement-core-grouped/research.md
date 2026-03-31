@@ -42,21 +42,20 @@
   - **Prefer user scope over project scope**: rejected because it makes repository-local prompt behavior harder to override intentionally.
   - **Expose two commands for the same group name**: rejected because the spec requires one effective operator-visible grouped command.
 
-## Decision 4: Derive descriptions and names with Pi-compatible fallback rules
+## Decision 4: Require frontmatter descriptions; normalize subcommand names to lowercase kebab-case
 
 - **Decision**:
   - Group command names come from the first-level directory name.
-  - Nested prompt names come from the markdown filename stem.
-  - `_index.md` provides the group description by `frontmatter.description`, then first non-empty body line, then the directory name.
-  - Nested prompts use the same fallback pattern: `frontmatter.description`, then first non-empty body line, then the filename stem.
-  - No extra normalization is added in this slice.
+  - Nested prompt subcommand names come from the markdown filename stem, normalized to lowercase kebab-case.
+  - `_index.md` provides the group description via `frontmatter.description` (required — no fallback). A group directory without a valid `_index.md` description is skipped during discovery.
+  - Nested prompts provide their description via `frontmatter.description` (required — no fallback). A nested prompt file missing `description` is skipped during discovery.
 - **Rationale**:
-  - Pi's prompt-template loader already uses this description fallback model.
-  - Avoiding custom normalization keeps the first slice predictable and easy to document.
-  - Using raw filesystem stems preserves author control and avoids inventing a second naming layer.
+  - The spec clarification session explicitly chose required descriptions over fallback derivation, because author-provided descriptions are higher quality and avoid ambiguity in grouped UX.
+  - Lowercase kebab-case normalization was decided in the spec (FR-003a) to provide consistent, predictable subcommand entry regardless of how authors capitalize or space filenames on disk.
+  - Skipping invalid metadata with a diagnostic notification keeps discovery resilient while surfacing authoring mistakes.
 - **Alternatives considered**:
-  - **Require frontmatter descriptions everywhere**: rejected because the spec explicitly allows fallback behavior.
-  - **Slugify or lowercase names automatically**: rejected because that diverges from current Pi filename semantics and would require extra migration rules.
+  - **Allow description fallback from body text or filename**: rejected because the spec clarification explicitly required frontmatter descriptions.
+  - **Use raw filesystem stems without normalization**: rejected because the spec requires kebab-case normalization (FR-003a) for operator-facing consistency.
   - **Treat `_index.md` as a runnable nested prompt**: rejected because it conflicts with the compatibility commitments.
 
 ## Decision 5: Use the built-in selector for bare `/group` and visible user-message dispatch for execution

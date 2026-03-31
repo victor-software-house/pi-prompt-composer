@@ -66,15 +66,17 @@ As a prompt author, I want to place grouped prompts in supported user or project
 
 1. **Given** a supported prompt root contains both flat prompt files and grouped prompt directories, **When** prompt discovery runs, **Then** flat prompts remain available through their existing behavior and grouped directories become grouped slash commands.
 2. **Given** the same group name exists in both user-scoped and project-scoped prompt roots, **When** prompt discovery runs, **Then** the system applies one documented precedence rule consistently and presents a single effective grouped command to the operator.
-3. **Given** the same group name exists in both user-scoped and project-scoped prompt roots, **When** prompt discovery runs, **Then** the project-scoped group wins, only one effective grouped command is exposed, and the group listing identifies the winning scope with compact markers such as `[u]` or `[p]` when that listing supports scope markers.
+3. **Given** the same group name exists in both user-scoped and project-scoped prompt roots, **When** prompt discovery runs, **Then** the project-scoped group wins, only one effective grouped command is exposed, and scope markers apply per FR-012a.
 
 ### Edge Cases
 
 - A prompt directory that contains only `_index.md` and no direct runnable nested prompt files does not become a grouped command.
 - An unknown subcommand entered after a valid group name returns package-owned feedback that names the group, echoes the unknown subcommand, and lists the available nested prompt options.
-- When the same group name exists in both supported prompt roots, the project-scoped group wins, and the group listing identifies the winning scope with compact markers such as `[u]` or `[p]` when that listing supports scope markers.
+- When the same group name exists in both supported prompt roots, the project-scoped group wins and scope markers apply per FR-012a.
 - `_index.md` MUST include `description` frontmatter, and each nested prompt file MUST include `description` plus an `args` array whose items define `name`, `required`, and `hint` for operator-visible argument guidance.
 - Nested prompt files continue to use Pi-compatible placeholder behavior when the operator provides no extra arguments; this feature does not add guided argument collection.
+- A group directory without `_index.md`, or with `_index.md` that lacks `description` frontmatter, MUST be skipped during discovery and MUST NOT be registered as a grouped command. The extension MUST emit a diagnostic notification identifying the skipped directory and the reason.
+- A nested prompt file that is missing `description` frontmatter or has a missing or malformed `args` array MUST be skipped during discovery and excluded from its group's runnable prompts. The extension MUST emit a diagnostic notification identifying the skipped file and the reason. If skipping all nested prompts in a group leaves zero runnable prompts, the group itself is not registered.
 
 ## Compatibility & Non-Goals *(mandatory)*
 
@@ -112,7 +114,7 @@ As a prompt author, I want to place grouped prompts in supported user or project
 - **FR-003**: The system MUST create one slash command per discovered prompt group using the directory name as the command name.
 - **FR-003a**: The system MUST derive each nested prompt subcommand from the markdown filename stem and normalize it to lowercase kebab-case before exposing it to operators.
 - **FR-004**: The system MUST allow an operator to run a nested prompt by entering `/group subcommand` followed by any prompt arguments.
-- **FR-005**: The system MUST show an interactive selection experience when an operator enters `/group` without a subcommand and MUST let the operator choose one of the available nested prompts. Each selector item MUST show the normalized subcommand name and that prompt's required description.
+- **FR-005**: The system MUST show an interactive selection experience when an operator enters `/group` without a subcommand and MUST let the operator choose one of the available nested prompts. Each selector item MUST show the normalized subcommand name and that prompt's required description. When a nested prompt declares required arguments in its `args` metadata, the selector item MUST append a parenthetical hint listing those argument names. When the operator selects a prompt via the bare-command selector and provides no arguments, the prompt body is sent with unsubstituted placeholders, consistent with NG-001.
 - **FR-006**: The system MUST offer available nested prompt names as completions after the operator types `/group` and begins entering a subcommand.
 - **FR-007**: The system MUST render grouped prompt content using the same prompt argument placeholder behavior already expected from flat prompt templates.
 - **FR-008**: The system MUST send the final rendered grouped prompt content as a visible user message so the operator can inspect what was dispatched.

@@ -164,8 +164,58 @@ Verify that grouped prompt metadata is author-provided and not derived:
 
 - `_index.md` must include `description`.
 - Nested prompt files must include `description` and `args[]` items with `name`, `required`, and `hint`.
-- Grouped UX shows the prompt description and exposes the configured argument hints without adding guided argument collection.
-- Invalid grouped metadata is skipped or surfaced through package-owned diagnostics according to the implementation.
+- Grouped UX shows the prompt description and exposes the configured argument hints as parenthetical hints in selector items and autocomplete (e.g., `fix — Propose a fix (issue, constraints?)`).
+- Bare-command selector dispatch sends the prompt body with unsubstituted placeholders when no arguments are provided, consistent with NG-001.
+
+### 9a. Validate invalid metadata is skipped with diagnostics
+
+Create a group directory with an invalid nested prompt to verify skip+diagnostic behavior:
+
+1. Create `.pi/prompts/broken/` with a valid `_index.md`:
+
+```md
+---
+description: Broken test group
+---
+```
+
+2. Add `good.md` with valid metadata:
+
+```md
+---
+description: A good prompt
+args:
+  - name: input
+    required: true
+    hint: Some input
+---
+Do something with $1
+```
+
+3. Add `bad.md` with **missing** `args` array:
+
+```md
+---
+description: A bad prompt with no args
+---
+This prompt has no args metadata.
+```
+
+4. Reload Pi and verify:
+   - The `/broken` grouped command is registered (because `good.md` is valid).
+   - `bad.md` is **not** listed as a subcommand.
+   - A diagnostic notification was emitted identifying `bad.md` and the reason it was skipped.
+
+5. Now remove `good.md` so only `bad.md` remains. Reload and verify:
+   - The `/broken` grouped command is **not** registered (zero valid nested prompts).
+   - A diagnostic notification was emitted identifying the skipped directory.
+
+### 9b. Validate missing `_index.md` skips the group
+
+Create `.pi/prompts/noindex/` with a valid nested prompt but **no** `_index.md`. Reload and verify:
+
+- The `/noindex` grouped command is **not** registered.
+- A diagnostic notification was emitted identifying the missing `_index.md`.
 
 ## 10. Run repository validation
 
