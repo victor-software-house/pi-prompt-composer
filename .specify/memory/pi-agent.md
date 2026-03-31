@@ -84,6 +84,27 @@ bun run lint
   `pi-provider-utils` npm package.
 - Command dispatch uses `pi.sendUserMessage()` and `ctx.ui.select()`.
 
+## Testing Infrastructure
+
+- Test framework: vitest (via `bun run test` = `vitest --run`,
+  `bun run test:watch` = `vitest`)
+- Integration testing: `@marcfargas/pi-test-harness@0.5.0` for Layer 3
+  extension-flow tests
+- Three test layers:
+  1. **Layer 1 — helpers**: pure function unit tests (`test/helpers.test.ts`)
+  2. **Layer 2 — discovery**: filesystem-based tests with temp dirs
+     (`test/discovery.test.ts`)
+  3. **Layer 3 — extension-flow**: full Pi session via harness
+     (`test/extension-flow.test.ts`)
+- Test config: `vitest.config.ts` + `tsconfig.test.json` (extends base,
+  adds `test/` to include)
+- Layer 3 peer deps: `@mariozechner/pi-ai`, `@mariozechner/pi-agent-core`
+- `extensions/index.ts` exports named functions and types for test access
+  alongside the default extension export
+- Production `tsconfig.json` unchanged — only includes `extensions/**/*.ts`
+- Full verification workflow: `bun install`, `bun run fix`,
+  `bun run typecheck`, `bun run lint`, `bun run test`
+
 ## Recent Changes
 
 - Native `/spec` scaffolding was initialized under `.specify/`.
@@ -92,6 +113,10 @@ bun run lint
   commands, and commit discipline.
 - `/spec plan` for `001-implement-core-grouped` added research, data model,
   quickstart, and grouped-command contract artifacts for the first useful slice.
+- `/spec plan` for `002-layered-extension-testing` designed a three-layer test
+  suite covering helpers, discovery, and extension-flow behavior. Research
+  resolved all unknowns (vitest, pi-test-harness, named-export testability
+  strategy, fixture design).
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
