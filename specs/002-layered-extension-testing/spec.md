@@ -11,11 +11,23 @@
 
 - Q: Which scope should this testing feature commit to in the spec? → A: Broad coverage across all three categories.
 
+## Feature Summary
+
+This feature adds the repository's first automated test coverage for the currently implemented grouped-prompt extension behavior in `extensions/index.ts`.
+
+The spec uses three named test categories throughout:
+
+1. **Helper tests** — fast isolated tests for pure behavior such as argument parsing, placeholder substitution, prompt-name normalization, metadata validation, and operator-facing label formatting.
+2. **Discovery tests** — tests that create temporary prompt-directory fixtures and verify grouped-prompt scanning, scope attribution, warnings, and fallback behavior.
+3. **Extension-flow tests** — higher-level tests that verify operator-visible command behavior through the extension boundary, including direct dispatch, bare-command selection, and unknown-subcommand feedback.
+
+This feature commits to meaningful coverage in all three categories. It is not limited to helper-only or discovery-only validation.
+
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Trust prompt rendering behavior during refactors (Priority: P1)
+### User Story 1 - Trust core helper behavior during refactors (Priority: P1)
 
-As a maintainer, I want automated tests for prompt parsing, placeholder substitution, metadata validation, and formatting helpers so that I can change the extension without accidentally breaking its core grouped-prompt behavior.
+As a maintainer, I want automated helper tests for prompt parsing, placeholder substitution, metadata validation, and formatting helpers so that I can change the extension without accidentally breaking its core grouped-prompt behavior.
 
 **Why this priority**: The extension currently concentrates most behavior in one runtime file and has no automated safety net. Protecting the pure behavior with fast tests gives the highest confidence for the least setup effort.
 
@@ -29,9 +41,9 @@ As a maintainer, I want automated tests for prompt parsing, placeholder substitu
 
 ---
 
-### User Story 2 - Validate prompt discovery against realistic prompt trees (Priority: P2)
+### User Story 2 - Validate grouped-prompt discovery against realistic prompt trees (Priority: P2)
 
-As a maintainer, I want automated tests for prompt-root scanning and grouped-prompt discovery so that I can safely evolve prompt-loading logic without breaking supported directory layouts or warning behavior.
+As a maintainer, I want automated discovery tests for prompt-root scanning and grouped-prompt discovery so that I can safely evolve prompt-loading logic without breaking supported directory layouts or warning behavior.
 
 **Why this priority**: Discovery behavior encodes several repository-specific rules around `_index.md`, descriptions, args metadata, duplicate group names, and scope. These rules are central to the extension's operator experience and are best protected with realistic filesystem scenarios.
 
@@ -45,11 +57,11 @@ As a maintainer, I want automated tests for prompt-root scanning and grouped-pro
 
 ---
 
-### User Story 3 - Prove command flows still work through the extension boundary (Priority: P3)
+### User Story 3 - Prove grouped command flows through the extension boundary (Priority: P3)
 
-As a maintainer, I want at least one automated test path that exercises grouped commands through the extension boundary so that command registration, direct dispatch, selector flow, and user-message delivery can be verified as real extension behavior rather than only as isolated helpers.
+As a maintainer, I want automated extension-flow tests for grouped commands so that command registration, direct dispatch, selector flow, and user-message delivery are verified as real extension behavior rather than only as isolated helpers.
 
-**Why this priority**: Pure and filesystem tests protect most logic, but extension behavior still depends on command registration and UI-triggered dispatch. A higher-level test slice reduces the risk that the extension works in pieces but fails as a command.
+**Why this priority**: Helper and discovery tests protect most logic, but extension behavior still depends on command registration and UI-triggered dispatch. This feature explicitly commits to broad coverage in this category so the extension does not only work in pieces.
 
 **Independent Test**: Run automated scenarios that load the extension in a controlled session, invoke grouped commands through the same operator-facing entry points, and verify visible outcomes for direct dispatch, bare-command selection, and unknown-subcommand feedback.
 
@@ -61,11 +73,11 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 
 ### Edge Cases
 
-- Core helper tests must cover quoted arguments, empty argument positions, mixed placeholder forms, and cases where optional values are omitted.
+- Helper tests must cover quoted arguments, empty argument positions, mixed placeholder forms, and cases where optional values are omitted.
 - Discovery tests must cover both prompt scopes, duplicate group names across scopes, directories missing `_index.md`, `_index.md` with the wrong type, and groups with no runnable nested prompts.
 - Discovery tests must cover nested prompt metadata cases where `description`, `name`, or `args` are absent or malformed without incorrectly preventing prompt registration.
-- Extension-level tests must cover selector cancellation and ensure that cancellation does not dispatch an unintended user message.
-- The verification workflow must remain clear about which checks are mandatory when tests are added and which behaviors are still intentionally untested.
+- Extension-flow tests must cover selector cancellation and ensure that cancellation does not dispatch an unintended user message.
+- The verification workflow must remain clear about which checks are mandatory when tests are added and which grouped-prompt behaviors are intentionally outside this feature's coverage.
 
 ## Compatibility & Non-Goals *(mandatory)*
 
@@ -83,8 +95,8 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 
 ## Assumptions
 
-- This feature uses three explicit test categories: helper tests for isolated pure behavior, discovery tests for prompt scanning against temporary filesystem fixtures, and extension-flow tests for operator-visible grouped-command behavior through the extension boundary.
-- The feature now commits to broad coverage across all three test categories rather than treating extension-flow validation as an optional stretch goal.
+- This feature uses the three test categories defined in [Feature Summary](#feature-summary): helper tests, discovery tests, and extension-flow tests.
+- The feature commits to broad coverage across all three test categories rather than treating extension-flow validation as an optional stretch goal.
 - Some internal helpers may need to become importable or move into testable units, but any such refactor must preserve the repository's current runtime layout truth and avoid overstating architectural changes.
 - The repository currently has no automated test suite, so this feature must also establish the minimal project-level commands and documentation needed to run tests reliably.
 - The feature should prefer real Pi extension execution paths for higher-level validation when practical, while avoiding unnecessary external runtime complexity for lower-level behavior.
@@ -98,7 +110,7 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 - **FR-003**: The system MUST add automated discovery tests that exercise grouped-prompt scanning against realistic temporary prompt-directory structures for both user-scoped and project-scoped prompt roots.
 - **FR-004**: Discovery tests MUST verify the documented rules for `_index.md` group recognition, missing description fallback, malformed args fallback, nested prompt registration, duplicate group-name warnings, and ignored unsupported contents.
 - **FR-005**: The system MUST add automated extension-flow tests that exercise grouped command behavior through the extension boundary.
-- **FR-005a**: Extension-flow tests MUST cover direct dispatch, bare-command selection, and unknown-subcommand feedback as separate observable behaviors.
+- **FR-005a**: Extension-flow tests MUST cover direct dispatch, bare-command selection, and unknown-subcommand feedback as separate observable behaviors within this feature, not as deferred follow-up work.
 - **FR-006**: The test suite MUST produce failures that identify the affected behavior clearly enough for a maintainer to distinguish helper regressions from discovery regressions and extension-flow regressions.
 - **FR-007**: The repository MUST document how to install dependencies, run the automated tests, and include the test command in the standard verification guidance for future contributors.
 - **FR-008**: The repository MUST preserve existing linting and type-checking gates while adding tests; the new test workflow must coexist with current validation commands rather than replacing them.
