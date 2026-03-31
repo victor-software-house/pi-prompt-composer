@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: User description: "layered extension testing for prompt composer"
 
+## Clarifications
+
+### Session 2026-03-31
+
+- Q: Which scope should this testing feature commit to in the spec? → A: Broad coverage across all three categories.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Trust prompt rendering behavior during refactors (Priority: P1)
@@ -77,7 +83,8 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 
 ## Assumptions
 
-- The highest-value first slice follows the layered testing approach already researched for Pi extensions: fast tests for pure behavior first, realistic filesystem tests second, and extension-boundary tests where they provide clear additional confidence.
+- This feature uses three explicit test categories: helper tests for isolated pure behavior, discovery tests for prompt scanning against temporary filesystem fixtures, and extension-flow tests for operator-visible grouped-command behavior through the extension boundary.
+- The feature now commits to broad coverage across all three test categories rather than treating extension-flow validation as an optional stretch goal.
 - Some internal helpers may need to become importable or move into testable units, but any such refactor must preserve the repository's current runtime layout truth and avoid overstating architectural changes.
 - The repository currently has no automated test suite, so this feature must also establish the minimal project-level commands and documentation needed to run tests reliably.
 - The feature should prefer real Pi extension execution paths for higher-level validation when practical, while avoiding unnecessary external runtime complexity for lower-level behavior.
@@ -90,7 +97,8 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 - **FR-002**: The system MUST add automated tests for the currently implemented pure grouped-prompt helper behavior, including command-argument parsing, placeholder substitution, prompt-name normalization, metadata validation, and operator-facing label formatting.
 - **FR-003**: The system MUST add automated discovery tests that exercise grouped-prompt scanning against realistic temporary prompt-directory structures for both user-scoped and project-scoped prompt roots.
 - **FR-004**: Discovery tests MUST verify the documented rules for `_index.md` group recognition, missing description fallback, malformed args fallback, nested prompt registration, duplicate group-name warnings, and ignored unsupported contents.
-- **FR-005**: The system MUST provide at least one automated extension-level validation path for grouped command behavior that covers direct dispatch, bare-command selection, or unknown-subcommand feedback through the extension boundary.
+- **FR-005**: The system MUST add automated extension-flow tests that exercise grouped command behavior through the extension boundary.
+- **FR-005a**: Extension-flow tests MUST cover direct dispatch, bare-command selection, and unknown-subcommand feedback as separate observable behaviors.
 - **FR-006**: The test suite MUST produce failures that identify the affected behavior clearly enough for a maintainer to distinguish helper regressions from discovery regressions and extension-flow regressions.
 - **FR-007**: The repository MUST document how to install dependencies, run the automated tests, and include the test command in the standard verification guidance for future contributors.
 - **FR-008**: The repository MUST preserve existing linting and type-checking gates while adding tests; the new test workflow must coexist with current validation commands rather than replacing them.
@@ -99,7 +107,7 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 
 ### Key Entities *(include if feature involves data)*
 
-- **Test Layer**: A distinct validation slice focused on one level of behavior, such as pure helper logic, filesystem-driven discovery, or extension-boundary command flow.
+- **Test Category**: One of the three required validation slices in this feature: helper tests for isolated pure behavior, discovery tests for temporary-filesystem prompt scanning, and extension-flow tests for operator-visible grouped-command behavior through the extension boundary.
 - **Test Scenario**: A concrete automated example with inputs, expected outputs, and pass/fail conditions tied to one observable aspect of grouped-prompt behavior.
 - **Prompt Fixture**: A controlled prompt file or prompt-directory arrangement used to verify routing, metadata handling, fallback behavior, or warning behavior.
 - **Validation Workflow**: The repository's documented sequence of commands maintainers run to verify formatting, linting, typing, and automated tests.
@@ -110,6 +118,7 @@ As a maintainer, I want at least one automated test path that exercises grouped 
 
 - **SC-001**: Maintainers can run one documented test command from the repo root and receive a pass/fail result for automated grouped-prompt validation within the normal repository workflow.
 - **SC-002**: The automated suite covers all currently implemented pure helper behaviors and all documented grouped-prompt discovery rules at least once through explicit scenarios.
-- **SC-003**: At least one automated extension-level scenario verifies an operator-visible grouped-command flow without requiring manual interaction.
+- **SC-003**: The automated suite covers all three required test categories — helper behavior, filesystem discovery, and extension-flow behavior — with explicit scenarios for each.
+- **SC-003a**: Extension-flow coverage verifies direct dispatch, bare-command selection, and unknown-subcommand feedback without requiring manual interaction.
 - **SC-004**: When a regression is intentionally introduced into helper behavior, discovery behavior, or command-flow behavior, the corresponding automated tests fail in the affected layer instead of passing silently.
 - **SC-005**: Repository documentation and validation guidance remain internally consistent: a contributor following the documented commands can install dependencies, run tests, and understand where automated coverage applies.
