@@ -1,34 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: template -> 1.0.0
+- Version change: 1.0.1 -> 1.0.2
 - Modified principles:
-  - Added I. Scaffold Truth Over Roadmap
-  - Added II. Pi-Native Compatibility
-  - Added III. Verification Before Claims
-  - Added IV. Small, Reviewable Delivery
-  - Added V. Documentation and Spec Synchronization
-- Added sections:
-  - Operational Baseline
-  - Spec Workflow Quality Gates
-- Removed sections:
-  - Generic placeholder section names from the scaffold template
+  - Updated II. Pi-Native Compatibility: _index.md is now the group-level
+    metadata marker (type: group) rather than a bare-command fallback
 - Templates requiring updates:
   - ✅ .specify/templates/constitution-template.md
-  - ✅ .specify/templates/plan-template.md
-  - ✅ .specify/templates/spec-template.md
-  - ✅ .specify/templates/tasks-template.md
-  - ✅ .specify/templates/checklist-template.md
-  - ✅ .specify/templates/agent-file-template.md
-  - ✅ .specify/templates/commands/plan.md
-  - ✅ .specify/templates/commands/specify.md
-  - ✅ .specify/templates/commands/clarify.md
-  - ✅ .specify/templates/commands/tasks.md
-  - ✅ .specify/templates/commands/analyze.md
-  - ✅ .specify/templates/commands/checklist.md
-  - ✅ .specify/templates/commands/implement.md
   - ✅ .specify/memory/pi-agent.md
 - Follow-up TODOs:
-  - None
+  - Consider extracting faithful Pi helper reimplementations to a shared package such as pi-provider-utils
 -->
 # pi-prompt-composer Constitution
 
@@ -48,14 +28,21 @@ mislead both operators and future agents.
 New features MUST layer on top of Pi's native prompt-template behavior instead
 of replacing it. Implementations MUST reuse Pi utilities such as
 `parseCommandArgs`, `substituteArgs`, and `parseFrontmatter` when those
-utilities cover the required behavior. Flat `.md` prompt templates MUST remain
-Pi-native, `_index.md` MUST be the bare-command fallback, extension-registered
-commands MUST take precedence over conflicting flat prompt templates, and
-user-versus-project prompt scope MUST remain correct wherever command metadata
-is surfaced.
+utilities are publicly available and cover the required behavior. When required
+Pi behavior exists only in non-exported internals, implementations MUST
+faithfully reimplement that behavior, keep the result compatible with Pi-native
+semantics, and add source-provenance comments that identify the upstream Pi
+package version and internal module path. Flat `.md` prompt templates MUST
+remain Pi-native, `_index.md` with `type: group` frontmatter MUST be the
+group-level metadata marker for grouped prompt directories,
+extension-registered commands MUST take precedence over conflicting flat prompt
+templates, and user-versus-project prompt scope MUST remain correct wherever
+command metadata is surfaced.
 
 Rationale: the package exists to extend Pi prompt routing, not to fork or shadow
-Pi's baseline prompt system.
+Pi's baseline prompt system. Faithful local copies of non-exported helpers
+should remain explicit and easy to extract later into shared utilities such as
+`pi-provider-utils` when reuse justifies it.
 
 ### III. Verification Before Claims
 Before a change is presented as complete, agents MUST run the repository's
@@ -134,4 +121,4 @@ Compliance review is required during `/spec plan`, during `/spec analyze`, and
 before merge for any change that affects code, workflow templates, release
 configuration, or operator-facing behavior.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-30 | **Last Amended**: 2026-03-30
+**Version**: 1.0.2 | **Ratified**: 2026-03-30 | **Last Amended**: 2026-03-31
