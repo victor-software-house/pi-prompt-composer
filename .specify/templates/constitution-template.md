@@ -14,13 +14,19 @@ allowed to masquerade as shipped behavior.
 
 ### II. Pi-Native Compatibility
 New features MUST layer on top of Pi's native behavior instead of replacing it.
-Implementations MUST reuse Pi utilities when those utilities cover the required
-behavior. Flat prompt templates MUST remain Pi-native, `_index.md` MUST remain
-the bare-command fallback when applicable, extension-registered commands MUST
-take precedence over conflicting flat prompt templates, and scope attribution
-MUST remain correct wherever metadata is surfaced.
+Implementations MUST reuse Pi utilities when those utilities are publicly
+available and cover the required behavior. When required Pi behavior exists
+only in non-exported internals, implementations MUST faithfully reimplement
+that behavior, keep the result compatible with Pi-native semantics, and add
+source-provenance comments that identify the upstream Pi package version and
+internal module path. Flat prompt templates MUST remain Pi-native, `_index.md`
+MUST remain the bare-command fallback when applicable, extension-registered
+commands MUST take precedence over conflicting flat prompt templates, and scope
+attribution MUST remain correct wherever metadata is surfaced.
 
 Rationale: Pi extensions should extend Pi, not fork its baseline behavior.
+Faithful local copies of non-exported helpers should remain explicit and easy to
+extract later into shared utilities when reuse justifies it.
 
 ### III. Verification Before Claims
 Before a change is presented as complete, agents MUST run the repository's
