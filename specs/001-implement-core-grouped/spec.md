@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Implement core grouped prompt routing for nested prompt folders: scan Pi prompt roots for first-level directories, build a grouped-prompt registry, register one /group command per directory with subcommand autocomplete, dispatch /group subcommand to the matching markdown prompt using Pi-native argument substitution, and open an interactive selector for bare /group."
 
+## Clarifications
+
+### Session 2026-03-31
+
+- Q: How should grouped prompt discovery treat unsupported directory contents when deciding whether a first-level directory becomes a prompt group? → A: A directory becomes a group only if it contains at least one direct `.md` file other than `_index.md`; non-markdown files and deeper nested directories are ignored without blocking registration.
+- Q: What should the operator-visible subcommand naming rule be for nested prompt files? → A: Normalize nested prompt filenames to lowercase kebab-case before exposing them as subcommands.
+- Q: How should user-vs-project scope be surfaced in package-owned UX or diagnostics for grouped commands? → A: Show scope labels only when duplicate group names exist across the two prompt roots.
+- Q: What description fallback should grouped UX use when `_index.md` or a nested prompt file lacks a `description` field? → A: Require `description` frontmatter; if it is absent, show no description.
+- Q: When must grouped prompt discovery refresh during this first slice? → A: Refresh grouped prompt discovery only when the extension loads or reloads.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Run a nested prompt directly (Priority: P1)
@@ -52,11 +62,11 @@ As a prompt author, I want to place grouped prompts in supported user or project
 
 ### Edge Cases
 
-- What happens when a prompt directory contains only `_index.md` and no runnable nested prompt files?
-- How does the system handle an unknown subcommand entered after a valid group name?
-- How does the system behave when the same group name exists in both supported prompt roots?
-- What happens when `_index.md` or a nested prompt file has missing descriptive metadata?
-- How does the system behave when a nested prompt file uses supported argument placeholders but the operator provides no extra arguments?
+- A prompt directory that contains only `_index.md` and no direct runnable nested prompt files does not become a grouped command.
+- An unknown subcommand entered after a valid group name returns package-owned feedback that names the group, echoes the unknown subcommand, and lists the available nested prompt options.
+- When the same group name exists in both supported prompt roots, the project-scoped group wins, and package-owned UX or diagnostics identify the winning scope.
+- If `_index.md` or a nested prompt file omits `description` frontmatter, grouped package-owned UX shows no description instead of deriving fallback copy.
+- Nested prompt files continue to use Pi-compatible placeholder behavior when the operator provides no extra arguments; this feature does not add guided argument collection.
 
 ## Compatibility & Non-Goals *(mandatory)*
 
@@ -66,7 +76,7 @@ As a prompt author, I want to place grouped prompts in supported user or project
 - **CC-002**: Grouped commands MUST preserve the current prompt placeholder and argument-substitution behavior already expected from prompt templates.
 - **CC-003**: Bare `/group` behavior MUST use `_index.md` only as group-level descriptive or fallback content and MUST NOT change the meaning of nested prompt files.
 - **CC-004**: If a grouped command name conflicts with an existing flat prompt name, the grouped command MUST take precedence in a predictable, documented way.
-- **CC-005**: User-scoped and project-scoped grouped prompts MUST remain distinguishable in package-owned UX or diagnostics even when only one effective command is exposed.
+- **CC-005**: When the same grouped command name exists in both supported prompt roots, package-owned UX or diagnostics MUST identify whether the effective command came from the project-scoped or user-scoped prompt root.
 
 ### Explicit Non-Goals
 
@@ -79,33 +89,36 @@ As a prompt author, I want to place grouped prompts in supported user or project
 
 - Project-scoped grouped prompts take precedence over user-scoped grouped prompts when both define the same group name, because project-local behavior should win within the active repository.
 - A directory is only treated as a runnable grouped command when it contains at least one nested markdown prompt other than `_index.md`.
-- If descriptive metadata is absent, the system uses the same fallback style already expected from prompt templates rather than requiring new authoring metadata.
-- Unsupported layouts, such as deeper nested directories, are ignored or reported clearly instead of being interpreted as additional command levels.
+- Group-level and nested-prompt descriptions come from `description` frontmatter; if that metadata is absent, package-owned grouped UX shows no description instead of deriving fallback copy from body text or filenames.
+- Nested prompt subcommand names are derived from markdown filename stems and normalized to lowercase kebab-case for operator-visible command entry.
+- A first-level directory becomes a grouped command only when it contains at least one direct `.md` file other than `_index.md`; non-markdown files and deeper nested directories are ignored and do not block registration.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST scan both supported Pi prompt roots for first-level directories that qualify as grouped prompt candidates.
-- **FR-002**: The system MUST treat markdown files directly inside a grouped prompt directory as nested prompts, excluding `_index.md` from the runnable nested prompt list.
+- **FR-001**: The system MUST scan both supported Pi prompt roots for first-level directories that qualify as grouped prompt candidates, where a qualifying directory contains at least one direct `.md` file other than `_index.md`.
+- **FR-002**: The system MUST treat markdown files directly inside a grouped prompt directory as nested prompts, excluding `_index.md` from the runnable nested prompt list, and MUST ignore non-markdown files and deeper nested directories inside the group.
 - **FR-003**: The system MUST create one slash command per discovered prompt group using the directory name as the command name.
+- **FR-003a**: The system MUST derive each nested prompt subcommand from the markdown filename stem and normalize it to lowercase kebab-case before exposing it to operators.
 - **FR-004**: The system MUST allow an operator to run a nested prompt by entering `/group subcommand` followed by any prompt arguments.
 - **FR-005**: The system MUST show an interactive selection experience when an operator enters `/group` without a subcommand and MUST let the operator choose one of the available nested prompts.
 - **FR-006**: The system MUST offer available nested prompt names as completions after the operator types `/group` and begins entering a subcommand.
 - **FR-007**: The system MUST render grouped prompt content using the same prompt argument placeholder behavior already expected from flat prompt templates.
 - **FR-008**: The system MUST send the final rendered grouped prompt content as a visible user message so the operator can inspect what was dispatched.
 - **FR-009**: The system MUST preserve the existing behavior of flat `.md` prompt templates that are not inside grouped prompt directories.
-- **FR-010**: The system MUST use `_index.md`, when present, as the preferred source for group-level description or help content shown in grouped prompt UX.
+- **FR-010**: The system MUST use `_index.md`, when present, as the preferred source for group-level description or help content shown in grouped prompt UX, and MUST show no derived description when `description` frontmatter is absent.
 - **FR-011**: The system MUST return package-owned feedback when the operator enters an unknown subcommand, and that feedback MUST name the group, echo the unknown subcommand, and list the available nested prompt options.
 - **FR-012**: The system MUST record whether each discovered grouped prompt came from the user-scoped or project-scoped prompt root.
+- **FR-012a**: When duplicate group names exist across supported prompt roots, the system MUST surface the winning scope in package-owned descriptions, selector copy, or diagnostics.
 - **FR-013**: The system MUST resolve duplicate group names across supported prompt roots using a single documented precedence rule and MUST apply that rule consistently.
-- **FR-014**: The system MUST refresh grouped prompt discovery whenever the extension is reloaded so the effective command list reflects added, changed, or removed grouped prompts.
+- **FR-014**: The system MUST refresh grouped prompt discovery whenever the extension loads or is reloaded so the effective command list reflects added, changed, or removed grouped prompts. This first slice does not require additional in-session refresh triggers.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Prompt Root**: A supported source location for prompts. It has a scope, contains flat prompt files and grouped prompt directories, and participates in precedence decisions.
 - **Prompt Group**: A first-level prompt directory that becomes one slash command. It has a name, scope, description, and a set of nested prompts.
-- **Nested Prompt**: A markdown prompt file inside a prompt group that becomes a runnable subcommand. It has a name, prompt content, optional descriptive metadata, and an originating scope.
+- **Nested Prompt**: A markdown prompt file inside a prompt group that becomes a runnable subcommand. It has a normalized lowercase kebab-case name derived from the filename stem, prompt content, optional `description` frontmatter used for grouped UX, and an originating scope.
 - **Effective Command**: The operator-visible grouped command that results after discovery and precedence resolution. It points to the prompt group that wins for a given command name.
 
 ## Success Criteria *(mandatory)*
