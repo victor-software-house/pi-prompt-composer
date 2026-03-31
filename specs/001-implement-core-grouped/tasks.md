@@ -19,6 +19,7 @@
 - Operator-facing docs stay in `README.md`
 - Validation scenarios live in `specs/001-implement-core-grouped/quickstart.md`
 - Repo validation commands are defined in `package.json`
+- Grouped prompt metadata is defined in prompt frontmatter: `_index.md` requires `description`; nested prompts require `description` plus `args[]` entries with `name`, `required`, and `hint`
 
 ---
 
@@ -38,9 +39,9 @@
 **⚠️ CRITICAL**: No user story work should start until this phase is complete.
 
 - [ ] T003 Add local `parseCommandArgs()` and `substituteArgs()` reimplementations with source-provenance comments in `extensions/index.ts`.
-- [ ] T004 Add grouped prompt runtime types plus description fallback helpers for prompt roots, groups, and nested prompts in `extensions/index.ts`.
-- [ ] T005 Add filesystem discovery helpers that scan `~/.pi/agent/prompts` and `<cwd>/.pi/prompts` for first-level grouped prompt candidates in `extensions/index.ts`.
-- [ ] T006 Build the effective grouped-command registry with project-over-user precedence and preserved scope metadata in `extensions/index.ts`.
+- [ ] T004 Add grouped prompt runtime types plus frontmatter-schema parsing helpers for prompt roots, groups, nested prompts, and nested `args` hint metadata in `extensions/index.ts`.
+- [ ] T005 Add filesystem discovery helpers that scan `~/.pi/agent/prompts` and `<cwd>/.pi/prompts` for first-level grouped prompt candidates in `extensions/index.ts`, while ignoring non-markdown files, deeper nested directories, and invalid empty groups.
+- [ ] T006 Build the effective grouped-command registry with project-over-user precedence, preserved scope metadata, normalized lowercase kebab-case subcommand names, and invalid-metadata handling rules in `extensions/index.ts`.
 
 **Checkpoint**: Foundation ready. Grouped prompt data can now be used by story-specific command flows.
 
@@ -55,8 +56,8 @@
 ### Implementation for User Story 1
 
 - [ ] T007 [US1] Register one extension command per effective grouped prompt in `extensions/index.ts`.
-- [ ] T008 [US1] Implement direct `/group subcommand ...` parsing and nested-prompt lookup in `extensions/index.ts`.
-- [ ] T009 [US1] Render grouped prompt bodies with Pi-compatible argument substitution and dispatch them with `pi.sendUserMessage()` follow-up handling in `extensions/index.ts`.
+- [ ] T008 [US1] Implement direct `/group subcommand ...` parsing, normalized nested-prompt lookup, and required grouped metadata loading in `extensions/index.ts`.
+- [ ] T009 [US1] Render grouped prompt bodies with Pi-compatible argument substitution, surface `args[]`-based hint metadata to the operator without guided collection, and dispatch them with `pi.sendUserMessage()` follow-up handling in `extensions/index.ts`.
 - [ ] T010 [US1] Add package-owned unknown-subcommand feedback in `extensions/index.ts` that names the group, echoes the unknown subcommand, and lists the available nested prompts.
 - [ ] T011 [US1] Validate the direct-dispatch and invalid-subcommand scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
 
@@ -72,10 +73,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Add nested-prompt autocomplete through `getArgumentCompletions()` in `extensions/index.ts`.
+- [ ] T012 [US2] Add nested-prompt autocomplete through `getArgumentCompletions()` in `extensions/index.ts` using normalized lowercase kebab-case subcommand names.
 - [ ] T013 [US2] Implement the bare `/group` selector flow with `ctx.ui.select()` and selected-prompt dispatch in `extensions/index.ts`.
-- [ ] T014 [US2] Use `_index.md` group descriptions and nested prompt description fallbacks in the grouped selector UX within `extensions/index.ts`.
-- [ ] T015 [US2] Validate the bare-command discovery scenario from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
+- [ ] T014 [US2] Use required `_index.md` and nested prompt descriptions plus `args[]` hint metadata in the grouped selector and grouped-command UX within `extensions/index.ts`.
+- [ ] T015 [US2] Validate the bare-command discovery scenario from `specs/001-implement-core-grouped/quickstart.md`, including selector labels and argument hints, against the implementation in `extensions/index.ts`.
 
 **Checkpoint**: User Story 2 should now make grouped prompts discoverable without memorizing subcommands.
 
@@ -89,10 +90,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Ensure grouped discovery ignores root-level flat `.md` prompts, deeper nested directories, non-markdown files, and empty groups in `extensions/index.ts`.
-- [ ] T017 [US3] Surface winning scope metadata for duplicate groups in package-owned command descriptions or feedback in `extensions/index.ts`.
-- [ ] T018 [US3] Rebuild grouped prompt discovery during extension load or reload so added, removed, and overridden prompt groups refresh predictably in `extensions/index.ts`.
-- [ ] T019 [US3] Validate coexistence, duplicate-precedence, and same-name flat-prompt conflict scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
+- [ ] T016 [US3] Ensure grouped discovery ignores root-level flat `.md` prompts, deeper nested directories, non-markdown files, invalid grouped metadata, and empty groups in `extensions/index.ts`.
+- [ ] T017 [US3] Preserve winning scope metadata for duplicate groups, rely on Pi-native listing markers such as `[u]` and `[p]` where available, and limit package-owned scope surfacing to fallback diagnostics in `extensions/index.ts`.
+- [ ] T018 [US3] Rebuild grouped prompt discovery during extension load or reload so added, removed, invalid, and overridden prompt groups refresh predictably in `extensions/index.ts`.
+- [ ] T019 [US3] Validate coexistence, duplicate-precedence, same-name flat-prompt conflict, and listing-level scope-marker scenarios from `specs/001-implement-core-grouped/quickstart.md` against the implementation in `extensions/index.ts`.
 
 **Checkpoint**: All three user stories should now work without breaking unrelated flat prompt templates.
 
@@ -102,7 +103,7 @@
 
 **Purpose**: Final documentation and required repo-wide validation.
 
-- [ ] T020 Update grouped prompt usage, precedence, selector behavior, and visible user-message dispatch guidance in `README.md`.
+- [ ] T020 Update grouped prompt usage, required frontmatter schema, argument hints, precedence, selector behavior, and visible user-message dispatch guidance in `README.md`.
 - [ ] T021 Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint` from `package.json` before completion.
 - [ ] T022 Run the full operator validation flow documented in `specs/001-implement-core-grouped/quickstart.md` after all implementation tasks are complete.
 
@@ -127,7 +128,7 @@
 
 ### Within Each User Story
 
-- Finish registry and helper work before story-specific command behavior.
+- Finish registry, frontmatter-schema handling, and helper work before story-specific command behavior.
 - Implement operator-facing behavior before story validation.
 - Complete the story's quickstart validation before moving to the next priority.
 
@@ -183,10 +184,10 @@ Task: "Review the operator validation scenarios in specs/001-implement-core-grou
 
 ### Incremental Delivery
 
-1. Setup + Foundation establish the grouped prompt registry and Pi-compatible helpers.
-2. Add US1 for direct grouped prompt execution.
+1. Setup + Foundation establish the grouped prompt registry, required frontmatter schema handling, and Pi-compatible helpers.
+2. Add US1 for direct grouped prompt execution and `args[]`-based operator hint surfacing.
 3. Add US2 for autocomplete and bare-command discovery.
-4. Add US3 for coexistence, precedence UX, and reload hardening.
+4. Add US3 for coexistence, Pi-native scope-marker alignment, precedence UX, and reload hardening.
 5. Finish with README and repo-wide validation.
 
 ### Recommended Execution Order
@@ -204,4 +205,4 @@ Task: "Review the operator validation scenarios in specs/001-implement-core-grou
 - All tasks use the repository's actual current file layout.
 - `README.md` is the only required documentation sync target for this implementation slice.
 - `package.json` remains the source of truth for required validation commands.
-- `specs/001-implement-core-grouped/quickstart.md` remains the source of truth for manual operator validation.
+- `specs/001-implement-core-grouped/quickstart.md` remains the source of truth for manual operator validation, including required frontmatter metadata and Pi-native scope-marker behavior where available.

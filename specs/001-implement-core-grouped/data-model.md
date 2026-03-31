@@ -26,15 +26,18 @@ Represents one runnable markdown prompt file inside a group directory.
 
 | Field | Type | Description |
 |---|---|---|
-| `name` | `string` | Subcommand name, derived from the filename stem. |
+| `name` | `string` | Subcommand name, derived from the filename stem and normalized to lowercase kebab-case. |
 | `filePath` | `string` | Absolute path to the `.md` file. |
-| `description` | `string` | `frontmatter.description`, else first non-empty body line, else `name`. |
+| `description` | `string` | Required `frontmatter.description` used in grouped UX. |
+| `args` | `{ name: string; required: boolean; hint: string }[]` | Required operator-visible argument guidance metadata from frontmatter. |
 | `content` | `string` | Prompt body after frontmatter stripping and before argument substitution. |
 | `scope` | `'user' | 'project'` | Originating prompt-root scope. |
 | `groupName` | `string` | Parent grouped command name. |
 
 **Validation rules**
 - Must be a `.md` file directly inside a first-level group directory.
+- `frontmatter.description` is required.
+- `frontmatter.args` is required and each item must define `name`, `required`, and `hint`.
 - `_index.md` is never a runnable nested prompt.
 - Non-markdown files and deeper directories are ignored.
 
@@ -47,13 +50,14 @@ Represents a first-level directory discovered in one prompt root before preceden
 | `name` | `string` | Group command name, derived from the directory name. |
 | `directoryPath` | `string` | Absolute path to the group directory. |
 | `scope` | `'user' | 'project'` | Originating prompt-root scope. |
-| `description` | `string` | `_index.md` description fallback, else directory name. |
-| `indexPath` | `string \| undefined` | Optional `_index.md` path for metadata/help. |
+| `description` | `string` | Required `_index.md` `frontmatter.description` used for group-level metadata. |
+| `indexPath` | `string \| undefined` | Expected `_index.md` path for metadata/help. |
 | `prompts` | `NestedPrompt[]` | Runnable nested prompts in this directory. |
 
 **Validation rules**
 - A candidate only becomes actionable when `prompts.length > 0`.
-- `_index.md` may exist without making the group runnable on its own.
+- `_index.md` must exist with `description` metadata for grouped UX.
+- Invalid grouped metadata is skipped or surfaced through package-owned diagnostics according to implementation.
 
 ### 4. Effective Prompt Group
 
@@ -64,7 +68,7 @@ Represents the single operator-visible grouped command after duplicate resolutio
 | `name` | `string` | Registered slash-command name. |
 | `scope` | `'user' | 'project'` | Winning scope after precedence resolution. |
 | `directoryPath` | `string` | Winning group directory path. |
-| `description` | `string` | Description used for command registration and selector UX. |
+| `description` | `string` | Group description used for command registration and selector UX. |
 | `promptsByName` | `Map<string, NestedPrompt>` | Nested prompts keyed by subcommand name. |
 | `promptNames` | `string[]` | Stable nested prompt names for autocomplete and errors. |
 
@@ -103,7 +107,7 @@ extension load/reload
 ### Selector view
 
 - Input: `EffectivePromptGroup.promptsByName`
-- Output: human-readable list labels combining nested prompt name and description
+- Output: human-readable list labels combining normalized nested prompt name and required description, plus `args` hints where grouped UX surfaces them
 
 ### Error view
 

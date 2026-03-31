@@ -24,6 +24,10 @@ Run one of the review prompts.
 ```md
 ---
 description: Summarize a change
+args:
+  - name: change
+    required: true
+    hint: What changed?
 ---
 Summarize the following change:
 $ARGUMENTS
@@ -47,6 +51,13 @@ Use the project-scoped review prompts.
 ```md
 ---
 description: Propose a fix
+args:
+  - name: issue
+    required: true
+    hint: What needs fixing?
+  - name: constraints
+    required: false
+    hint: Extra constraints to preserve
 ---
 Propose a fix for:
 $1
@@ -86,6 +97,7 @@ Run:
 Expected result:
 
 - Pi opens a selector listing at least `fix`.
+- The selector shows the normalized subcommand name plus its required description.
 - Choosing `fix` dispatches the rendered prompt as a visible user message.
 
 ## 5. Validate coexistence with flat prompts
@@ -132,6 +144,7 @@ With both user and project `review/` groups present, verify:
 
 - `/review` uses the project-scoped description and nested prompts.
 - User-scoped `review/summary.md` is not merged into the effective project group.
+- If Pi surfaces scope markers in grouped command listings, the winning command is labeled with compact markers such as `[p]` or `[u]` at the listing level.
 
 ## 8. Validate unknown-subcommand feedback
 
@@ -145,7 +158,16 @@ Expected result:
 
 - Pi shows corrective feedback naming the valid nested prompts for `/review`.
 
-## 9. Run repository validation
+## 9. Validate required grouped metadata and argument hints
+
+Verify that grouped prompt metadata is author-provided and not derived:
+
+- `_index.md` must include `description`.
+- Nested prompt files must include `description` and `args[]` items with `name`, `required`, and `hint`.
+- Grouped UX shows the prompt description and exposes the configured argument hints without adding guided argument collection.
+- Invalid grouped metadata is skipped or surfaced through package-owned diagnostics according to the implementation.
+
+## 10. Run repository validation
 
 From the repository root:
 
@@ -155,3 +177,4 @@ bun run fix
 bun run typecheck
 bun run lint
 ```
+
