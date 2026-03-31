@@ -101,14 +101,39 @@ Expected result:
 - The flat prompt still behaves as a native Pi prompt template.
 - The grouped-routing extension does not interfere with unrelated flat prompt names.
 
-## 6. Validate duplicate precedence
+## 6. Validate grouped command precedence over a same-name flat prompt
+
+Create a flat prompt with the same root-level name as the grouped command:
+
+`.pi/prompts/review.md`
+
+```md
+---
+description: Flat review prompt
+---
+This flat prompt should not win when the grouped `/review` command exists.
+```
+
+Reload Pi and verify:
+
+```text
+/review fix "grouped prompt bug" preserve flat prompt behavior
+```
+
+Expected result:
+
+- The grouped `/review` command still wins over the flat `review.md` prompt.
+- `fix.md` inside the grouped `review/` directory is selected.
+- The flat `review.md` prompt is not dispatched for this command.
+
+## 7. Validate duplicate precedence
 
 With both user and project `review/` groups present, verify:
 
 - `/review` uses the project-scoped description and nested prompts.
 - User-scoped `review/summary.md` is not merged into the effective project group.
 
-## 7. Validate unknown-subcommand feedback
+## 8. Validate unknown-subcommand feedback
 
 Run:
 
@@ -120,7 +145,7 @@ Expected result:
 
 - Pi shows corrective feedback naming the valid nested prompts for `/review`.
 
-## 8. Run repository validation
+## 9. Run repository validation
 
 From the repository root:
 

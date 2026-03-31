@@ -96,7 +96,7 @@ As a prompt author, I want to place grouped prompts in supported user or project
 - **FR-008**: The system MUST send the final rendered grouped prompt content as a visible user message so the operator can inspect what was dispatched.
 - **FR-009**: The system MUST preserve the existing behavior of flat `.md` prompt templates that are not inside grouped prompt directories.
 - **FR-010**: The system MUST use `_index.md`, when present, as the preferred source for group-level description or help content shown in grouped prompt UX.
-- **FR-011**: The system MUST show a helpful error when the operator enters an unknown subcommand and MUST include the available nested prompt options in that feedback.
+- **FR-011**: The system MUST return package-owned feedback when the operator enters an unknown subcommand, and that feedback MUST name the group, echo the unknown subcommand, and list the available nested prompt options.
 - **FR-012**: The system MUST record whether each discovered grouped prompt came from the user-scoped or project-scoped prompt root.
 - **FR-013**: The system MUST resolve duplicate group names across supported prompt roots using a single documented precedence rule and MUST apply that rule consistently.
 - **FR-014**: The system MUST refresh grouped prompt discovery whenever the extension is reloaded so the effective command list reflects added, changed, or removed grouped prompts.

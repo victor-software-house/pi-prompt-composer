@@ -112,7 +112,11 @@ Behavior:
 
 ### Unknown subcommand
 
-The command must provide corrective feedback that includes the available nested prompt names for the current group.
+The command must provide package-owned corrective feedback that:
+
+- names the current group command
+- echoes the unknown subcommand value
+- lists the available nested prompt names for that group
 
 ### Empty or unsupported layouts
 
