@@ -3,7 +3,7 @@
 Folder-based grouped slash commands for [Pi](https://github.com/badlogic/pi-mono).
 
 <p align="center">
-  <img src="assets/preview.svg" alt="Grouped prompt selector preview" width="700">
+  <img src="assets/preview.png" alt="Grouped prompt selector preview" width="700">
 </p>
 
 Turn a directory of `.md` prompt files into a single `/command` with Tab-completable subcommands, a rich interactive selector, and automatic missing-argument collection.
