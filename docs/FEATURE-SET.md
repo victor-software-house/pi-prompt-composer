@@ -133,6 +133,14 @@ These constraints shape the package design.
 2. **Grouped dispatch is native-like, not identical to native `/template` execution** — the package can faithfully reuse Pi parsing and substitution helpers, but final dispatch happens through extension-driven user-message sending.
 3. **Extension commands cannot override `sourceInfo`** — Pi's public `registerCommand()` API does not allow per-command source metadata, so grouped commands will appear as extension commands in Pi's built-in command inventory.
 
+### Priority 6: Operator-only prompts
+
+6.1 **Operator-only dispatch mode** — A frontmatter flag opts a grouped prompt out of model dispatch; the rendered result is shown only to the operator.
+
+6.2 **Full pipeline for operator-only prompts** — Argument collection, substitution, and shell preprocessing run the same way; only the final dispatch target changes.
+
+6.3 **Unified discovery** — Operator-only prompts appear in menus, autocomplete, and diagnostics alongside regular grouped prompts.
+
 ## Non-goals for the first version
 
 Keep these out of scope:
