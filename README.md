@@ -1,135 +1,134 @@
 # pi-prompt-composer
 
-Folder-nested prompt routing extension for [Pi](https://github.com/badlogic/pi-mono).
+Folder-based grouped slash commands for [Pi](https://github.com/badlogic/pi-mono).
 
-## What it does
+<p align="center">
+  <img src="assets/preview.png" alt="Grouped prompt selector preview" width="700">
+</p>
 
-Adds subdirectory-based prompt routing to Pi's existing prompt template system. A folder of `.md` files under a prompt root becomes a single `/command` with Tab-completable subcommands, an interactive selector on bare invocation, and Pi-native argument substitution.
+Turn a directory of `.md` prompt files into a single `/command` with Tab-completable subcommands, a rich interactive selector, and automatic missing-argument collection.
 
-```text
-~/.pi/agent/prompts/          # user-scoped prompt root
-├── workspace.md              # /workspace       (flat, native Pi)
-├── review/
-│   ├── _index.md             # group metadata (type: group required)
-│   ├── summary.md            # /review summary
-│   └── fix.md                # /review fix
+## Quick start
 
-<project>/.pi/prompts/        # project-scoped prompt root
-├── deploy/
-│   ├── _index.md             # group metadata
-│   └── staging.md            # /deploy staging
+```bash
+# Install
+pi install pi-prompt-composer
+
+# Copy the bundled examples into your project prompt root
+mkdir -p .pi/prompts/review
+cp -r $(pi resolve pi-prompt-composer)/examples/prompts/review/* .pi/prompts/review/
+
+# Reload Pi, then try:
+#   /review           → interactive selector
+#   /review summary   → asks for missing "change" arg, then sends
+#   /review fix "bug" → dispatches immediately
 ```
 
-Each nested `.md` file uses the same frontmatter and `$1`/`$@`/`$ARGUMENTS`/`${@:N}` arg syntax as native Pi prompt templates.
+## How it works
+
+A folder with an `_index.md` (containing `type: group`) becomes a grouped command. Every other `.md` file in that folder becomes a subcommand.
+
+```text
+.pi/prompts/
+├── workspace.md              ← flat Pi prompt, unchanged
+├── review/
+│   ├── _index.md             ← type: group  →  /review
+│   ├── summary.md            ←                  /review summary
+│   └── fix.md                ←                  /review fix
+```
+
+Both prompt roots are scanned:
+- **User**: `~/.pi/agent/prompts/`
+- **Project**: `<project>/.pi/prompts/`
+
+Flat `.md` files outside group directories continue to work as native Pi prompts.
 
 ## Features
 
-- **Direct dispatch**: `/review fix "some issue" preserve behavior` routes to `fix.md` with argument substitution
-- **Bare-command selector**: `/review` opens an interactive menu listing all nested prompts
-- **Autocomplete**: Tab-complete subcommand names after typing `/review `
-- **Unknown-subcommand feedback**: Typos show available alternatives
-- **Dual prompt roots**: Scans both `~/.pi/agent/prompts` and `<project>/.pi/prompts`
-- **Flat prompt coexistence**: Existing flat `.md` prompt templates continue to work unchanged
-- **Grouped command precedence**: If a grouped command name matches a flat prompt, the grouped command wins
+| Feature | Behavior |
+|---------|----------|
+| **Direct dispatch** | `/review fix "the bug"` → substitutes args, sends immediately |
+| **Bare-command selector** | `/review` → rich TUI selector with aligned descriptions and dynamic usage hints |
+| **Missing-arg collection** | Prompts with required `args` metadata pause and ask before sending |
+| **Autocomplete** | Tab after `/review ` shows subcommand names with descriptions |
+| **Unknown subcommand** | Typos show a warning with available alternatives |
+| **Escape syntax** | `\$ARGUMENTS` renders as literal `$ARGUMENTS` |
+| **Discovery warnings** | Malformed metadata surfaces as Pi notifications on session start |
 
-## Prompt directory layout
+## Writing prompts
 
-### Required: `_index.md`
+### `_index.md` (required)
 
-Every grouped prompt directory **must** have an `_index.md` with `type: group` in frontmatter. This is the hard gate — directories without it are not recognized as prompt groups.
-
-```markdown
+```yaml
 ---
 type: group
 description: Review workflows
 ---
-Optional help content shown nowhere currently.
 ```
+
+`type: group` is the hard gate — directories without it are ignored.
 
 ### Nested prompt files
 
-Every `.md` file (except `_index.md`) inside a group directory is registered as a subcommand.
-
-```markdown
+```yaml
 ---
 description: Summarize a change
 args:
   - name: change
     required: true
     hint: What changed?
+  - name: context
+    required: false
+    hint: Additional context
 ---
 Summarize the following change:
 $ARGUMENTS
 ```
 
-### Frontmatter fields
+**Argument syntax** is Pi-native: `$1`, `$2`, `$@`, `$ARGUMENTS`, `${@:N}`, `${@:N:L}`.
 
-| Field | Location | Required | Behavior when missing |
-|---|---|---|---|
-| `type: group` | `_index.md` | **Yes (hard gate)** | Directory is not a prompt group |
-| `description` | `_index.md` | Recommended | Warns, falls back to directory name |
-| `description` | nested `.md` | Recommended | Warns, falls back to filename stem |
-| `args` | nested `.md` | Optional | No argument hints shown; silent |
-| `name` | nested `.md` | Optional | Uses kebab-case filename stem |
+Use `\$` to escape a literal dollar sign (e.g., `\$ARGUMENTS` renders as `$ARGUMENTS`).
 
-- **`args`** items must each have `name` (string), `required` (boolean), and `hint` (string). Malformed arrays warn and are treated as absent.
-- **`name`** overrides the filename stem as the subcommand name (used verbatim, no normalization).
-- Subcommand names derived from filenames are normalized to **lowercase kebab-case** (e.g., `My Summary.md` → `my-summary`).
-- Metadata issues **never** prevent a nested prompt from being registered.
+### `args` metadata
 
-## Duplicate groups
+Each item needs:
 
-When the same group name exists in both user and project prompt roots, the extension warns but does not enforce its own precedence. Pi's command registration order determines which wins. Groups are not merged across scopes.
+| Field | Required | Default | Notes |
+|-------|----------|---------|-------|
+| `name` | **yes** | — | Items without `name` are skipped with a warning |
+| `required` | no | `false` | Whether the extension asks for this arg when missing |
+| `hint` | no | `""` | Shown in the input prompt and selector usage hint |
 
-## Discovery refresh
+Parsing is lenient — a missing `hint` or `required` won't break the prompt. Only a missing `name` drops that individual arg item.
 
-Grouped prompt discovery runs when the extension loads or reloads. There is no per-keystroke or file-watch rescan in this version.
+## What this package owns vs Pi-native
+
+| Concern | Owned by |
+|---------|----------|
+| Frontmatter parsing, arg syntax, substitution | **Pi** (reused) |
+| Folder → command grouping, selector, arg collection | **pi-prompt-composer** |
+| Flat `.md` prompt behavior | **Pi** (unchanged) |
+| Command precedence (grouped wins over flat) | **Pi** (extension commands take precedence) |
+
+## Known limitations
+
+See [`docs/ISSUES.md`](docs/ISSUES.md) for tracked defects and status.
 
 ## Non-goals (this version)
 
-- No guided collection for missing arguments (prompts dispatch with unsubstituted placeholders)
 - No shell substitution or preprocessing
 - No nesting deeper than `/group subcommand`
 - No aliases or dynamic subcommands
-- No numeric performance thresholds
-
-## Package shape
-
-```json
-{
-  "pi": {
-    "extensions": ["./extensions"]
-  }
-}
-```
-
-## Install
-
-```bash
-pi install pi-prompt-composer
-```
 
 ## Development
 
 ```bash
 bun install
-bun run typecheck
-bun run lint
-bun run test
+bun run typecheck && bun run lint && bun run test
 ```
 
-Autofix:
-
-```bash
-bun run fix
-```
-
-Watch mode for tests:
-
-```bash
-bun run test:watch
-```
+Autofix: `bun run fix` · Watch: `bun run test:watch`
 
 ## License
 
-MIT
+[MIT](LICENSE)

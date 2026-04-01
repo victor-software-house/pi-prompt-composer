@@ -116,6 +116,21 @@ Acceptance criteria:
 - at least one realistic grouped prompt example is included
 - docs clearly mark future conditional rendering as out of scope for the first useful release
 
+## PPC-009: Lenient args validation and operator-visible warnings (next — high priority)
+
+Harden the argument metadata pipeline so incomplete frontmatter degrades gracefully instead of silently breaking interactive collection.
+
+See [`ISSUES.md`](ISSUES.md) for full defect descriptions (ISS-001 through ISS-004).
+
+Acceptance criteria:
+
+- `parseArgsMetadata` / `isValidArgsItem` accept items with missing `hint` (defaults to empty string) and missing `required` (defaults to `false`); only missing `name` rejects an individual item
+- valid items in a partially malformed array are preserved; only the invalid items are dropped (with a per-item warning)
+- discovery warnings surface through Pi's `ctx.ui.notify()` at load, reload, and startup — not just `console.warn`
+- the dynamic usage hint and `ctx.ui.input()` title omit the ` — hint` suffix when hint is empty, rather than showing a dangling separator
+- mandatory vs optional args have a compact, obvious visual distinction in the selector (exact treatment to be validated visually before committing)
+- tests cover: args with missing hint, args with missing required, mixed valid/invalid items in one array, empty hint rendering in selector and input, and warning surfacing
+
 ## Deferred work
 
 These are explicit follow-on items, not first-release requirements:

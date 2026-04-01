@@ -79,7 +79,7 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 1.3 **Interactive bare command menu** — Bare `/command` opens a menu where each nested prompt is an option.
 
-1.4 **Guided argument collection** — If a prompt is missing required arguments, the extension asks for them and waits before rendering.
+1.4 **Guided argument collection** — If a prompt is missing required arguments, the extension asks for them and waits before rendering. Args parsing is lenient: missing `hint` defaults to empty, missing `required` defaults to `false`.
 
 1.5 **Pi-native prompt compatibility** — Frontmatter, argument parsing, substitution, Markdown rendering, and user-message delivery stay Pi-native.
 
@@ -91,7 +91,7 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 2.2 **Useful command descriptions** — Prefer metadata from `_index.md`.
 
-2.3 **Helpful error handling** — Unknown subcommands, incomplete commands, and preprocessing failures should guide the operator.
+2.3 **Helpful error handling** — Unknown subcommands, incomplete commands, and preprocessing failures should guide the operator. Discovery warnings surface through Pi notifications on session start.
 
 2.4 **Visible rendered output** — The final rendered prompt, not hidden intermediate instructions, should be what appears in the user message bubble.
 
