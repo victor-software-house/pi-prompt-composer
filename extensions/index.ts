@@ -1,7 +1,16 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { type ExtensionAPI, getAgentDir, parseFrontmatter, stripFrontmatter } from '@mariozechner/pi-coding-agent';
+import {
+	DynamicBorder,
+	type ExtensionAPI,
+	type ExtensionCommandContext,
+	getAgentDir,
+	parseFrontmatter,
+	stripFrontmatter,
+	type Theme,
+} from '@mariozechner/pi-coding-agent';
 import type { AutocompleteItem } from '@mariozechner/pi-tui';
+import { Container, type SelectItem, SelectList, type SelectListTheme, Spacer, Text } from '@mariozechner/pi-tui';
 
 // ---------------------------------------------------------------------------
 // Pi-internal helper reimplementations
@@ -44,13 +53,18 @@ export function parseCommandArgs(argsString: string): string[] {
 	return args;
 }
 
+/** Sentinel used to protect escaped dollar signs during substitution. */
+const ESCAPE_SENTINEL = '\x00ESCAPED_DOLLAR\x00';
+
 /**
  * Substitute argument placeholders in template content.
  * Supports $1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}.
- * Near-verbatim copy of Pi's internal substituteArgs.
+ * Use `\$` to produce a literal `$` (e.g. `\$ARGUMENTS` renders as `$ARGUMENTS`).
+ * Near-verbatim copy of Pi's internal substituteArgs, plus escape support.
  */
 export function substituteArgs(content: string, args: string[]): string {
-	let result = content;
+	// Protect escaped dollar signs before any substitution
+	let result = content.replace(/\\\$/g, ESCAPE_SENTINEL);
 
 	// Replace $1, $2, etc. with positional args FIRST
 	result = result.replace(/\$(\d+)/g, (_, num: string) => {
@@ -72,6 +86,9 @@ export function substituteArgs(content: string, args: string[]): string {
 	const allArgs = args.join(' ');
 	result = result.replace(/\$ARGUMENTS/g, allArgs);
 	result = result.replace(/\$@/g, allArgs);
+
+	// Restore escaped dollar signs as literal $
+	result = result.replaceAll(ESCAPE_SENTINEL, '$');
 	return result;
 }
 
@@ -111,6 +128,11 @@ export interface EffectivePromptGroup {
 	promptNames: string[];
 }
 
+export interface ResolvedPromptArgs {
+	args: string[];
+	didCollectMissingArgs: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -127,33 +149,75 @@ export function toKebabCase(input: string): string {
 		.toLowerCase();
 }
 
-/** Validate an args array item from frontmatter. */
-export function isValidArgsItem(item: unknown): item is { name: string; required: boolean; hint: string } {
-	if (typeof item !== 'object' || item === null) return false;
-	return (
-		'name' in item &&
-		typeof item.name === 'string' &&
-		'required' in item &&
-		typeof item.required === 'boolean' &&
-		'hint' in item &&
-		typeof item.hint === 'string'
-	);
+/** Safely read a property from an unknown object for lenient parsing. */
+function readProp(obj: object, key: string): unknown {
+	if (!Object.hasOwn(obj, key)) return undefined;
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- isolated runtime-safe index read
+	return (obj as Record<string, unknown>)[key];
 }
 
-/** Validate an args array from frontmatter. Returns validated array or undefined. */
+/**
+ * Leniently parse a single args item from frontmatter.
+ * - `name` (string) is required — items without it are rejected.
+ * - `required` defaults to `false` if missing or non-boolean.
+ * - `hint` defaults to `''` if missing or non-string.
+ * Returns the normalized ArgsItem, or `undefined` with a warning.
+ */
+export function parseArgsItem(
+	item: unknown,
+	index: number,
+	filePath: string,
+	warnings: string[],
+): ArgsItem | undefined {
+	if (typeof item !== 'object' || item === null) {
+		warnings.push(`${basename(filePath)}: args[${index}] is not an object, skipping`);
+		return undefined;
+	}
+	const rawName = readProp(item, 'name');
+	const rawRequired = readProp(item, 'required');
+	const rawHint = readProp(item, 'hint');
+
+	if (typeof rawName !== 'string' || rawName.trim() === '') {
+		warnings.push(`${basename(filePath)}: args[${index}] missing required "name" field, skipping`);
+		return undefined;
+	}
+
+	const name = rawName;
+	const required = typeof rawRequired === 'boolean' ? rawRequired : false;
+	const hint = typeof rawHint === 'string' ? rawHint : '';
+
+	if (rawRequired === undefined) {
+		warnings.push(`${basename(filePath)}: args[${index}] "${name}" missing "required", defaulting to false`);
+	}
+	if (rawHint === undefined || typeof rawHint !== 'string') {
+		warnings.push(`${basename(filePath)}: args[${index}] "${name}" missing "hint", recommended for better UX`);
+	}
+
+	return { name, required, hint };
+}
+
+/** Parse an args array from frontmatter. Lenient: keeps valid items, warns per-item. */
 export function parseArgsMetadata(raw: unknown, filePath: string, warnings: string[]): ArgsItem[] | undefined {
 	if (raw === undefined || raw === null) return undefined;
 	if (!Array.isArray(raw)) {
-		warnings.push(`Malformed args in ${basename(filePath)}: expected array, treating as absent`);
+		warnings.push(`${basename(filePath)}: args must be an array, ignoring`);
 		return undefined;
 	}
-	if (!raw.every(isValidArgsItem)) {
-		warnings.push(
-			`Malformed args items in ${basename(filePath)}: each item needs name, required, hint; treating as absent`,
-		);
-		return undefined;
+
+	const result: ArgsItem[] = [];
+	for (let i = 0; i < raw.length; i++) {
+		const parsed = parseArgsItem(raw[i], i, filePath, warnings);
+		if (parsed !== undefined) {
+			result.push(parsed);
+		}
 	}
-	return raw;
+
+	return result.length > 0 ? result : undefined;
+}
+
+export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArgs: string[]): ArgsItem[] {
+	if (args === undefined || args.length === 0) return [];
+	return args.filter((arg, index) => arg.required && (providedArgs[index] === undefined || providedArgs[index] === ''));
 }
 
 // ---------------------------------------------------------------------------
@@ -323,19 +387,195 @@ export function formatSelectorLabel(prompt: NestedPrompt): string {
 }
 
 // ---------------------------------------------------------------------------
+// Rich TUI selector component
+// ---------------------------------------------------------------------------
+
+/** Build a SelectListTheme using the runtime theme instance (jiti-safe). */
+function buildSelectListTheme(theme: Theme): SelectListTheme {
+	return {
+		selectedPrefix: (text: string) => theme.fg('accent', text),
+		selectedText: (text: string) => theme.fg('accent', text),
+		description: (text: string) => theme.fg('muted', text),
+		scrollInfo: (text: string) => theme.fg('muted', text),
+		noMatch: (text: string) => theme.fg('muted', text),
+	};
+}
+
+/** Build SelectItem[] from group prompts for the rich selector. */
+function buildSelectorItems(group: EffectivePromptGroup): SelectItem[] {
+	return group.promptNames.map((n) => {
+		const p = group.promptsByName.get(n);
+		return {
+			value: n,
+			label: n,
+			description: p?.description ?? '',
+		};
+	});
+}
+
+/** Format the dynamic usage hint shown below the selector list. */
+function formatUsageHint(group: EffectivePromptGroup, promptName: string, theme: Theme): string {
+	const p = group.promptsByName.get(promptName);
+	if (!p) return '';
+
+	// Usage line: /group subcommand <required> [optional]
+	let usage = theme.fg('dim', `  /${group.name} ${promptName}`);
+	if (p.args && p.args.length > 0) {
+		const argTokens = p.args.map((a) =>
+			a.required ? theme.fg('accent', `<${a.name}>`) : theme.fg('muted', `[${a.name}]`),
+		);
+		usage += ` ${argTokens.join(' ')}`;
+	}
+
+	// Arg hints below the usage line
+	const lines = [usage];
+	if (p.args && p.args.length > 0) {
+		for (const arg of p.args) {
+			const marker = arg.required ? theme.fg('accent', '•') : theme.fg('muted', '◦');
+			const label = arg.hint !== '' ? `${arg.name} — ${arg.hint}` : arg.name;
+			lines.push(`  ${marker} ${theme.fg('muted', label)}`);
+		}
+	}
+
+	return lines.join('\n');
+}
+
+/**
+ * Container subclass that delegates keyboard input to a SelectList child.
+ * Necessary because Container itself has no handleInput.
+ */
+class GroupSelectorComponent extends Container {
+	private selectList: SelectList;
+
+	constructor(group: EffectivePromptGroup, theme: Theme, onSelect: (promptName: string) => void, onCancel: () => void) {
+		super();
+
+		const items = buildSelectorItems(group);
+
+		// Top border
+		this.addChild(new DynamicBorder((s: string) => theme.fg('border', s)));
+		this.addChild(new Spacer(1));
+
+		// Accent-colored title
+		this.addChild(new Text(theme.fg('accent', group.description), 1, 0));
+		this.addChild(new Spacer(1));
+
+		// Rich select list — label is just the name, description is separate
+		this.selectList = new SelectList(items, Math.min(items.length, 12), buildSelectListTheme(theme), {
+			minPrimaryColumnWidth: 10,
+			maxPrimaryColumnWidth: 24,
+		});
+		this.selectList.onSelect = (item) => onSelect(item.value);
+		this.selectList.onCancel = () => onCancel();
+		this.addChild(this.selectList);
+
+		// Dynamic usage hint — updates on navigation
+		this.addChild(new Spacer(1));
+		const usageHint = new Text('', 1, 0);
+		this.addChild(usageHint);
+
+		const updateHint = (name: string) => {
+			usageHint.setText(formatUsageHint(group, name, theme));
+		};
+
+		this.selectList.onSelectionChange = (item) => updateHint(item.value);
+
+		// Show hint for the initially selected item
+		if (items.length > 0 && items[0]) {
+			updateHint(items[0].value);
+		}
+
+		// Keyboard hints
+		this.addChild(new Spacer(1));
+		const hints = [
+			`${theme.fg('dim', '↑↓')} ${theme.fg('muted', 'navigate')}`,
+			`${theme.fg('dim', 'enter')} ${theme.fg('muted', 'select')}`,
+			`${theme.fg('dim', 'esc')} ${theme.fg('muted', 'cancel')}`,
+		].join('   ');
+		this.addChild(new Text(hints, 1, 0));
+		this.addChild(new Spacer(1));
+
+		// Bottom border
+		this.addChild(new DynamicBorder((s: string) => theme.fg('border', s)));
+	}
+
+	handleInput(keyData: string) {
+		this.selectList.handleInput(keyData);
+	}
+}
+
+/** Show a rich grouped-prompt selector and return the selected prompt name. */
+async function showPromptSelector(
+	group: EffectivePromptGroup,
+	ctx: ExtensionCommandContext,
+): Promise<string | undefined> {
+	return ctx.ui.custom<string | undefined>((_tui, theme, _keybindings, done) => {
+		return new GroupSelectorComponent(
+			group,
+			theme,
+			(name) => done(name),
+			() => done(undefined),
+		);
+	});
+}
+
+// ---------------------------------------------------------------------------
+// Interactive prompt helpers
+// ---------------------------------------------------------------------------
+
+async function resolvePromptArgs(
+	prompt: NestedPrompt,
+	providedArgs: string[],
+	ctx: ExtensionCommandContext,
+): Promise<ResolvedPromptArgs | undefined> {
+	const resolvedArgs = [...providedArgs];
+	let didCollectMissingArgs = false;
+
+	for (const [index, arg] of (prompt.args ?? []).entries()) {
+		if (!arg.required) continue;
+		if (resolvedArgs[index] !== undefined && resolvedArgs[index] !== '') continue;
+
+		let value: string | undefined;
+		do {
+			const inputTitle =
+				arg.hint !== ''
+					? `/${prompt.groupName} ${prompt.name} — ${arg.name}`
+					: `/${prompt.groupName} ${prompt.name}: ${arg.name}`;
+			value = await ctx.ui.input(inputTitle, arg.hint || undefined);
+			if (value === undefined) return undefined;
+			if (value.trim() === '') {
+				ctx.ui.notify(`Argument "${arg.name}" is required`, 'warning');
+			}
+		} while (value.trim() === '');
+		resolvedArgs[index] = value;
+		didCollectMissingArgs = true;
+	}
+
+	return { args: resolvedArgs, didCollectMissingArgs };
+}
+
+// Reserved for future debugging / opt-in editor confirmation flow.
+// async function editRenderedPrompt(
+// 	prompt: NestedPrompt,
+// 	rendered: string,
+// 	ctx: ExtensionCommandContext,
+// ): Promise<string | undefined> {
+// 	return ctx.ui.editor(`Edit /${prompt.groupName} ${prompt.name} prompt`, rendered);
+// }
+
+// ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
 
 export default function (pi: ExtensionAPI) {
+	/** Warnings from the most recent discovery pass, surfaced on session_start. */
+	let lastWarnings: string[] = [];
+
 	function registerGroupedCommands() {
 		const warnings: string[] = [];
 		const roots = getPromptRoots();
 		const groups = discoverGroups(roots, warnings);
-
-		// Emit collected warnings
-		for (const w of warnings) {
-			console.warn(`[pi-prompt-composer] ${w}`);
-		}
+		lastWarnings = warnings;
 
 		for (const group of groups) {
 			pi.registerCommand(group.name, {
@@ -359,26 +599,19 @@ export default function (pi: ExtensionAPI) {
 				async handler(argsString, ctx) {
 					const trimmed = argsString.trim();
 
-					// Bare /group -> selector flow
+					// Bare /group -> rich selector flow
 					if (trimmed === '') {
-						const options = group.promptNames.map((n) => {
-							const p = group.promptsByName.get(n);
-							return p !== undefined ? formatSelectorLabel(p) : n;
-						});
-
-						const selection = await ctx.ui.select(group.description, options);
-						if (selection === undefined) return;
-
-						// Resolve selection back to a prompt name
-						const selectedIndex = options.indexOf(selection);
-						const selectedName = selectedIndex >= 0 ? group.promptNames[selectedIndex] : undefined;
+						const selectedName = await showPromptSelector(group, ctx);
 						if (selectedName === undefined) return;
 
 						const prompt = group.promptsByName.get(selectedName);
 						if (prompt === undefined) return;
 
-						// Dispatch with unsubstituted placeholders (NG-001)
-						pi.sendUserMessage(prompt.content, {
+						const resolved = await resolvePromptArgs(prompt, [], ctx);
+						if (resolved === undefined) return;
+
+						const rendered = substituteArgs(prompt.content, resolved.args);
+						pi.sendUserMessage(rendered, {
 							deliverAs: 'followUp',
 						});
 						return;
@@ -401,7 +634,10 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					const promptArgs = parsed.slice(1);
-					const rendered = substituteArgs(prompt.content, promptArgs);
+					const resolved = await resolvePromptArgs(prompt, promptArgs, ctx);
+					if (resolved === undefined) return;
+
+					const rendered = substituteArgs(prompt.content, resolved.args);
 					pi.sendUserMessage(rendered, {
 						deliverAs: 'followUp',
 					});
@@ -412,4 +648,11 @@ export default function (pi: ExtensionAPI) {
 
 	// Initial discovery on extension load
 	registerGroupedCommands();
+
+	// Surface discovery warnings through Pi's notification UI
+	pi.on('session_start', async (_event, ctx) => {
+		for (const w of lastWarnings) {
+			ctx.ui.notify(`[prompt-composer] ${w}`, 'warning');
+		}
+	});
 }
