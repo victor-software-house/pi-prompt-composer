@@ -1,7 +1,7 @@
 {
 	"name": "pi-prompt-composer",
 	"version": "0.1.0",
-	"description": "Folder-nested prompt routing extension for Pi",
+	"description": "Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for Pi",
 	"license": "MIT",
 	"author": "Victor Software House",
 	"repository": {
@@ -24,7 +24,12 @@
 		"pi-extension",
 		"pi-coding-agent",
 		"prompt-templates",
-		"slash-commands"
+		"slash-commands",
+		"coding-agent",
+		"developer-tools",
+		"llm",
+		"openai",
+		"prompt-engineering"
 	],
 	"pi": {
 		"extensions": [

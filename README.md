@@ -1,6 +1,6 @@
 # pi-prompt-composer
 
-Folder-based grouped slash commands for [Pi](https://github.com/badlogic/pi-mono).
+Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for [Pi](https://github.com/badlogic/pi-mono).
 
 <p align="center">
   <img src="assets/preview.png" alt="Grouped prompt selector preview" width="700">
@@ -128,6 +128,12 @@ bun run typecheck && bun run lint && bun run test
 ```
 
 Autofix: `bun run fix` · Watch: `bun run test:watch`
+
+## Related packages
+
+| Package | Description |
+|---------|-------------|
+| [`@victor-software-house/pi-openai-proxy`](https://www.npmjs.com/package/@victor-software-house/pi-openai-proxy) | OpenAI-compatible HTTP proxy for Pi's multi-provider model registry |
 
 ## License
 
