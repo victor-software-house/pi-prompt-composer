@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: "Force a patch release (e.g. metadata-only changes)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -57,6 +62,13 @@ jobs:
 
       - name: Verify package contents
         run: npm pack --dry-run
+
+      - name: Force release commit
+        if: inputs.force_release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "fix: force release"
 
       - name: Release
         run: bunx semantic-release
