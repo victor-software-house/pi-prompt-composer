@@ -1,6 +1,6 @@
 {
 	"name": "pi-prompt-composer",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for Pi",
 	"license": "MIT",
 	"author": "Victor Software House",
