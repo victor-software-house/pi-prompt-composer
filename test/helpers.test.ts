@@ -83,6 +83,18 @@ describe('substituteArgs', () => {
 		const tpl = 'No placeholders here';
 		expect(substituteArgs(tpl, ['a', 'b'])).toBe(tpl);
 	});
+
+	test('\\$ escapes dollar sign to literal $', () => {
+		expect(substituteArgs('Use \\$ARGUMENTS verbatim', ['a', 'b'])).toBe('Use $ARGUMENTS verbatim');
+	});
+
+	test('\\$1 escapes positional to literal $1', () => {
+		expect(substituteArgs('Literal \\$1 here', ['val'])).toBe('Literal $1 here');
+	});
+
+	test('mixed escaped and unescaped placeholders', () => {
+		expect(substituteArgs('$1 then \\$ARGUMENTS end', ['x'])).toBe('x then $ARGUMENTS end');
+	});
 });
 
 // ---------------------------------------------------------------------------
