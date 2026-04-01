@@ -45,3 +45,6 @@ pre-push:
     lint:
       priority: 2
       run: bun run lint
+    test:
+      priority: 3
+      run: bun run test

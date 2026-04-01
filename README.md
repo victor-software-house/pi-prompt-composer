@@ -115,12 +115,19 @@ pi install pi-prompt-composer
 bun install
 bun run typecheck
 bun run lint
+bun run test
 ```
 
 Autofix:
 
 ```bash
 bun run fix
+```
+
+Watch mode for tests:
+
+```bash
+bun run test:watch
 ```
 
 ## License
