@@ -169,12 +169,11 @@ describe('direct dispatch', () => {
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
 	});
 
-	test('/testgrp hello collects missing required args, opens editor, then dispatches edited content', async () => {
+	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
 		const { ctx, inputCalls, editorCalls } = createContext({
 			input: async () => 'world',
-			editor: async (_title, prefill) => `${prefill}\n\nEdited before send.`,
 		});
 
 		await cmd.handler('hello', ctx);
@@ -182,10 +181,9 @@ describe('direct dispatch', () => {
 		expect(inputCalls).toHaveLength(1);
 		expect(inputCalls[0]!.title).toContain('/testgrp hello');
 		expect(inputCalls[0]!.placeholder).toBe('Who should be greeted?');
-		expect(editorCalls).toHaveLength(1);
-		expect(editorCalls[0]!.prefill).toContain('Hello world and world');
+		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Edited before send.');
+		expect(sentMessages[0]!.content).toContain('Hello world and world');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
 	});
 });
@@ -194,22 +192,20 @@ describe('direct dispatch', () => {
 // T031 — Selector flow
 // ---------------------------------------------------------------------------
 describe('selector flow', () => {
-	test('bare /testgrp with selection collects required args, opens editor, and dispatches edited content', async () => {
+	test('bare /testgrp with selection collects required args and dispatches rendered content', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
 		const { ctx, inputCalls, editorCalls } = createContext({
 			select: async (_title, options) => options[1],
 			input: async () => 'Pi user',
-			editor: async (_title, prefill) => `Final draft:\n${prefill}`,
 		});
 
 		await cmd.handler('', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(editorCalls).toHaveLength(1);
-		expect(editorCalls[0]!.prefill).toContain('Hello Pi user and Pi user');
+		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Final draft:');
+		expect(sentMessages[0]!.content).toContain('Hello Pi user and Pi user');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
 	});
 });
