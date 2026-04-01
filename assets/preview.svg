@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 292" font-family="'SauceCodePro Nerd Font', 'Source Code Pro', 'Courier New', monospace" font-size="14">
+<rect width="100%" height="100%" fill="#1F1F28"/>
+<text x="16.0" y="30.0" fill="#54546d">────────────────────────────────────────────────────────────────────────────────</text>
+<text x="16.0" y="70.0" fill="#DCD7BA"> </text>
+<text x="24.4" y="70.0" fill="#dca561">Review workflows</text>
+<text x="158.8" y="70.0" fill="#DCD7BA">                                                               </text>
+<text x="16.0" y="110.0" fill="#dca561">→ fix       Suggest a targeted fix</text>
+<text x="16.0" y="130.0" fill="#DCD7BA">  summary</text>
+<text x="91.6" y="130.0" fill="#727169">   Summarize a change</text>
+<text x="16.0" y="170.0" fill="#DCD7BA">   </text>
+<text x="41.2" y="170.0" fill="#54546d">/review fix</text>
+<text x="133.6" y="170.0" fill="#DCD7BA"> </text>
+<text x="142.0" y="170.0" fill="#dca561">&lt;issue&gt;</text>
+<text x="200.8" y="170.0" fill="#DCD7BA">                                                          </text>
+<text x="16.0" y="190.0" fill="#DCD7BA">   </text>
+<text x="41.2" y="190.0" fill="#dca561">•</text>
+<text x="49.6" y="190.0" fill="#DCD7BA"> </text>
+<text x="58.0" y="190.0" fill="#727169">issue — What issue should be fixed?</text>
+<text x="352.0" y="190.0" fill="#DCD7BA">                                        </text>
+<text x="16.0" y="230.0" fill="#DCD7BA"> </text>
+<text x="24.4" y="230.0" fill="#54546d">↑↓</text>
+<text x="41.2" y="230.0" fill="#DCD7BA"> </text>
+<text x="49.6" y="230.0" fill="#727169">navigate</text>
+<text x="116.8" y="230.0" fill="#DCD7BA">   </text>
+<text x="142.0" y="230.0" fill="#54546d">enter</text>
+<text x="184.0" y="230.0" fill="#DCD7BA"> </text>
+<text x="192.4" y="230.0" fill="#727169">select</text>
+<text x="242.8" y="230.0" fill="#DCD7BA">   </text>
+<text x="268.0" y="230.0" fill="#54546d">esc</text>
+<text x="293.2" y="230.0" fill="#DCD7BA"> </text>
+<text x="301.6" y="230.0" fill="#727169">cancel</text>
+<text x="352.0" y="230.0" fill="#DCD7BA">                                        </text>
+<text x="16.0" y="270.0" fill="#54546d">────────────────────────────────────────────────────────────────────────────────</text>
+</svg>
