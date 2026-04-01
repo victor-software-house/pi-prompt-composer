@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -21,7 +22,7 @@ import { join } from 'node:path';
 // project root. To control what getPromptRoots() returns, we set
 // process.cwd() during extension load.
 
-import type { EffectivePromptGroup } from '../extensions/index';
+import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 // ---------------------------------------------------------------------------
 // Types for mock API
@@ -41,7 +42,7 @@ interface MockCommandContext {
 
 interface SendUserMessageCall {
 	content: string;
-	options?: Record<string, unknown>;
+	options: Record<string, unknown> | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ async function loadExtension(cwd: string) {
 			commands.set(name, cmd);
 		},
 		sendUserMessage(content: string, options?: Record<string, unknown>) {
-			sentMessages.push({ content, options });
+			sentMessages.push({ content, options: options ?? undefined });
 		},
 	};
 
@@ -66,7 +67,7 @@ async function loadExtension(cwd: string) {
 	try {
 		// Use require-like approach to get the extension entry point
 		const mod = await import('../extensions/index');
-		mod.default(mockPi);
+		mod.default(mockPi as unknown as ExtensionAPI);
 	} finally {
 		process.chdir(originalCwd);
 	}
