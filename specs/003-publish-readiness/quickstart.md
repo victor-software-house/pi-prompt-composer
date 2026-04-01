@@ -71,12 +71,14 @@ Expected results:
 Open Pi in any project directory and verify these flows:
 
 1. Type `/review` and press Enter.
-   - Expected: a selector opens with the example subcommands.
+   - Expected: a selector opens with the example subcommands, and after choosing one Pi opens an editor with the rendered prompt before sending.
 2. Type `/review summary "my change"`.
    - Expected: a visible user message is sent containing the rendered prompt with `my change` substituted.
-3. Type `/review` then use tab-completion after a space.
+3. Type `/review summary` without the required value.
+   - Expected: the extension asks for the missing value, opens an editor with the rendered prompt, and only sends after confirmation.
+4. Type `/review` then use tab-completion after a space.
    - Expected: available subcommands appear.
-4. Type `/review nonexistent`.
+5. Type `/review nonexistent`.
    - Expected: a warning shows the available subcommands.
 
 Record the full checklist results in `docs/MANUAL-TESTING.md`.

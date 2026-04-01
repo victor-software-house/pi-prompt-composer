@@ -4,7 +4,7 @@ Folder-nested prompt routing extension for [Pi](https://github.com/badlogic/pi-m
 
 ## What it does
 
-Adds subdirectory-based prompt routing to Pi's existing prompt template system. A folder of `.md` files under a prompt root becomes a single `/command` with Tab-completable subcommands, an interactive selector on bare invocation, and Pi-native argument substitution.
+Adds subdirectory-based prompt routing to Pi's existing prompt template system. A folder of `.md` files under a prompt root becomes a single `/command` with Tab-completable subcommands, an interactive selector on bare invocation, Pi-native argument substitution, and editor-based confirmation when required arguments are missing or a prompt is chosen from the selector.
 
 ```text
 ~/.pi/agent/prompts/          # user-scoped prompt root
@@ -25,7 +25,8 @@ Each nested `.md` file uses the same frontmatter and `$1`/`$@`/`$ARGUMENTS`/`${@
 ## Features
 
 - **Direct dispatch**: `/review fix "some issue" preserve behavior` routes to `fix.md` with argument substitution
-- **Bare-command selector**: `/review` opens an interactive menu listing all nested prompts
+- **Bare-command selector**: `/review` opens an interactive menu listing all nested prompts, then opens the rendered prompt in an editor before sending
+- **Missing-argument collection**: prompts with required `args` metadata pause, ask for missing values, then open an editor with the rendered prompt before dispatch
 - **Autocomplete**: Tab-complete subcommand names after typing `/review `
 - **Unknown-subcommand feedback**: Typos show available alternatives
 - **Dual prompt roots**: Scans both `~/.pi/agent/prompts` and `<project>/.pi/prompts`
@@ -85,9 +86,14 @@ When the same group name exists in both user and project prompt roots, the exten
 
 Grouped prompt discovery runs when the extension loads or reloads. There is no per-keystroke or file-watch rescan in this version.
 
+## Missing required arguments
+
+If a nested prompt defines required `args` metadata and the operator omits one or more required values, `pi-prompt-composer` pauses and asks for the missing values before rendering. The final rendered prompt then opens in Pi's editor so the operator can review or tweak it before it is sent as a visible user message.
+
+This also applies when the operator starts from a bare grouped command like `/review`: after choosing a nested prompt from the selector, the extension gathers any missing required values and opens the rendered result in the editor before dispatch.
+
 ## Non-goals (this version)
 
-- No guided collection for missing arguments (prompts dispatch with unsubstituted placeholders)
 - No shell substitution or preprocessing
 - No nesting deeper than `/group subcommand`
 - No aliases or dynamic subcommands

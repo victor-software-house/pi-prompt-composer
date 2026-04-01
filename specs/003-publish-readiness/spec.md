@@ -18,8 +18,9 @@ A Pi operator discovers pi-prompt-composer on npm. They read the README, install
 **Acceptance Scenarios**:
 
 1. **Given** a Pi installation without pi-prompt-composer, **When** the operator runs `pi install pi-prompt-composer`, **Then** the package installs without errors and the extension loads on the next Pi session.
-2. **Given** the package is installed and example prompts are copied to `~/.pi/agent/prompts/review/`, **When** the operator types `/review` and presses Enter, **Then** an interactive selector menu appears listing the nested prompts.
+2. **Given** the package is installed and example prompts are copied to `~/.pi/agent/prompts/review/`, **When** the operator types `/review` and presses Enter, **Then** an interactive selector menu appears listing the nested prompts and the selected prompt opens an editor before dispatch.
 3. **Given** the example prompts are in place, **When** the operator types `/review summary some change description`, **Then** the rendered prompt appears as a visible user message with the arguments substituted.
+4. **Given** the operator selects a prompt or directly invokes one without all required arguments, **When** the extension detects missing required args from prompt metadata, **Then** it pauses, collects the missing values interactively, opens an editor with the rendered prompt, and only dispatches after confirmation.
 4. **Given** the example prompts are in place, **When** the operator types `/review <Tab>`, **Then** available subcommands (`summary`, `fix`) appear as completions.
 
 ---
@@ -82,8 +83,9 @@ Before publishing, a maintainer installs the package locally from the repo (`pi 
 
 **Acceptance Scenarios**:
 
-1. **Given** the package is installed locally, **When** the maintainer invokes `/review`, **Then** the interactive selector opens with correct labels and descriptions.
+1. **Given** the package is installed locally, **When** the maintainer invokes `/review`, **Then** the interactive selector opens with correct labels and descriptions and the selected prompt opens in an editor before dispatch.
 2. **Given** example prompts with argument metadata, **When** the maintainer invokes `/review summary "my change"`, **Then** the rendered prompt shows "my change" substituted into the template body.
+3. **Given** example prompts with required args metadata, **When** the maintainer invokes `/review summary` without the required value, **Then** the extension asks for the missing value, opens an editor with the rendered prompt, and waits for confirmation before sending.
 3. **Given** example prompts, **When** the maintainer types `/review <Tab>`, **Then** subcommand completions appear.
 4. **Given** example prompts, **When** the maintainer types `/review nonexistent`, **Then** a warning notification shows the available subcommands.
 
@@ -98,18 +100,17 @@ Before publishing, a maintainer installs the package locally from the repo (`pi 
 
 ### Compatibility Commitments
 
-- **CC-001**: All existing grouped prompt routing behavior (discovery, command registration, selector, dispatch, autocomplete, error feedback) MUST remain unchanged. This feature adds packaging, documentation, and tooling around the existing runtime — it does not modify the extension logic.
+- **CC-001**: Existing grouped prompt routing behavior (discovery, command registration, autocomplete, and unknown-subcommand feedback) MUST remain intact while selector and missing-argument UX are improved. This feature may extend `extensions/index.ts` to collect required args interactively and route selected prompts through an editor before dispatch.
 - **CC-002**: The `package.json` `pi` field, `files` array, and extension entry point (`./extensions`) MUST remain compatible with Pi's package installation mechanism.
 - **CC-003**: The existing 65-test automated suite MUST continue to pass. New CI configuration MUST run the test suite before publishing.
 - **CC-004**: Flat Pi-native `.md` prompt templates MUST remain unaffected. The README and examples MUST not imply that pi-prompt-composer replaces Pi's native prompt system.
 
 ### Explicit Non-Goals
 
-- **NG-001**: This feature will not add new runtime behavior to the extension. No code changes to `extensions/index.ts` for routing, dispatch, or UX.
-- **NG-002**: This feature will not implement guided argument collection (PPC-004 deferred work). The README and examples will document current behavior (unsubstituted placeholders for missing args).
-- **NG-003**: This feature will not implement shell substitution (PPC-006). The README will not document it as available.
-- **NG-004**: The preview script will not produce animated GIFs or video. A single static terminal frame is sufficient for the first release.
-- **NG-005**: The preview script will not require a running Pi session. It will compose Pi TUI components programmatically to produce the output.
+- **NG-001**: This feature will not implement shell substitution (PPC-006). The README will not document it as available.
+- **NG-002**: This feature will not add a rich custom form UI beyond Pi's built-in input/editor primitives.
+- **NG-003**: The preview script will not produce animated GIFs or video. A single static terminal frame is sufficient for the first release.
+- **NG-004**: The preview script will not require a running Pi session. It will compose Pi TUI components programmatically to produce the output.
 
 ## Requirements *(mandatory)*
 
@@ -120,8 +121,8 @@ Before publishing, a maintainer installs the package locally from the repo (`pi 
 - **FR-001**: The README MUST open with a one-line description and a visual preview (image or rendered terminal frame) above the fold.
 - **FR-002**: The README MUST include a quick-start section that takes a new user from install to working grouped command in a single copy-paste sequence.
 - **FR-003**: The README MUST include a directory layout diagram with annotations for `_index.md`, nested prompt files, and frontmatter fields.
-- **FR-004**: The README MUST document current behavior honestly — including that missing required arguments dispatch with unsubstituted placeholders (no guided collection yet).
-- **FR-005**: The README MUST distinguish between Pi-native prompt template behavior and pi-prompt-composer's grouped routing additions.
+- **FR-004**: The README MUST document current behavior honestly — including that prompts with required args metadata pause for missing values, then open an editor with the rendered prompt before dispatch.
+- **FR-005**: The README MUST distinguish between Pi-native prompt template behavior and pi-prompt-composer's grouped routing additions, including the package-owned editor confirmation flow for selector and missing-arg cases.
 
 #### Example Prompts
 
@@ -145,7 +146,7 @@ Before publishing, a maintainer installs the package locally from the repo (`pi 
 
 #### Manual Testing
 
-- **FR-017**: The repo MUST include a documented manual test checklist covering: local install, selector invocation, direct dispatch with args, autocomplete, unknown subcommand feedback, and reload behavior.
+- **FR-017**: The repo MUST include a documented manual test checklist covering: local install, selector invocation, editor confirmation after selection, direct dispatch with args, missing-required-arg collection, autocomplete, unknown subcommand feedback, and reload behavior.
 
 ### Key Entities
 

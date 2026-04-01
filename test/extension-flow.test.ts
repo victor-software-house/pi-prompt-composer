@@ -36,6 +36,8 @@ interface RegisteredCommand {
 interface MockCommandContext {
 	ui: {
 		select: (title: string, options: string[]) => Promise<string | undefined>;
+		input: (title: string, placeholder?: string) => Promise<string | undefined>;
+		editor: (title: string, prefill?: string) => Promise<string | undefined>;
 		notify: (message: string, severity: string) => void;
 	};
 }
@@ -65,7 +67,6 @@ async function loadExtension(cwd: string) {
 	const originalCwd = process.cwd();
 	process.chdir(cwd);
 	try {
-		// Use require-like approach to get the extension entry point
 		const mod = await import('../extensions/index');
 		mod.default(mockPi as unknown as ExtensionAPI);
 	} finally {
@@ -75,6 +76,41 @@ async function loadExtension(cwd: string) {
 	return { commands, sentMessages };
 }
 
+function createContext(overrides?: {
+	select?: MockCommandContext['ui']['select'];
+	input?: MockCommandContext['ui']['input'];
+	editor?: MockCommandContext['ui']['editor'];
+}) {
+	const notifyCalls: Array<{ message: string; severity: string }> = [];
+	const inputCalls: Array<{ title: string; placeholder: string | undefined }> = [];
+	const editorCalls: Array<{ title: string; prefill: string | undefined }> = [];
+
+	const ctx: MockCommandContext = {
+		ui: {
+			select: overrides?.select ?? (async () => undefined),
+			input: overrides?.input ?? (async () => undefined),
+			editor: overrides?.editor ?? (async (_title, prefill) => prefill),
+			notify: (message, severity) => {
+				notifyCalls.push({ message, severity });
+			},
+		},
+	};
+
+	const originalInput = ctx.ui.input;
+	ctx.ui.input = async (title, placeholder) => {
+		inputCalls.push({ title, placeholder });
+		return originalInput(title, placeholder);
+	};
+
+	const originalEditor = ctx.ui.editor;
+	ctx.ui.editor = async (title, prefill) => {
+		editorCalls.push({ title, prefill });
+		return originalEditor(title, prefill);
+	};
+
+	return { ctx, notifyCalls, inputCalls, editorCalls };
+}
+
 // ---------------------------------------------------------------------------
 // Fixture helpers
 // ---------------------------------------------------------------------------
@@ -82,20 +118,23 @@ function buildFixture(rootDir: string) {
 	const promptsDir = join(rootDir, '.pi', 'prompts', 'testgrp');
 	mkdirSync(promptsDir, { recursive: true });
 
-	writeFileSync(
-		join(promptsDir, '_index.md'),
-		'---\ntype: group\ndescription: Test group\n---\n',
-	);
+	writeFileSync(join(promptsDir, '_index.md'), '---\ntype: group\ndescription: Test group\n---\n');
 
 	writeFileSync(
 		join(promptsDir, 'hello.md'),
-		'---\ndescription: Say hello\n---\nHello $1 and $ARGUMENTS',
+		[
+			'---',
+			'description: Say hello',
+			'args:',
+			'  - name: target',
+			'    required: true',
+			'    hint: Who should be greeted?',
+			'---',
+			'Hello $1 and $ARGUMENTS',
+		].join('\n'),
 	);
 
-	writeFileSync(
-		join(promptsDir, 'bye.md'),
-		'---\ndescription: Say goodbye\n---\nGoodbye everyone',
-	);
+	writeFileSync(join(promptsDir, 'bye.md'), '---\ndescription: Say goodbye\n---\nGoodbye everyone');
 }
 
 let cwd: string;
@@ -118,20 +157,35 @@ describe('direct dispatch', () => {
 
 		expect(commands.has('testgrp')).toBe(true);
 		const cmd = commands.get('testgrp')!;
-
-		const notifyCalls: Array<{ message: string; severity: string }> = [];
-		const ctx: MockCommandContext = {
-			ui: {
-				select: async () => undefined,
-				notify: (message, severity) => { notifyCalls.push({ message, severity }); },
-			},
-		};
+		const { ctx, inputCalls, editorCalls } = createContext();
 
 		await cmd.handler('hello arg1 arg2', ctx);
 
+		expect(inputCalls).toHaveLength(0);
+		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello arg1');
 		expect(sentMessages[0]!.content).toContain('arg1 arg2');
+		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+	});
+
+	test('/testgrp hello collects missing required args, opens editor, then dispatches edited content', async () => {
+		const { commands, sentMessages } = await loadExtension(cwd);
+		const cmd = commands.get('testgrp')!;
+		const { ctx, inputCalls, editorCalls } = createContext({
+			input: async () => 'world',
+			editor: async (_title, prefill) => `${prefill}\n\nEdited before send.`,
+		});
+
+		await cmd.handler('hello', ctx);
+
+		expect(inputCalls).toHaveLength(1);
+		expect(inputCalls[0]!.title).toContain('/testgrp hello');
+		expect(inputCalls[0]!.placeholder).toBe('Who should be greeted?');
+		expect(editorCalls).toHaveLength(1);
+		expect(editorCalls[0]!.prefill).toContain('Hello world and world');
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toContain('Edited before send.');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
 	});
 });
@@ -140,23 +194,22 @@ describe('direct dispatch', () => {
 // T031 — Selector flow
 // ---------------------------------------------------------------------------
 describe('selector flow', () => {
-	test('bare /testgrp with selection dispatches unsubstituted content with deliverAs followUp', async () => {
+	test('bare /testgrp with selection collects required args, opens editor, and dispatches edited content', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-
-		// Mock select returns the first option (bye comes before hello alphabetically)
-		const ctx: MockCommandContext = {
-			ui: {
-				select: async (_title, options) => options[0],
-				notify: () => {},
-			},
-		};
+		const { ctx, inputCalls, editorCalls } = createContext({
+			select: async (_title, options) => options[1],
+			input: async () => 'Pi user',
+			editor: async (_title, prefill) => `Final draft:\n${prefill}`,
+		});
 
 		await cmd.handler('', ctx);
 
+		expect(inputCalls).toHaveLength(1);
+		expect(editorCalls).toHaveLength(1);
+		expect(editorCalls[0]!.prefill).toContain('Hello Pi user and Pi user');
 		expect(sentMessages).toHaveLength(1);
-		// bye.md body is "Goodbye everyone" — unsubstituted
-		expect(sentMessages[0]!.content).toContain('Goodbye everyone');
+		expect(sentMessages[0]!.content).toContain('Final draft:');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
 	});
 });
@@ -168,16 +221,12 @@ describe('selector cancellation', () => {
 	test('bare /testgrp with cancelled selection dispatches no message', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-
-		const ctx: MockCommandContext = {
-			ui: {
-				select: async () => undefined,
-				notify: () => {},
-			},
-		};
+		const { ctx, inputCalls, editorCalls } = createContext();
 
 		await cmd.handler('', ctx);
 
+		expect(inputCalls).toHaveLength(0);
+		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(0);
 	});
 });
@@ -189,14 +238,7 @@ describe('unknown subcommand', () => {
 	test('/testgrp nonexistent triggers warning notification with alternatives', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-
-		const notifyCalls: Array<{ message: string; severity: string }> = [];
-		const ctx: MockCommandContext = {
-			ui: {
-				select: async () => undefined,
-				notify: (message, severity) => { notifyCalls.push({ message, severity }); },
-			},
-		};
+		const { ctx, notifyCalls } = createContext();
 
 		await cmd.handler('nonexistent', ctx);
 
