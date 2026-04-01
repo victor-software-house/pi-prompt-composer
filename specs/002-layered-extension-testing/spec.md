@@ -13,6 +13,13 @@
 - Q: Should autocomplete (`getArgumentCompletions`) be in automated test scope? → A: No — autocomplete is verified via manual testing only; excluded from the automated suite.
 - Q: Should Layer 3 tests assert dispatch-level contract details (deliverAs, substitution state, severity)? → A: Yes — one consolidated requirement; these are observable contract details that catch real regressions.
 
+### Session 2026-04-01
+
+- Q: Should `bun run test` be added to lefthook hooks, and if so, which hook? → A: Pre-push only — balances safety with developer speed; keeps every-commit latency low while catching test failures before code leaves the machine.
+- Q: Should the test performance targets (<2s for Layer 1+2, <30s per Layer 3 scenario) be enforceable gates or advisory guidance? → A: Advisory — targets remain as design guidance in the plan, not as enforced gates or timing assertions.
+- Q: When should the pi-test-harness API be verified against the assumed contract? → A: During T003 (dependency install) — inspect harness type exports after `bun install`; if API mismatches, update contract and Layer 3 tasks before writing test code.
+- Q: Apply mechanical cleanups batch (merge T038→T037, T036 removes legacy sentence, optional spot check in T018, update plan scenario count)? → A: Yes — all four cleanups confirmed for downstream task/plan updates.
+
 ## Feature Summary
 
 This feature adds the repository's first automated test coverage for the currently implemented grouped-prompt extension behavior in `extensions/index.ts`.
@@ -87,7 +94,7 @@ As a maintainer, I want automated extension-flow tests for grouped commands so t
 
 - **CC-001**: Adding automated tests MUST preserve the current observable behavior of grouped prompt routing, Pi-native placeholder handling, warning semantics, and command registration; tests are a safety net, not a behavior change.
 - **CC-002**: Existing flat `.md` prompt-template behavior, grouped-command precedence over conflicting flat prompt names, `_index.md` group recognition rules, and user-versus-project scope attribution MUST remain documented and covered where relevant.
-- **CC-003**: The repository's documented verification workflow MUST be updated to include any new test command so maintainers can run one consistent validation sequence.
+- **CC-003**: The repository's documented verification workflow MUST be updated to include any new test command so maintainers can run one consistent validation sequence. This includes updating `lefthook.yml` to add `bun run test` to the pre-push hook (not pre-commit, to avoid adding Layer 3 latency to every commit).
 
 ### Explicit Non-Goals
 
@@ -103,6 +110,7 @@ As a maintainer, I want automated extension-flow tests for grouped commands so t
 - Some internal helpers may need to become importable or move into testable units, but any such refactor must preserve the repository's current runtime layout truth and avoid overstating architectural changes.
 - The repository currently has no automated test suite, so this feature must also establish the minimal project-level commands and documentation needed to run tests reliably.
 - The feature should prefer real Pi extension execution paths for higher-level validation when practical, while avoiding unnecessary external runtime complexity for lower-level behavior.
+- The `@marcfargas/pi-test-harness` type exports MUST be verified against the assumed Layer 3 contract during dependency installation (Phase 1). If the actual API differs from the contract in `contracts/test-suite-contract.md`, the contract and Layer 3 tasks must be updated before Layer 3 implementation begins.
 
 ## Requirements *(mandatory)*
 
@@ -116,7 +124,7 @@ As a maintainer, I want automated extension-flow tests for grouped commands so t
 - **FR-005a**: Extension-flow tests MUST cover direct dispatch, bare-command selection, and unknown-subcommand feedback as separate observable behaviors within this feature, not as deferred follow-up work.
 - **FR-005b**: Extension-flow tests MUST assert dispatch-level contract details: the `deliverAs: 'followUp'` option on dispatched messages, the absence of argument substitution in selector-flow dispatch, and the `'warning'` severity level on unknown-subcommand notifications.
 - **FR-006**: The test suite MUST produce failures that identify the affected behavior clearly enough for a maintainer to distinguish helper regressions from discovery regressions and extension-flow regressions.
-- **FR-007**: The repository MUST document how to install dependencies, run the automated tests, and include the test command in the standard verification guidance for future contributors.
+- **FR-007**: The repository MUST document how to install dependencies, run the automated tests, and include the test command in the standard verification guidance for future contributors. The test command MUST also be added to the lefthook pre-push hook so that test failures are caught before code leaves the developer machine.
 - **FR-008**: The repository MUST preserve existing linting and type-checking gates while adding tests; the new test workflow must coexist with current validation commands rather than replacing them.
 - **FR-009**: Any refactoring required to enable tests MUST preserve current runtime behavior and keep `extensions/index.ts` as the implementation truth unless and until committed source explicitly changes that layout.
 - **FR-010**: The feature artifacts produced by the spec workflow for this change MUST stay aligned with current repository reality, including the absence of an existing test suite before this feature lands.
