@@ -39,6 +39,8 @@
 		"fix": "bun run fix:oxlint && bun run fix:biome",
 		"fix:biome": "biome check --write .",
 		"fix:oxlint": "oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json .",
+		"test": "vitest --run",
+		"test:watch": "vitest",
 		"format": "biome format --write .",
 		"prepare": "lefthook install"
 	},
@@ -62,6 +64,10 @@
 		"oxlint": "^1.56.0",
 		"oxlint-tsgolint": "^0.17.1",
 		"semantic-release": "^25.0.3",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.0",
+		"@marcfargas/pi-test-harness": "^0.5.0",
+		"@mariozechner/pi-ai": "^0.63.0",
+		"@mariozechner/pi-agent-core": "^0.63.0"
 	}
 }
