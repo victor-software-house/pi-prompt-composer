@@ -8,6 +8,7 @@ import {
 	fmString,
 	formatArgsHint,
 	formatSelectorLabel,
+	getMissingRequiredArgs,
 } from '../extensions/index';
 import type { ArgsItem, NestedPrompt } from '../extensions/index';
 
@@ -195,6 +196,26 @@ describe('parseArgsMetadata', () => {
 		const warnings: string[] = [];
 		expect(parseArgsMetadata([], 'test.md', warnings)).toEqual([]);
 		expect(warnings).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T014b — getMissingRequiredArgs
+// ---------------------------------------------------------------------------
+describe('getMissingRequiredArgs', () => {
+	test('returns empty array when args metadata is absent', () => {
+		expect(getMissingRequiredArgs(undefined, ['a'])).toEqual([]);
+	});
+
+	test('returns only required args missing from the provided positional list', () => {
+		const args: ArgsItem[] = [
+			{ name: 'target', required: true, hint: 'Who?' },
+			{ name: 'tone', required: false, hint: 'Tone' },
+			{ name: 'context', required: true, hint: 'Context' },
+		];
+		expect(getMissingRequiredArgs(args, ['alice'])).toEqual([
+			{ name: 'context', required: true, hint: 'Context' },
+		]);
 	});
 });
 

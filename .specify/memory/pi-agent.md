@@ -82,7 +82,7 @@ bun run lint
   `CONFIG_DIR_NAME` are not publicly exported.
 - These local helpers are candidates for future extraction to a shared
   `pi-provider-utils` npm package.
-- Command dispatch uses `pi.sendUserMessage()` and `ctx.ui.select()`.
+- Command dispatch uses `pi.sendUserMessage()` plus `ctx.ui.select()` for bare grouped commands, `ctx.ui.input()` for missing required args, and `ctx.ui.editor()` for selector-based or missing-arg confirmation before dispatch.
 
 ## Testing Infrastructure
 
@@ -122,13 +122,15 @@ bun run lint
   strategy, fixture design).
 - `/spec implement` for `002-layered-extension-testing` completed all 38 tasks:
   65 tests across 3 layers, named exports, docs/hook/workflow updates.
-- `/spec plan` for `003-publish-readiness` designed a package-polish slice that
-  keeps `extensions/index.ts` unchanged while adding planned `examples/`,
-  `assets/`, and `scripts/` paths for shipped prompt examples and a reproducible
-  package preview. Research chose semantic-release + npm trusted publishing
-  after a one-time manual bootstrap publish/tag/trust sequence, plus a single
-  committed SVG preview asset reused by both `README.md` and `package.json`
-  `pi.image` gallery metadata.
+- `/spec plan` for `003-publish-readiness` designed a package-polish slice
+  with one focused runtime UX improvement in `extensions/index.ts`: missing
+  required args are collected with `ctx.ui.input()` and selector-based or
+  missing-arg prompts open in `ctx.ui.editor()` before dispatch. The same plan
+  adds planned `examples/`, `assets/`, and `scripts/` paths for shipped prompt
+  examples and a reproducible package preview. Research chose semantic-release
+  + npm trusted publishing after a one-time manual bootstrap
+  publish/tag/trust sequence, plus a single committed SVG preview asset reused
+  by both `README.md` and `package.json` `pi.image` gallery metadata.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

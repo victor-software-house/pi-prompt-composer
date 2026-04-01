@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This contract defines what must be true for `pi-prompt-composer` to count as a properly publishable Pi package. It covers the package manifest, bundled examples, preview-generation interface, maintainer documentation, and release workflow.
+This contract defines what must be true for `pi-prompt-composer` to count as a properly publishable Pi package. It covers the package manifest, bundled examples, grouped prompt editor UX, preview-generation interface, maintainer documentation, and release workflow.
 
 ## 1. Package Manifest Contract
 
@@ -97,8 +97,9 @@ The generated asset MUST:
 
 The README MUST also:
 - explain that grouped commands layer on top of native flat prompt templates
-- document current limitations honestly (no guided argument collection, no shell substitution)
+- document current limitations honestly (editor-based missing-arg handling is present; shell substitution is not)
 - show the example directory layout with `_index.md` and nested prompts
+- explain that selector-based invocation opens the rendered prompt in Pi's editor before dispatch
 
 ## 5. Maintainer Documentation Contract
 
@@ -109,7 +110,9 @@ Two maintainer-facing docs MUST exist:
 Must include a checklist for:
 - local package install via `pi install ./`
 - bare `/review` selector flow
+- editor confirmation after selection
 - direct `/review summary ...` dispatch
+- missing-required-arg collection before send
 - tab completion
 - unknown subcommand feedback
 - pass/fail recording before first publish
@@ -144,8 +147,7 @@ Must include:
 
 This feature does **not** require:
 
-- changes to `extensions/index.ts` grouped-routing logic
-- guided argument collection
 - shell substitution or preprocessing
 - animated preview media
 - a live Pi session to generate the preview asset
+- a custom multi-field form UI beyond Pi's built-in input/editor primitives

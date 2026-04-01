@@ -1,6 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { type ExtensionAPI, getAgentDir, parseFrontmatter, stripFrontmatter } from '@mariozechner/pi-coding-agent';
+import {
+	type ExtensionAPI,
+	type ExtensionCommandContext,
+	getAgentDir,
+	parseFrontmatter,
+	stripFrontmatter,
+} from '@mariozechner/pi-coding-agent';
 import type { AutocompleteItem } from '@mariozechner/pi-tui';
 
 // ---------------------------------------------------------------------------
@@ -111,6 +117,11 @@ export interface EffectivePromptGroup {
 	promptNames: string[];
 }
 
+export interface ResolvedPromptArgs {
+	args: string[];
+	didCollectMissingArgs: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -154,6 +165,11 @@ export function parseArgsMetadata(raw: unknown, filePath: string, warnings: stri
 		return undefined;
 	}
 	return raw;
+}
+
+export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArgs: string[]): ArgsItem[] {
+	if (args === undefined || args.length === 0) return [];
+	return args.filter((arg, index) => arg.required && (providedArgs[index] === undefined || providedArgs[index] === ''));
 }
 
 // ---------------------------------------------------------------------------
@@ -323,6 +339,45 @@ export function formatSelectorLabel(prompt: NestedPrompt): string {
 }
 
 // ---------------------------------------------------------------------------
+// Interactive prompt helpers
+// ---------------------------------------------------------------------------
+
+async function resolvePromptArgs(
+	prompt: NestedPrompt,
+	providedArgs: string[],
+	ctx: ExtensionCommandContext,
+): Promise<ResolvedPromptArgs | undefined> {
+	const resolvedArgs = [...providedArgs];
+	let didCollectMissingArgs = false;
+
+	for (const [index, arg] of (prompt.args ?? []).entries()) {
+		if (!arg.required) continue;
+		if (resolvedArgs[index] !== undefined && resolvedArgs[index] !== '') continue;
+
+		let value: string | undefined;
+		do {
+			value = await ctx.ui.input(`/${prompt.groupName} ${prompt.name} — ${arg.name}`, arg.hint);
+			if (value === undefined) return undefined;
+			if (value.trim() === '') {
+				ctx.ui.notify(`Argument "${arg.name}" is required`, 'warning');
+			}
+		} while (value.trim() === '');
+		resolvedArgs[index] = value;
+		didCollectMissingArgs = true;
+	}
+
+	return { args: resolvedArgs, didCollectMissingArgs };
+}
+
+async function editRenderedPrompt(
+	prompt: NestedPrompt,
+	rendered: string,
+	ctx: ExtensionCommandContext,
+): Promise<string | undefined> {
+	return ctx.ui.editor(`Edit /${prompt.groupName} ${prompt.name} prompt`, rendered);
+}
+
+// ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
 
@@ -377,8 +432,14 @@ export default function (pi: ExtensionAPI) {
 						const prompt = group.promptsByName.get(selectedName);
 						if (prompt === undefined) return;
 
-						// Dispatch with unsubstituted placeholders (NG-001)
-						pi.sendUserMessage(prompt.content, {
+						const resolved = await resolvePromptArgs(prompt, [], ctx);
+						if (resolved === undefined) return;
+
+						const rendered = substituteArgs(prompt.content, resolved.args);
+						const edited = await editRenderedPrompt(prompt, rendered, ctx);
+						if (edited === undefined) return;
+
+						pi.sendUserMessage(edited, {
 							deliverAs: 'followUp',
 						});
 						return;
@@ -401,7 +462,20 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					const promptArgs = parsed.slice(1);
-					const rendered = substituteArgs(prompt.content, promptArgs);
+					const resolved = await resolvePromptArgs(prompt, promptArgs, ctx);
+					if (resolved === undefined) return;
+
+					const rendered = substituteArgs(prompt.content, resolved.args);
+					if (resolved.didCollectMissingArgs) {
+						const edited = await editRenderedPrompt(prompt, rendered, ctx);
+						if (edited === undefined) return;
+
+						pi.sendUserMessage(edited, {
+							deliverAs: 'followUp',
+						});
+						return;
+					}
+
 					pi.sendUserMessage(rendered, {
 						deliverAs: 'followUp',
 					});
