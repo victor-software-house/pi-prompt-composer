@@ -131,6 +131,29 @@ Acceptance criteria:
 - mandatory vs optional args have a compact, obvious visual distinction in the selector (exact treatment to be validated visually before committing)
 - tests cover: args with missing hint, args with missing required, mixed valid/invalid items in one array, empty hint rendering in selector and input, and warning surfacing
 
+## PPC-010: Operator-only prompts with custom logic
+
+Support grouped prompts that execute custom logic and show results only to the operator, without dispatching a user message to the model.
+
+Use cases include reminders, environment status checks, setup scripts, local tooling invocations, and any prompt whose purpose is operator-side effects rather than agent conversation.
+
+Planned mechanism:
+
+- a frontmatter flag (e.g. `dispatch: none` or `target: operator`) marks a prompt as operator-only
+- the render pipeline runs normally: arg substitution, shell preprocessing, full expansion
+- instead of `pi.sendUserMessage()`, the rendered output is displayed to the operator through `ctx.ui.notify()` or a similar operator-visible channel
+- custom logic (shell substitution via `!\`command\``) runs and its output is part of the operator-visible result
+- the model never sees the prompt or its output in conversation history
+
+Acceptance criteria:
+
+- a frontmatter key opts a grouped prompt out of model dispatch
+- the full render pipeline (args, shell substitution) still executes
+- rendered output is shown to the operator in a visible, readable form
+- the conversation history is not affected
+- operator-only prompts participate in the same menu, autocomplete, and discovery as regular grouped prompts
+- docs clearly distinguish operator-only prompts from model-dispatched prompts
+
 ## Deferred work
 
 These are explicit follow-on items, not first-release requirements:
