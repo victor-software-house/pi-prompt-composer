@@ -2,7 +2,9 @@
 
 Active defects with exact symptoms and verification criteria.
 
-## ISS-001: Strict args validation rejects all args when any item is incomplete
+## ISS-001: ~~Strict args validation rejects all args when any item is incomplete~~ FIXED
+
+**Status**: Fixed in `531939a`. Lenient per-item parsing: missing `hint` → `''`, missing `required` → `false`, only missing `name` rejects individual items.
 
 **Severity**: High — breaks interactive arg collection entirely for affected prompts.
 
@@ -14,7 +16,9 @@ Active defects with exact symptoms and verification criteria.
 
 **Verification**: A prompt with `args: [{ name: target, required: true }]` (no `hint`) should still trigger the input collection flow for `target`.
 
-## ISS-002: Discovery warnings only go to console.warn, not Pi UI
+## ISS-002: ~~Discovery warnings only go to console.warn, not Pi UI~~ FIXED
+
+**Status**: Fixed in `531939a`. Warnings now surface via `ctx.ui.notify()` on `session_start`.
 
 **Severity**: Medium — operators never see the warnings unless they check terminal output.
 
@@ -34,7 +38,9 @@ Active defects with exact symptoms and verification criteria.
 
 **Verification**: An operator seeing the selector for the first time can tell which args are mandatory without consulting docs.
 
-## ISS-004: `hint` field in args frontmatter is undocumented as recommended-but-optional
+## ISS-004: ~~`hint` field in args frontmatter is undocumented as recommended-but-optional~~ FIXED
+
+**Status**: Fixed in `531939a`. Missing `hint` defaults to empty string. Selector and input prompt omit ` — ` suffix when hint is empty. Warning recommends adding hints.
 
 **Severity**: Low — authoring friction.
 
