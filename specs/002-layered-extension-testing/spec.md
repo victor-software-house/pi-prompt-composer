@@ -10,6 +10,8 @@
 ### Session 2026-03-31
 
 - Q: Which scope should this testing feature commit to in the spec? → A: Broad coverage across all three categories.
+- Q: Should autocomplete (`getArgumentCompletions`) be in automated test scope? → A: No — autocomplete is verified via manual testing only; excluded from the automated suite.
+- Q: Should Layer 3 tests assert dispatch-level contract details (deliverAs, substitution state, severity)? → A: Yes — one consolidated requirement; these are observable contract details that catch real regressions.
 
 ## Feature Summary
 
@@ -92,6 +94,7 @@ As a maintainer, I want automated extension-flow tests for grouped commands so t
 - **NG-001**: This feature will not introduce new grouped-prompt product behavior beyond what is needed to make existing behavior testable and verifiable.
 - **NG-002**: This feature will not require exhaustive end-to-end coverage of every future roadmap item; it focuses on the current implemented extension behavior and the highest-value regression paths.
 - **NG-003**: This feature will not define release gates based on a numeric code-coverage percentage.
+- **NG-004**: This feature will not add automated tests for autocomplete (`getArgumentCompletions`) behavior; autocomplete is validated via manual testing during the quickstart verification.
 
 ## Assumptions
 
@@ -111,6 +114,7 @@ As a maintainer, I want automated extension-flow tests for grouped commands so t
 - **FR-004**: Discovery tests MUST verify the documented rules for `_index.md` group recognition, missing description fallback, malformed args fallback, nested prompt registration, duplicate group-name warnings, and ignored unsupported contents.
 - **FR-005**: The system MUST add automated extension-flow tests that exercise grouped command behavior through the extension boundary.
 - **FR-005a**: Extension-flow tests MUST cover direct dispatch, bare-command selection, and unknown-subcommand feedback as separate observable behaviors within this feature, not as deferred follow-up work.
+- **FR-005b**: Extension-flow tests MUST assert dispatch-level contract details: the `deliverAs: 'followUp'` option on dispatched messages, the absence of argument substitution in selector-flow dispatch, and the `'warning'` severity level on unknown-subcommand notifications.
 - **FR-006**: The test suite MUST produce failures that identify the affected behavior clearly enough for a maintainer to distinguish helper regressions from discovery regressions and extension-flow regressions.
 - **FR-007**: The repository MUST document how to install dependencies, run the automated tests, and include the test command in the standard verification guidance for future contributors.
 - **FR-008**: The repository MUST preserve existing linting and type-checking gates while adding tests; the new test workflow must coexist with current validation commands rather than replacing them.
