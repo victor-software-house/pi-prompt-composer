@@ -3,7 +3,7 @@ import {
 	parseCommandArgs,
 	substituteArgs,
 	toKebabCase,
-	isValidArgsItem,
+	parseArgsItem,
 	parseArgsMetadata,
 	fmString,
 	formatArgsHint,
@@ -135,79 +135,127 @@ describe('toKebabCase', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T013 — isValidArgsItem
+// T013 — parseArgsItem (lenient per-item parsing)
 // ---------------------------------------------------------------------------
-describe('isValidArgsItem', () => {
-	test('returns true for valid item with all three fields', () => {
-		expect(isValidArgsItem({ name: 'file', required: true, hint: 'path' })).toBe(true);
+describe('parseArgsItem', () => {
+	test('returns full ArgsItem when all fields present', () => {
+		const w: string[] = [];
+		expect(parseArgsItem({ name: 'file', required: true, hint: 'path' }, 0, 'test.md', w)).toEqual({
+			name: 'file',
+			required: true,
+			hint: 'path',
+		});
+		expect(w).toHaveLength(0);
 	});
 
-	test('returns false when name is missing', () => {
-		expect(isValidArgsItem({ required: true, hint: 'path' })).toBe(false);
+	test('defaults required to false when missing', () => {
+		const w: string[] = [];
+		const result = parseArgsItem({ name: 'file', hint: 'path' }, 0, 'test.md', w);
+		expect(result).toEqual({ name: 'file', required: false, hint: 'path' });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('missing "required"');
 	});
 
-	test('returns false when required is missing', () => {
-		expect(isValidArgsItem({ name: 'file', hint: 'path' })).toBe(false);
+	test('defaults hint to empty string when missing', () => {
+		const w: string[] = [];
+		const result = parseArgsItem({ name: 'file', required: true }, 0, 'test.md', w);
+		expect(result).toEqual({ name: 'file', required: true, hint: '' });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('missing "hint"');
 	});
 
-	test('returns false when hint is missing', () => {
-		expect(isValidArgsItem({ name: 'file', required: true })).toBe(false);
+	test('defaults both required and hint when missing', () => {
+		const w: string[] = [];
+		const result = parseArgsItem({ name: 'tone' }, 0, 'test.md', w);
+		expect(result).toEqual({ name: 'tone', required: false, hint: '' });
+		expect(w).toHaveLength(2);
 	});
 
-	test('returns false for wrong types', () => {
-		expect(isValidArgsItem({ name: 123, required: 'yes', hint: true })).toBe(false);
+	test('rejects item without name', () => {
+		const w: string[] = [];
+		expect(parseArgsItem({ required: true, hint: 'path' }, 0, 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('missing required "name"');
 	});
 
-	test('returns false for null', () => {
-		expect(isValidArgsItem(null)).toBe(false);
+	test('rejects non-object item', () => {
+		const w: string[] = [];
+		expect(parseArgsItem('string', 0, 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('not an object');
 	});
 
-	test('returns false for non-object', () => {
-		expect(isValidArgsItem('string')).toBe(false);
+	test('rejects null item', () => {
+		const w: string[] = [];
+		expect(parseArgsItem(null, 0, 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(1);
 	});
 });
 
 // ---------------------------------------------------------------------------
-// T014 — parseArgsMetadata
+// T014 — parseArgsMetadata (lenient array parsing)
 // ---------------------------------------------------------------------------
 describe('parseArgsMetadata', () => {
-	test('returns valid array as-is', () => {
+	test('returns fully valid array as-is', () => {
 		const valid: ArgsItem[] = [{ name: 'file', required: true, hint: 'path' }];
-		const warnings: string[] = [];
-		expect(parseArgsMetadata(valid, 'test.md', warnings)).toEqual(valid);
-		expect(warnings).toHaveLength(0);
+		const w: string[] = [];
+		expect(parseArgsMetadata(valid, 'test.md', w)).toEqual(valid);
+		expect(w).toHaveLength(0);
 	});
 
 	test('returns undefined for undefined (no warning)', () => {
-		const warnings: string[] = [];
-		expect(parseArgsMetadata(undefined, 'test.md', warnings)).toBeUndefined();
-		expect(warnings).toHaveLength(0);
+		const w: string[] = [];
+		expect(parseArgsMetadata(undefined, 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(0);
 	});
 
 	test('returns undefined for null (no warning)', () => {
-		const warnings: string[] = [];
-		expect(parseArgsMetadata(null, 'test.md', warnings)).toBeUndefined();
-		expect(warnings).toHaveLength(0);
+		const w: string[] = [];
+		expect(parseArgsMetadata(null, 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(0);
 	});
 
 	test('returns undefined with warning for non-array', () => {
-		const warnings: string[] = [];
-		expect(parseArgsMetadata('not-array', 'test.md', warnings)).toBeUndefined();
-		expect(warnings).toHaveLength(1);
-		expect(warnings[0]).toContain('expected array');
+		const w: string[] = [];
+		expect(parseArgsMetadata('not-array', 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('must be an array');
 	});
 
-	test('returns undefined with warning for array with invalid items', () => {
-		const warnings: string[] = [];
-		expect(parseArgsMetadata([{ bad: true }], 'test.md', warnings)).toBeUndefined();
-		expect(warnings).toHaveLength(1);
-		expect(warnings[0]).toContain('each item needs');
+	test('keeps valid items, drops invalid ones with per-item warnings', () => {
+		const w: string[] = [];
+		const raw = [
+			{ name: 'good', required: true, hint: 'yes' },
+			{ bad: true },
+			{ name: 'also-good', required: false, hint: '' },
+		];
+		const result = parseArgsMetadata(raw, 'test.md', w);
+		expect(result).toEqual([
+			{ name: 'good', required: true, hint: 'yes' },
+			{ name: 'also-good', required: false, hint: '' },
+		]);
+		expect(w.length).toBeGreaterThanOrEqual(1);
+		expect(w.some((s) => s.includes('args[1]'))).toBe(true);
 	});
 
-	test('returns empty array as-is', () => {
-		const warnings: string[] = [];
-		expect(parseArgsMetadata([], 'test.md', warnings)).toEqual([]);
-		expect(warnings).toHaveLength(0);
+	test('fills in defaults for missing hint and required', () => {
+		const w: string[] = [];
+		const raw = [{ name: 'target' }];
+		const result = parseArgsMetadata(raw, 'test.md', w);
+		expect(result).toEqual([{ name: 'target', required: false, hint: '' }]);
+		expect(w.length).toBe(2); // missing required + missing hint
+	});
+
+	test('returns undefined for empty array (no warning)', () => {
+		const w: string[] = [];
+		expect(parseArgsMetadata([], 'test.md', w)).toBeUndefined();
+		expect(w).toHaveLength(0);
+	});
+
+	test('returns undefined when all items are rejected', () => {
+		const w: string[] = [];
+		expect(parseArgsMetadata([{ bad: true }, null], 'test.md', w)).toBeUndefined();
+		expect(w.length).toBe(2);
 	});
 });
 

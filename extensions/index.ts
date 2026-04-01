@@ -149,33 +149,70 @@ export function toKebabCase(input: string): string {
 		.toLowerCase();
 }
 
-/** Validate an args array item from frontmatter. */
-export function isValidArgsItem(item: unknown): item is { name: string; required: boolean; hint: string } {
-	if (typeof item !== 'object' || item === null) return false;
-	return (
-		'name' in item &&
-		typeof item.name === 'string' &&
-		'required' in item &&
-		typeof item.required === 'boolean' &&
-		'hint' in item &&
-		typeof item.hint === 'string'
-	);
+/** Safely read a property from an unknown object for lenient parsing. */
+function readProp(obj: object, key: string): unknown {
+	if (!Object.hasOwn(obj, key)) return undefined;
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- isolated runtime-safe index read
+	return (obj as Record<string, unknown>)[key];
 }
 
-/** Validate an args array from frontmatter. Returns validated array or undefined. */
+/**
+ * Leniently parse a single args item from frontmatter.
+ * - `name` (string) is required — items without it are rejected.
+ * - `required` defaults to `false` if missing or non-boolean.
+ * - `hint` defaults to `''` if missing or non-string.
+ * Returns the normalized ArgsItem, or `undefined` with a warning.
+ */
+export function parseArgsItem(
+	item: unknown,
+	index: number,
+	filePath: string,
+	warnings: string[],
+): ArgsItem | undefined {
+	if (typeof item !== 'object' || item === null) {
+		warnings.push(`${basename(filePath)}: args[${index}] is not an object, skipping`);
+		return undefined;
+	}
+	const rawName = readProp(item, 'name');
+	const rawRequired = readProp(item, 'required');
+	const rawHint = readProp(item, 'hint');
+
+	if (typeof rawName !== 'string' || rawName.trim() === '') {
+		warnings.push(`${basename(filePath)}: args[${index}] missing required "name" field, skipping`);
+		return undefined;
+	}
+
+	const name = rawName;
+	const required = typeof rawRequired === 'boolean' ? rawRequired : false;
+	const hint = typeof rawHint === 'string' ? rawHint : '';
+
+	if (rawRequired === undefined) {
+		warnings.push(`${basename(filePath)}: args[${index}] "${name}" missing "required", defaulting to false`);
+	}
+	if (rawHint === undefined || typeof rawHint !== 'string') {
+		warnings.push(`${basename(filePath)}: args[${index}] "${name}" missing "hint", recommended for better UX`);
+	}
+
+	return { name, required, hint };
+}
+
+/** Parse an args array from frontmatter. Lenient: keeps valid items, warns per-item. */
 export function parseArgsMetadata(raw: unknown, filePath: string, warnings: string[]): ArgsItem[] | undefined {
 	if (raw === undefined || raw === null) return undefined;
 	if (!Array.isArray(raw)) {
-		warnings.push(`Malformed args in ${basename(filePath)}: expected array, treating as absent`);
+		warnings.push(`${basename(filePath)}: args must be an array, ignoring`);
 		return undefined;
 	}
-	if (!raw.every(isValidArgsItem)) {
-		warnings.push(
-			`Malformed args items in ${basename(filePath)}: each item needs name, required, hint; treating as absent`,
-		);
-		return undefined;
+
+	const result: ArgsItem[] = [];
+	for (let i = 0; i < raw.length; i++) {
+		const parsed = parseArgsItem(raw[i], i, filePath, warnings);
+		if (parsed !== undefined) {
+			result.push(parsed);
+		}
 	}
-	return raw;
+
+	return result.length > 0 ? result : undefined;
 }
 
 export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArgs: string[]): ArgsItem[] {
@@ -395,7 +432,8 @@ function formatUsageHint(group: EffectivePromptGroup, promptName: string, theme:
 	if (p.args && p.args.length > 0) {
 		for (const arg of p.args) {
 			const marker = arg.required ? theme.fg('accent', '•') : theme.fg('muted', '◦');
-			lines.push(`  ${marker} ${theme.fg('muted', `${arg.name} — ${arg.hint}`)}`);
+			const label = arg.hint !== '' ? `${arg.name} — ${arg.hint}` : arg.name;
+			lines.push(`  ${marker} ${theme.fg('muted', label)}`);
 		}
 	}
 
@@ -499,7 +537,11 @@ async function resolvePromptArgs(
 
 		let value: string | undefined;
 		do {
-			value = await ctx.ui.input(`/${prompt.groupName} ${prompt.name} — ${arg.name}`, arg.hint);
+			const inputTitle =
+				arg.hint !== ''
+					? `/${prompt.groupName} ${prompt.name} — ${arg.name}`
+					: `/${prompt.groupName} ${prompt.name}: ${arg.name}`;
+			value = await ctx.ui.input(inputTitle, arg.hint || undefined);
 			if (value === undefined) return undefined;
 			if (value.trim() === '') {
 				ctx.ui.notify(`Argument "${arg.name}" is required`, 'warning');
@@ -526,15 +568,14 @@ async function resolvePromptArgs(
 // ---------------------------------------------------------------------------
 
 export default function (pi: ExtensionAPI) {
+	/** Warnings from the most recent discovery pass, surfaced on session_start. */
+	let lastWarnings: string[] = [];
+
 	function registerGroupedCommands() {
 		const warnings: string[] = [];
 		const roots = getPromptRoots();
 		const groups = discoverGroups(roots, warnings);
-
-		// Emit collected warnings
-		for (const w of warnings) {
-			console.warn(`[pi-prompt-composer] ${w}`);
-		}
+		lastWarnings = warnings;
 
 		for (const group of groups) {
 			pi.registerCommand(group.name, {
@@ -607,4 +648,11 @@ export default function (pi: ExtensionAPI) {
 
 	// Initial discovery on extension load
 	registerGroupedCommands();
+
+	// Surface discovery warnings through Pi's notification UI
+	pi.on('session_start', async (_event, ctx) => {
+		for (const w of lastWarnings) {
+			ctx.ui.notify(`[prompt-composer] ${w}`, 'warning');
+		}
+	});
 }

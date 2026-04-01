@@ -227,10 +227,10 @@ Body`;
 		const groups = discoverGroups(roots(), warnings);
 		const prompt = groups[0]!.promptsByName.get('cmd');
 		expect(prompt?.args).toBeUndefined();
-		expect(warnings.some((w) => w.includes('expected array'))).toBe(true);
+		expect(warnings.some((w) => w.includes('must be an array'))).toBe(true);
 	});
 
-	test('invalid items in args array → undefined + warning', () => {
+	test('invalid items in args array → dropped with per-item warning', () => {
 		const fm = `---
 description: Cmd
 args:
@@ -243,7 +243,7 @@ Body`;
 		const groups = discoverGroups(roots(), warnings);
 		const prompt = groups[0]!.promptsByName.get('cmd');
 		expect(prompt?.args).toBeUndefined();
-		expect(warnings.some((w) => w.includes('each item needs'))).toBe(true);
+		expect(warnings.some((w) => w.includes('missing required "name"'))).toBe(true);
 	});
 });
 
