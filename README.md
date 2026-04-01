@@ -94,9 +94,7 @@ This also applies when the operator starts from a bare grouped command like `/re
 
 ## Known limitations
 
-- **Strict args validation**: if any arg item in frontmatter is incomplete (e.g., missing `hint`), the entire args array is silently discarded — no input prompt, no usage hint. Fix tracked as PPC-009.
-- **Warnings are console-only**: discovery warnings (malformed metadata, missing descriptions) go to `console.warn`, not Pi's notification UI.
-- See [`docs/ISSUES.md`](docs/ISSUES.md) for full details.
+- See [`docs/ISSUES.md`](docs/ISSUES.md) for tracked defects and their status.
 
 ## Non-goals (this version)
 
