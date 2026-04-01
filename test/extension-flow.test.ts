@@ -57,6 +57,7 @@ async function loadExtension(cwd: string) {
 		sendUserMessage(content: string, options?: Record<string, unknown>) {
 			sentMessages.push({ content, options: options ?? undefined });
 		},
+		on() {},
 	};
 
 	// Temporarily change cwd so the extension's getPromptRoots picks up our fixtures
