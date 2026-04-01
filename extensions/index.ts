@@ -1,13 +1,16 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import {
+	DynamicBorder,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	getAgentDir,
 	parseFrontmatter,
 	stripFrontmatter,
+	type Theme,
 } from '@mariozechner/pi-coding-agent';
 import type { AutocompleteItem } from '@mariozechner/pi-tui';
+import { Container, type SelectItem, SelectList, type SelectListTheme, Spacer, Text } from '@mariozechner/pi-tui';
 
 // ---------------------------------------------------------------------------
 // Pi-internal helper reimplementations
@@ -50,13 +53,18 @@ export function parseCommandArgs(argsString: string): string[] {
 	return args;
 }
 
+/** Sentinel used to protect escaped dollar signs during substitution. */
+const ESCAPE_SENTINEL = '\x00ESCAPED_DOLLAR\x00';
+
 /**
  * Substitute argument placeholders in template content.
  * Supports $1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}.
- * Near-verbatim copy of Pi's internal substituteArgs.
+ * Use `\$` to produce a literal `$` (e.g. `\$ARGUMENTS` renders as `$ARGUMENTS`).
+ * Near-verbatim copy of Pi's internal substituteArgs, plus escape support.
  */
 export function substituteArgs(content: string, args: string[]): string {
-	let result = content;
+	// Protect escaped dollar signs before any substitution
+	let result = content.replace(/\\\$/g, ESCAPE_SENTINEL);
 
 	// Replace $1, $2, etc. with positional args FIRST
 	result = result.replace(/\$(\d+)/g, (_, num: string) => {
@@ -78,6 +86,9 @@ export function substituteArgs(content: string, args: string[]): string {
 	const allArgs = args.join(' ');
 	result = result.replace(/\$ARGUMENTS/g, allArgs);
 	result = result.replace(/\$@/g, allArgs);
+
+	// Restore escaped dollar signs as literal $
+	result = result.replaceAll(ESCAPE_SENTINEL, '$');
 	return result;
 }
 
@@ -339,6 +350,97 @@ export function formatSelectorLabel(prompt: NestedPrompt): string {
 }
 
 // ---------------------------------------------------------------------------
+// Rich TUI selector component
+// ---------------------------------------------------------------------------
+
+/** Build a SelectListTheme using the runtime theme instance (jiti-safe). */
+function buildSelectListTheme(theme: Theme): SelectListTheme {
+	return {
+		selectedPrefix: (text: string) => theme.fg('accent', text),
+		selectedText: (text: string) => theme.fg('accent', text),
+		description: (text: string) => theme.fg('muted', text),
+		scrollInfo: (text: string) => theme.fg('muted', text),
+		noMatch: (text: string) => theme.fg('muted', text),
+	};
+}
+
+/** Build SelectItem[] from group prompts for the rich selector. */
+function buildSelectorItems(group: EffectivePromptGroup): SelectItem[] {
+	return group.promptNames.map((n) => {
+		const p = group.promptsByName.get(n);
+		const hint = p ? formatArgsHint(p.args) : '';
+		return {
+			value: n,
+			label: `${n}${hint}`,
+			description: p?.description ?? '',
+		};
+	});
+}
+
+/**
+ * Container subclass that delegates keyboard input to a SelectList child.
+ * Necessary because Container itself has no handleInput.
+ */
+class GroupSelectorComponent extends Container {
+	private selectList: SelectList;
+
+	constructor(group: EffectivePromptGroup, theme: Theme, onSelect: (promptName: string) => void, onCancel: () => void) {
+		super();
+
+		const items = buildSelectorItems(group);
+
+		// Top border
+		this.addChild(new DynamicBorder((s: string) => theme.fg('border', s)));
+		this.addChild(new Spacer(1));
+
+		// Accent-colored title
+		this.addChild(new Text(theme.fg('accent', group.description), 1, 0));
+		this.addChild(new Spacer(1));
+
+		// Rich select list with aligned label + description columns
+		this.selectList = new SelectList(items, Math.min(items.length, 12), buildSelectListTheme(theme), {
+			minPrimaryColumnWidth: 12,
+			maxPrimaryColumnWidth: 36,
+		});
+		this.selectList.onSelect = (item) => onSelect(item.value);
+		this.selectList.onCancel = () => onCancel();
+		this.addChild(this.selectList);
+
+		// Keyboard hints
+		this.addChild(new Spacer(1));
+		const hints = [
+			`${theme.fg('dim', '↑↓')} ${theme.fg('muted', 'navigate')}`,
+			`${theme.fg('dim', 'enter')} ${theme.fg('muted', 'select')}`,
+			`${theme.fg('dim', 'esc')} ${theme.fg('muted', 'cancel')}`,
+		].join('   ');
+		this.addChild(new Text(hints, 1, 0));
+		this.addChild(new Spacer(1));
+
+		// Bottom border
+		this.addChild(new DynamicBorder((s: string) => theme.fg('border', s)));
+	}
+
+	handleInput(keyData: string) {
+		this.selectList.handleInput(keyData);
+	}
+}
+
+/** Show a rich grouped-prompt selector and return the selected prompt name. */
+async function showPromptSelector(
+	group: EffectivePromptGroup,
+	ctx: ExtensionCommandContext,
+): Promise<string | undefined> {
+	return ctx.ui.custom<string | undefined>((_tui, theme, _keybindings, done) => {
+		return new GroupSelectorComponent(
+			group,
+			theme,
+			(name) => done(name),
+			() => done(undefined),
+		);
+	});
+}
+
+// ---------------------------------------------------------------------------
 // Interactive prompt helpers
 // ---------------------------------------------------------------------------
 
@@ -415,19 +517,9 @@ export default function (pi: ExtensionAPI) {
 				async handler(argsString, ctx) {
 					const trimmed = argsString.trim();
 
-					// Bare /group -> selector flow
+					// Bare /group -> rich selector flow
 					if (trimmed === '') {
-						const options = group.promptNames.map((n) => {
-							const p = group.promptsByName.get(n);
-							return p !== undefined ? formatSelectorLabel(p) : n;
-						});
-
-						const selection = await ctx.ui.select(group.description, options);
-						if (selection === undefined) return;
-
-						// Resolve selection back to a prompt name
-						const selectedIndex = options.indexOf(selection);
-						const selectedName = selectedIndex >= 0 ? group.promptNames[selectedIndex] : undefined;
+						const selectedName = await showPromptSelector(group, ctx);
 						if (selectedName === undefined) return;
 
 						const prompt = group.promptsByName.get(selectedName);

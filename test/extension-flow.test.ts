@@ -11,16 +11,11 @@ import { join } from 'node:path';
  * the real extension default export with a mock ExtensionAPI that captures
  * registerCommand, sendUserMessage, and ctx.ui interactions.
  *
- * This approach was chosen after T003 harness verification revealed that
- * @marcfargas/pi-test-harness's mock UI does not flow through to extension
- * command handler `ctx` parameters. The direct mock-API approach gives full
- * control over what the extension sees.
+ * The selector flow now uses ctx.ui.custom() with a GroupSelectorComponent
+ * (Pi-native Container + SelectList). Tests mock custom() by instantiating
+ * the real component, then programmatically triggering onSelect/onCancel on
+ * the SelectList child.
  */
-
-// We import the default export (extension entry point) and rely on the
-// extension discovering prompts from the filesystem via the cwd-based
-// project root. To control what getPromptRoots() returns, we set
-// process.cwd() during extension load.
 
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
@@ -39,6 +34,7 @@ interface MockCommandContext {
 		input: (title: string, placeholder?: string) => Promise<string | undefined>;
 		editor: (title: string, prefill?: string) => Promise<string | undefined>;
 		notify: (message: string, severity: string) => void;
+		custom: <T>(factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (result: T) => void) => unknown) => Promise<T>;
 	};
 }
 
@@ -76,39 +72,80 @@ async function loadExtension(cwd: string) {
 	return { commands, sentMessages };
 }
 
+/**
+ * Mock theme that returns text unmodified (no ANSI escapes in tests).
+ * Matches the Theme.fg(color, text) signature used by GroupSelectorComponent.
+ */
+const mockTheme = {
+	fg: (_color: string, text: string) => text,
+};
+
+/**
+ * Create a mock custom() that builds the real GroupSelectorComponent
+ * with mockTheme, then triggers onSelect on the SelectList child.
+ */
+function makeSelectorCustomMock(selectValue: string) {
+	return async <T>(factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (result: T) => void) => unknown): Promise<T> => {
+		return new Promise<T>((resolve) => {
+			const component = factory(null, mockTheme, null, resolve) as { children?: Array<{ onSelect?: (item: { value: string }) => void }> };
+			if (component.children) {
+				for (const child of component.children) {
+					if (typeof child.onSelect === 'function') {
+						child.onSelect({ value: selectValue });
+						return;
+					}
+				}
+			}
+			resolve(undefined as T);
+		});
+	};
+}
+
+/** Create a mock custom() that simulates pressing cancel. */
+function makeCancelCustomMock() {
+	return async <T>(factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (result: T) => void) => unknown): Promise<T> => {
+		return new Promise<T>((resolve) => {
+			const component = factory(null, mockTheme, null, resolve) as { children?: Array<{ onCancel?: () => void }> };
+			if (component.children) {
+				for (const child of component.children) {
+					if (typeof child.onCancel === 'function') {
+						child.onCancel();
+						return;
+					}
+				}
+			}
+			resolve(undefined as T);
+		});
+	};
+}
+
 function createContext(overrides?: {
-	select?: MockCommandContext['ui']['select'];
 	input?: MockCommandContext['ui']['input'];
-	editor?: MockCommandContext['ui']['editor'];
+	custom?: MockCommandContext['ui']['custom'];
 }) {
 	const notifyCalls: Array<{ message: string; severity: string }> = [];
 	const inputCalls: Array<{ title: string; placeholder: string | undefined }> = [];
-	const editorCalls: Array<{ title: string; prefill: string | undefined }> = [];
 
 	const ctx: MockCommandContext = {
 		ui: {
-			select: overrides?.select ?? (async () => undefined),
+			select: async () => undefined,
 			input: overrides?.input ?? (async () => undefined),
-			editor: overrides?.editor ?? (async (_title, prefill) => prefill),
+			editor: async (_title, prefill) => prefill,
 			notify: (message, severity) => {
 				notifyCalls.push({ message, severity });
 			},
+			custom: overrides?.custom ?? (async () => undefined),
 		},
 	};
 
+	// Wrap input to track calls
 	const originalInput = ctx.ui.input;
 	ctx.ui.input = async (title, placeholder) => {
 		inputCalls.push({ title, placeholder });
 		return originalInput(title, placeholder);
 	};
 
-	const originalEditor = ctx.ui.editor;
-	ctx.ui.editor = async (title, prefill) => {
-		editorCalls.push({ title, prefill });
-		return originalEditor(title, prefill);
-	};
-
-	return { ctx, notifyCalls, inputCalls, editorCalls };
+	return { ctx, notifyCalls, inputCalls };
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +172,20 @@ function buildFixture(rootDir: string) {
 	);
 
 	writeFileSync(join(promptsDir, 'bye.md'), '---\ndescription: Say goodbye\n---\nGoodbye everyone');
+
+	writeFileSync(
+		join(promptsDir, 'escaped.md'),
+		[
+			'---',
+			'description: Has escaped dollar signs',
+			'args:',
+			'  - name: name',
+			'    required: true',
+			'    hint: Your name',
+			'---',
+			'Hi $1, use \\$ARGUMENTS to reference all args',
+		].join('\n'),
+	);
 }
 
 let cwd: string;
@@ -157,12 +208,11 @@ describe('direct dispatch', () => {
 
 		expect(commands.has('testgrp')).toBe(true);
 		const cmd = commands.get('testgrp')!;
-		const { ctx, inputCalls, editorCalls } = createContext();
+		const { ctx, inputCalls } = createContext();
 
 		await cmd.handler('hello arg1 arg2', ctx);
 
 		expect(inputCalls).toHaveLength(0);
-		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello arg1');
 		expect(sentMessages[0]!.content).toContain('arg1 arg2');
@@ -172,7 +222,7 @@ describe('direct dispatch', () => {
 	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-		const { ctx, inputCalls, editorCalls } = createContext({
+		const { ctx, inputCalls } = createContext({
 			input: async () => 'world',
 		});
 
@@ -181,7 +231,6 @@ describe('direct dispatch', () => {
 		expect(inputCalls).toHaveLength(1);
 		expect(inputCalls[0]!.title).toContain('/testgrp hello');
 		expect(inputCalls[0]!.placeholder).toBe('Who should be greeted?');
-		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello world and world');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
@@ -189,24 +238,37 @@ describe('direct dispatch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T031 — Selector flow
+// T031 — Selector flow (rich TUI custom component)
 // ---------------------------------------------------------------------------
 describe('selector flow', () => {
-	test('bare /testgrp with selection collects required args and dispatches rendered content', async () => {
+	test('bare /testgrp opens custom selector and dispatches after collecting args', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-		const { ctx, inputCalls, editorCalls } = createContext({
-			select: async (_title, options) => options[1],
+		const { ctx, inputCalls } = createContext({
+			custom: makeSelectorCustomMock('hello'),
 			input: async () => 'Pi user',
 		});
 
 		await cmd.handler('', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello Pi user and Pi user');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+	});
+
+	test('bare /testgrp selecting prompt with no args dispatches directly', async () => {
+		const { commands, sentMessages } = await loadExtension(cwd);
+		const cmd = commands.get('testgrp')!;
+		const { ctx, inputCalls } = createContext({
+			custom: makeSelectorCustomMock('bye'),
+		});
+
+		await cmd.handler('', ctx);
+
+		expect(inputCalls).toHaveLength(0);
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toBe('Goodbye everyone');
 	});
 });
 
@@ -217,12 +279,13 @@ describe('selector cancellation', () => {
 	test('bare /testgrp with cancelled selection dispatches no message', async () => {
 		const { commands, sentMessages } = await loadExtension(cwd);
 		const cmd = commands.get('testgrp')!;
-		const { ctx, inputCalls, editorCalls } = createContext();
+		const { ctx, inputCalls } = createContext({
+			custom: makeCancelCustomMock(),
+		});
 
 		await cmd.handler('', ctx);
 
 		expect(inputCalls).toHaveLength(0);
-		expect(editorCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(0);
 	});
 });
@@ -244,5 +307,21 @@ describe('unknown subcommand', () => {
 		expect(notifyCalls[0]!.message).toContain('nonexistent');
 		expect(notifyCalls[0]!.message).toContain('bye');
 		expect(notifyCalls[0]!.message).toContain('hello');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T034 — Escape syntax (\$ → literal $)
+// ---------------------------------------------------------------------------
+describe('escape syntax', () => {
+	test('/testgrp escaped renders \\$ARGUMENTS as literal $ARGUMENTS', async () => {
+		const { commands, sentMessages } = await loadExtension(cwd);
+		const cmd = commands.get('testgrp')!;
+		const { ctx } = createContext();
+
+		await cmd.handler('escaped Alice', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toBe('Hi Alice, use $ARGUMENTS to reference all args');
 	});
 });
