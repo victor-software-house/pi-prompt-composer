@@ -134,7 +134,7 @@ function createContext(overrides?: {
 			notify: (message, severity) => {
 				notifyCalls.push({ message, severity });
 			},
-			custom: overrides?.custom ?? (async () => undefined),
+			custom: overrides?.custom ?? (async () => undefined as never),
 		},
 	};
 
