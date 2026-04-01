@@ -18,7 +18,7 @@
 - Runtime code stays in `extensions/index.ts` (named exports added, no behavioral changes)
 - Test files go in `test/` at repository root
 - Test config: `vitest.config.ts` and `tsconfig.test.json` at repository root
-- Operator-facing docs: `README.md` and `AGENTS.md`
+- Operator-facing docs and workflow config: `README.md`, `AGENTS.md`, and `lefthook.yml`
 - Validation scenarios: `specs/002-layered-extension-testing/quickstart.md`
 
 ---
@@ -29,7 +29,7 @@
 
 - [ ] T001 [P] Create `vitest.config.ts` at repository root with `globals: true`, `environment: 'node'`, `testTimeout: 30_000`, `include: ['test/**/*.test.ts']`, and `typecheck.tsconfig` pointing to `./tsconfig.test.json` per research decision R-007
 - [ ] T002 [P] Create `tsconfig.test.json` at repository root that extends `./tsconfig.json` and adds `test/**/*.ts` to `include`, adds `vitest/globals` to `types`, and keeps all strict settings from the base config per research decision R-006
-- [ ] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json` and run `bun install` per research decision R-009
+- [ ] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json`, run `bun install`, and inspect the installed `@marcfargas/pi-test-harness` type exports to confirm `createTestSession`, mock UI, and event APIs match `contracts/test-suite-contract.md`; if they differ, update the contract and Phase 5 tasks before writing Layer 3 tests
 - [ ] T004 Add `"test": "vitest --run"` and `"test:watch": "vitest"` scripts to `package.json` per research decision R-008
 - [ ] T005 Verify `bun run test` executes vitest and exits cleanly with zero tests found (no failures, no config errors)
 
@@ -66,7 +66,7 @@
 - [ ] T015 [P] [US1] Add an `fmString` describe block in `test/helpers.test.ts` with scenarios: string value → returned, number value → empty string, boolean value → empty string, missing key → empty string
 - [ ] T016 [P] [US1] Add a `formatArgsHint` describe block in `test/helpers.test.ts` with scenarios: `undefined` args → empty string, empty array → empty string, required-only args, optional-only args (appends `?`), mixed required and optional
 - [ ] T017 [P] [US1] Add a `formatSelectorLabel` describe block in `test/helpers.test.ts` with scenarios: prompt with args → `name [args] description`, prompt without args → `name description`; construct `NestedPrompt` objects using the exported type
-- [ ] T018 [US1] Run `bun run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass
+- [ ] T018 [US1] Run `bun run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass; optionally perform the quickstart intentional-breakage spot check (temporarily break one helper, verify only its tests fail, then revert) to validate FR-006 regression isolation
 
 **Checkpoint**: Layer 1 tests cover all 8 pure helpers with representative and boundary inputs. Regressions in any single helper produce a targeted, identifiable failure.
 
@@ -116,12 +116,12 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-**Purpose**: Documentation sync, workflow integration, and final end-to-end validation.
+**Purpose**: Documentation sync, hook integration, and final end-to-end validation.
 
 - [ ] T035 [P] Add `bun run test` to the verification section of `README.md` alongside existing `bun run typecheck` and `bun run lint` commands per CC-003 and FR-007
-- [ ] T036 [P] Add `bun run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007
-- [ ] T037 Run the full verification workflow from the repository root: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test` per the plan's validation strategy and `specs/002-layered-extension-testing/quickstart.md`
-- [ ] T038 Verify existing `bun run typecheck` and `bun run lint` gates pass without regressions after all test infrastructure changes per FR-008
+- [ ] T036 [P] Add `bun run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007, and remove or rewrite the existing "There is no test suite yet" sentence so the file stays internally consistent
+- [ ] T037 [P] Update `lefthook.yml` to run `bun run test` in the pre-push hook while leaving pre-commit unchanged, per CC-003 and FR-007
+- [ ] T038 Run the full verification workflow from the repository root: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test`, and confirm the existing typecheck/lint gates still pass without regressions after all test infrastructure changes per FR-008 and `specs/002-layered-extension-testing/quickstart.md`
 
 ---
 
@@ -184,7 +184,7 @@ T022, T023, T027 can run in parallel (independent describe blocks in test/discov
 ### Polish Phase
 
 ```
-T035 (README.md) and T036 (AGENTS.md) can run in parallel
+T035 (README.md), T036 (AGENTS.md), and T037 (lefthook.yml) can run in parallel
 ```
 
 ---
@@ -205,7 +205,7 @@ T035 (README.md) and T036 (AGENTS.md) can run in parallel
 2. Add US1 → Layer 1 helper tests → validate independently → first regression safety net
 3. Add US2 → Layer 2 discovery tests → validate independently → filesystem behavior covered
 4. Add US3 → Layer 3 extension-flow tests → validate independently → full extension behavior covered
-5. Polish → docs updated, full verification workflow confirmed
+5. Polish → docs and pre-push hook updated, full verification workflow confirmed
 6. Each story adds independent value without breaking previous stories
 
 ### Recommended Execution Order
@@ -216,7 +216,7 @@ Sequential (single-agent):
 3. T010–T018 (US1 — Layer 1)
 4. T019–T028 (US2 — Layer 2)
 5. T029–T034 (US3 — Layer 3)
-6. T035–T038 (Polish)
+6. T035–T038 (Polish: docs, hook integration, final verification)
 
 ---
 
@@ -229,11 +229,12 @@ Sequential (single-agent):
 | 3: US1 – Layer 1 | Helper tests (P1) | T010–T018 | T013–T017 parallel |
 | 4: US2 – Layer 2 | Discovery tests (P2) | T019–T028 | T022, T023, T027 parallel |
 | 5: US3 – Layer 3 | Extension-flow tests (P3) | T029–T034 | Sequential (session setup) |
-| 6: Polish | — | T035–T038 | T035, T036 parallel |
+| 6: Polish | — | T035–T038 | T035, T036, T037 parallel |
 | **Total** | | **38 tasks** | |
 
 - **Tasks per user story**: US1: 9, US2: 10, US3: 6
-- **Parallel opportunities**: 3 stories can proceed in parallel after Phase 2; multiple describe blocks within stories are parallel-safe
+- **Cross-cutting tasks**: Setup: 5, Foundational: 4, Polish: 4
+- **Parallel opportunities**: 3 stories can proceed in parallel after Phase 2; multiple describe blocks within stories are parallel-safe; README/AGENTS/lefthook updates are parallel-safe in Phase 6
 - **Independent test criteria**: Each story has a layer-specific `bun run test` invocation that validates only that story's test file
 - **Suggested MVP scope**: Phase 1 + Phase 2 + User Story 1 (T001–T018) delivers the first regression safety net with Layer 1 helper tests
 
