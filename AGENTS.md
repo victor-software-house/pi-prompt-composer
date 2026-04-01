@@ -42,6 +42,7 @@ Required gate before committing:
 ```bash
 bun run typecheck
 bun run lint
+bun run test
 ```
 
 Useful helper before manual cleanup:
@@ -53,7 +54,7 @@ bun run fix
 Additional checks:
 
 - Run `bun install` when dependencies, hooks, or release tooling change.
-- There is no test suite yet. Do not claim tests passed unless you added and ran a real test command.
+- The test suite uses vitest with three layers: helpers (`test/helpers.test.ts`), discovery (`test/discovery.test.ts`), and extension-flow (`test/extension-flow.test.ts`). Run `bun run test` to execute all layers, or `bun run test:watch` during development.
 - When touching packaging or release flow, verify `package.json`, `bun.lock`, `CHANGELOG.md`, and `release.config.mjs` stay aligned.
 
 ## Style and typing
