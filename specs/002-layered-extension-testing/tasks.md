@@ -27,11 +27,11 @@
 
 **Purpose**: Create the test runner configuration and TypeScript setup needed before any test file can be written.
 
-- [ ] T001 [P] Create `vitest.config.ts` at repository root with `globals: true`, `environment: 'node'`, `testTimeout: 30_000`, `include: ['test/**/*.test.ts']`, and `typecheck.tsconfig` pointing to `./tsconfig.test.json` per research decision R-007
-- [ ] T002 [P] Create `tsconfig.test.json` at repository root that extends `./tsconfig.json` and adds `test/**/*.ts` to `include`, adds `vitest/globals` to `types`, and keeps all strict settings from the base config per research decision R-006
-- [ ] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json`, run `bun install`, and inspect the installed `@marcfargas/pi-test-harness` type exports to confirm `createTestSession`, mock UI, and event APIs match `contracts/test-suite-contract.md`; if they differ, update the contract and Phase 5 tasks before writing Layer 3 tests
-- [ ] T004 Add `"test": "vitest --run"` and `"test:watch": "vitest"` scripts to `package.json` per research decision R-008
-- [ ] T005 Verify `bun run test` executes vitest and exits cleanly with zero tests found (no failures, no config errors)
+- [x] T001 [P] Create `vitest.config.ts` at repository root with `globals: true`, `environment: 'node'`, `testTimeout: 30_000`, `include: ['test/**/*.test.ts']`, and `typecheck.tsconfig` pointing to `./tsconfig.test.json` per research decision R-007
+- [x] T002 [P] Create `tsconfig.test.json` at repository root that extends `./tsconfig.json` and adds `test/**/*.ts` to `include`, adds `vitest/globals` to `types`, and keeps all strict settings from the base config per research decision R-006
+- [x] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json`, run `bun install`, and inspect the installed `@marcfargas/pi-test-harness` type exports to confirm `createTestSession`, mock UI, and event APIs match `contracts/test-suite-contract.md`; if they differ, update the contract and Phase 5 tasks before writing Layer 3 tests
+- [x] T004 Add `"test": "vitest --run"` and `"test:watch": "vitest"` scripts to `package.json` per research decision R-008
+- [x] T005 Verify `bun run test` executes vitest and exits cleanly with zero tests found (no failures, no config errors)
 
 ---
 
@@ -41,10 +41,10 @@
 
 **⚠️ CRITICAL**: No test file can import from `extensions/index.ts` until this phase is complete.
 
-- [ ] T006 Add `export` keyword to these 8 helper functions in `extensions/index.ts`: `parseCommandArgs`, `substituteArgs`, `toKebabCase`, `isValidArgsItem`, `parseArgsMetadata`, `fmString`, `formatArgsHint`, `formatSelectorLabel` per research decision R-004 and the import contract in `contracts/test-suite-contract.md`
-- [ ] T007 Add `export` keyword to the `discoverGroups` function in `extensions/index.ts` per research decision R-004
-- [ ] T008 Add `export type` statements for `PromptScope`, `PromptRoot`, `ArgsItem`, `NestedPrompt`, and `EffectivePromptGroup` in `extensions/index.ts` per research decision R-004
-- [ ] T009 Run `bun run typecheck` and `bun run lint` to confirm named exports do not break the existing strict TypeScript or lint gates in `extensions/index.ts`
+- [x] T006 Add `export` keyword to these 8 helper functions in `extensions/index.ts`: `parseCommandArgs`, `substituteArgs`, `toKebabCase`, `isValidArgsItem`, `parseArgsMetadata`, `fmString`, `formatArgsHint`, `formatSelectorLabel` per research decision R-004 and the import contract in `contracts/test-suite-contract.md`
+- [x] T007 Add `export` keyword to the `discoverGroups` function in `extensions/index.ts` per research decision R-004
+- [x] T008 Add `export type` statements for `PromptScope`, `PromptRoot`, `ArgsItem`, `NestedPrompt`, and `EffectivePromptGroup` in `extensions/index.ts` per research decision R-004
+- [x] T009 Run `bun run typecheck` and `bun run lint` to confirm named exports do not break the existing strict TypeScript or lint gates in `extensions/index.ts`
 
 **Checkpoint**: `extensions/index.ts` now has named exports alongside the unchanged default export. All existing lint and typecheck gates still pass.
 
@@ -58,15 +58,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create `test/helpers.test.ts` and add a `parseCommandArgs` describe block with scenarios: simple whitespace splitting, double-quoted strings, single-quoted strings, mixed quoting, empty input, whitespace-only input, and tab-separated input; import `parseCommandArgs` from `../extensions/index`
-- [ ] T011 [US1] Add a `substituteArgs` describe block in `test/helpers.test.ts` with scenarios: positional `$1`/`$2` replacement, `$@` replacement, `$ARGUMENTS` replacement, `${@:N}` slice, `${@:N:L}` slice with length, missing positional args replaced with empty string, and template with no placeholders returned unchanged
-- [ ] T012 [US1] Add a `toKebabCase` describe block in `test/helpers.test.ts` with scenarios: `.md` suffix removal, camelCase conversion, PascalCase conversion, spaces-to-dashes, underscores-to-dashes, already-kebab passthrough, special characters removed, and leading/trailing dashes stripped
-- [ ] T013 [P] [US1] Add an `isValidArgsItem` describe block in `test/helpers.test.ts` with scenarios: valid item with all three fields, missing `name` → false, missing `required` → false, missing `hint` → false, wrong types → false, null → false, non-object → false
-- [ ] T014 [P] [US1] Add a `parseArgsMetadata` describe block in `test/helpers.test.ts` with scenarios: valid array → returned as-is, `undefined`/`null` → returns `undefined` (no warning), non-array → returns `undefined` with warning, array with invalid items → returns `undefined` with warning, empty array → returned as-is
-- [ ] T015 [P] [US1] Add an `fmString` describe block in `test/helpers.test.ts` with scenarios: string value → returned, number value → empty string, boolean value → empty string, missing key → empty string
-- [ ] T016 [P] [US1] Add a `formatArgsHint` describe block in `test/helpers.test.ts` with scenarios: `undefined` args → empty string, empty array → empty string, required-only args, optional-only args (appends `?`), mixed required and optional
-- [ ] T017 [P] [US1] Add a `formatSelectorLabel` describe block in `test/helpers.test.ts` with scenarios: prompt with args → `name [args] description`, prompt without args → `name description`; construct `NestedPrompt` objects using the exported type
-- [ ] T018 [US1] Run `bun run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass; optionally perform the quickstart intentional-breakage spot check (temporarily break one helper, verify only its tests fail, then revert) to validate FR-006 regression isolation
+- [x] T010 [US1] Create `test/helpers.test.ts` and add a `parseCommandArgs` describe block with scenarios: simple whitespace splitting, double-quoted strings, single-quoted strings, mixed quoting, empty input, whitespace-only input, and tab-separated input; import `parseCommandArgs` from `../extensions/index`
+- [x] T011 [US1] Add a `substituteArgs` describe block in `test/helpers.test.ts` with scenarios: positional `$1`/`$2` replacement, `$@` replacement, `$ARGUMENTS` replacement, `${@:N}` slice, `${@:N:L}` slice with length, missing positional args replaced with empty string, and template with no placeholders returned unchanged
+- [x] T012 [US1] Add a `toKebabCase` describe block in `test/helpers.test.ts` with scenarios: `.md` suffix removal, camelCase conversion, PascalCase conversion, spaces-to-dashes, underscores-to-dashes, already-kebab passthrough, special characters removed, and leading/trailing dashes stripped
+- [x] T013 [P] [US1] Add an `isValidArgsItem` describe block in `test/helpers.test.ts` with scenarios: valid item with all three fields, missing `name` → false, missing `required` → false, missing `hint` → false, wrong types → false, null → false, non-object → false
+- [x] T014 [P] [US1] Add a `parseArgsMetadata` describe block in `test/helpers.test.ts` with scenarios: valid array → returned as-is, `undefined`/`null` → returns `undefined` (no warning), non-array → returns `undefined` with warning, array with invalid items → returns `undefined` with warning, empty array → returned as-is
+- [x] T015 [P] [US1] Add an `fmString` describe block in `test/helpers.test.ts` with scenarios: string value → returned, number value → empty string, boolean value → empty string, missing key → empty string
+- [x] T016 [P] [US1] Add a `formatArgsHint` describe block in `test/helpers.test.ts` with scenarios: `undefined` args → empty string, empty array → empty string, required-only args, optional-only args (appends `?`), mixed required and optional
+- [x] T017 [P] [US1] Add a `formatSelectorLabel` describe block in `test/helpers.test.ts` with scenarios: prompt with args → `name [args] description`, prompt without args → `name description`; construct `NestedPrompt` objects using the exported type
+- [x] T018 [US1] Run `bun run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass; optionally perform the quickstart intentional-breakage spot check (temporarily break one helper, verify only its tests fail, then revert) to validate FR-006 regression isolation
 
 **Checkpoint**: Layer 1 tests cover all 8 pure helpers with representative and boundary inputs. Regressions in any single helper produce a targeted, identifiable failure.
 
@@ -80,16 +80,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create `test/discovery.test.ts` with `beforeEach`/`afterEach` helpers using `mkdtempSync`/`rmSync` for temp directory lifecycle, and a `createGroup` fixture helper that builds `_index.md` + nested prompt files in a given root directory; import `discoverGroups` and types from `../extensions/index`
-- [ ] T020 [US2] Add a group-recognition describe block in `test/discovery.test.ts` with scenarios: directory with valid `_index.md` type: group and nested `.md` files → registered as `EffectivePromptGroup` with correct `name`, `scope`, `directoryPath`, `description`, `promptsByName`, and `promptNames`
-- [ ] T021 [US2] Add a group-rejection describe block in `test/discovery.test.ts` with scenarios: directory without `_index.md` → skipped, `_index.md` with wrong type → skipped, `_index.md` present but no nested `.md` → skipped (empty group)
-- [ ] T022 [P] [US2] Add a nested-prompt-filtering describe block in `test/discovery.test.ts` with scenarios: `.md` files registered, `_index.md` excluded from nested prompts, `.txt` and `.json` files ignored, subdirectories inside group ignored
-- [ ] T023 [P] [US2] Add a scope-attribution describe block in `test/discovery.test.ts` with scenarios: prompts from user-scoped root get `scope: 'user'`, prompts from project-scoped root get `scope: 'project'`, pass two `PromptRoot` entries and verify both scopes appear
-- [ ] T024 [US2] Add a metadata-fallback describe block in `test/discovery.test.ts` with scenarios: `_index.md` missing `description` → warning + directory name fallback, nested prompt missing `description` → warning + filename-stem fallback, nested prompt with `name` override → used instead of kebab-case stem
-- [ ] T025 [US2] Add an args-metadata describe block in `test/discovery.test.ts` with scenarios: valid `args` array → parsed on prompt, absent `args` → `undefined` (no warning), malformed `args` (not array) → `undefined` + warning, invalid items in `args` array → `undefined` + warning
-- [ ] T026 [US2] Add a duplicate-group-names describe block in `test/discovery.test.ts` with scenario: same directory name in two roots → both groups registered + a warning mentioning both scopes
-- [ ] T027 [P] [US2] Add a nonexistent-root describe block in `test/discovery.test.ts` with scenario: `PromptRoot` pointing to a path that does not exist → skipped silently with no warnings and no errors
-- [ ] T028 [US2] Run `bun run test -- test/discovery.test.ts` and confirm all Layer 2 tests pass
+- [x] T019 [US2] Create `test/discovery.test.ts` with `beforeEach`/`afterEach` helpers using `mkdtempSync`/`rmSync` for temp directory lifecycle, and a `createGroup` fixture helper that builds `_index.md` + nested prompt files in a given root directory; import `discoverGroups` and types from `../extensions/index`
+- [x] T020 [US2] Add a group-recognition describe block in `test/discovery.test.ts` with scenarios: directory with valid `_index.md` type: group and nested `.md` files → registered as `EffectivePromptGroup` with correct `name`, `scope`, `directoryPath`, `description`, `promptsByName`, and `promptNames`
+- [x] T021 [US2] Add a group-rejection describe block in `test/discovery.test.ts` with scenarios: directory without `_index.md` → skipped, `_index.md` with wrong type → skipped, `_index.md` present but no nested `.md` → skipped (empty group)
+- [x] T022 [P] [US2] Add a nested-prompt-filtering describe block in `test/discovery.test.ts` with scenarios: `.md` files registered, `_index.md` excluded from nested prompts, `.txt` and `.json` files ignored, subdirectories inside group ignored
+- [x] T023 [P] [US2] Add a scope-attribution describe block in `test/discovery.test.ts` with scenarios: prompts from user-scoped root get `scope: 'user'`, prompts from project-scoped root get `scope: 'project'`, pass two `PromptRoot` entries and verify both scopes appear
+- [x] T024 [US2] Add a metadata-fallback describe block in `test/discovery.test.ts` with scenarios: `_index.md` missing `description` → warning + directory name fallback, nested prompt missing `description` → warning + filename-stem fallback, nested prompt with `name` override → used instead of kebab-case stem
+- [x] T025 [US2] Add an args-metadata describe block in `test/discovery.test.ts` with scenarios: valid `args` array → parsed on prompt, absent `args` → `undefined` (no warning), malformed `args` (not array) → `undefined` + warning, invalid items in `args` array → `undefined` + warning
+- [x] T026 [US2] Add a duplicate-group-names describe block in `test/discovery.test.ts` with scenario: same directory name in two roots → both groups registered + a warning mentioning both scopes
+- [x] T027 [P] [US2] Add a nonexistent-root describe block in `test/discovery.test.ts` with scenario: `PromptRoot` pointing to a path that does not exist → skipped silently with no warnings and no errors
+- [x] T028 [US2] Run `bun run test -- test/discovery.test.ts` and confirm all Layer 2 tests pass
 
 **Checkpoint**: Layer 2 tests cover all discovery rules from the contract, including recognition, rejection, scope, metadata fallbacks, warnings, and edge cases. Changes to discovery logic produce targeted failures.
 
@@ -103,12 +103,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Create `test/extension-flow.test.ts` with a fixture helper that builds a project-scoped prompt directory (`.pi/prompts/<group>/`) in a temp `cwd`, including `_index.md` with `type: group` and at least two nested `.md` prompts with `$1`/`$ARGUMENTS` placeholders; import `createTestSession` and related utilities from `@marcfargas/pi-test-harness`
-- [ ] T030 [US3] Add a direct-dispatch test in `test/extension-flow.test.ts`: create a session with the real `extensions/index.ts`, invoke `/group subcommand arg1 arg2` via playbook, and assert `sendUserMessage` is called with rendered content containing the substituted arguments and the `{ deliverAs: 'followUp' }` option (FR-005b)
-- [ ] T031 [US3] Add a selector-flow test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning the first option, invoke bare `/group` via playbook, and assert `sendUserMessage` is called with the selected prompt's **unsubstituted** body content and the `{ deliverAs: 'followUp' }` option (FR-005b)
-- [ ] T032 [US3] Add a selector-cancellation test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning `undefined`, invoke bare `/group` via playbook, and assert no `sendUserMessage` call is made
-- [ ] T033 [US3] Add an unknown-subcommand test in `test/extension-flow.test.ts`: create a session, invoke `/group nonexistent` via playbook, and assert `ctx.ui.notify` is called with a message containing the unknown name and a list of available alternatives, using the `'warning'` severity level (FR-005b)
-- [ ] T034 [US3] Run `bun run test -- test/extension-flow.test.ts` and confirm all Layer 3 tests pass
+- [x] T029 [US3] Create `test/extension-flow.test.ts` with a fixture helper that builds a project-scoped prompt directory (`.pi/prompts/<group>/`) in a temp `cwd`, including `_index.md` with `type: group` and at least two nested `.md` prompts with `$1`/`$ARGUMENTS` placeholders; import `createTestSession` and related utilities from `@marcfargas/pi-test-harness`
+- [x] T030 [US3] Add a direct-dispatch test in `test/extension-flow.test.ts`: create a session with the real `extensions/index.ts`, invoke `/group subcommand arg1 arg2` via playbook, and assert `sendUserMessage` is called with rendered content containing the substituted arguments and the `{ deliverAs: 'followUp' }` option (FR-005b)
+- [x] T031 [US3] Add a selector-flow test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning the first option, invoke bare `/group` via playbook, and assert `sendUserMessage` is called with the selected prompt's **unsubstituted** body content and the `{ deliverAs: 'followUp' }` option (FR-005b)
+- [x] T032 [US3] Add a selector-cancellation test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning `undefined`, invoke bare `/group` via playbook, and assert no `sendUserMessage` call is made
+- [x] T033 [US3] Add an unknown-subcommand test in `test/extension-flow.test.ts`: create a session, invoke `/group nonexistent` via playbook, and assert `ctx.ui.notify` is called with a message containing the unknown name and a list of available alternatives, using the `'warning'` severity level (FR-005b)
+- [x] T034 [US3] Run `bun run test -- test/extension-flow.test.ts` and confirm all Layer 3 tests pass
 
 **Checkpoint**: Layer 3 tests prove the four operator-visible command flows work through the real Pi extension runtime. Extension behavior changes produce targeted failures.
 
@@ -118,10 +118,10 @@
 
 **Purpose**: Documentation sync, hook integration, and final end-to-end validation.
 
-- [ ] T035 [P] Add `bun run test` to the verification section of `README.md` alongside existing `bun run typecheck` and `bun run lint` commands per CC-003 and FR-007
-- [ ] T036 [P] Add `bun run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007, and remove or rewrite the existing "There is no test suite yet" sentence so the file stays internally consistent
-- [ ] T037 [P] Update `lefthook.yml` to run `bun run test` in the pre-push hook while leaving pre-commit unchanged, per CC-003 and FR-007
-- [ ] T038 Run the full verification workflow from the repository root: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test`, and confirm the existing typecheck/lint gates still pass without regressions after all test infrastructure changes per FR-008 and `specs/002-layered-extension-testing/quickstart.md`
+- [x] T035 [P] Add `bun run test` to the verification section of `README.md` alongside existing `bun run typecheck` and `bun run lint` commands per CC-003 and FR-007
+- [x] T036 [P] Add `bun run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007, and remove or rewrite the existing "There is no test suite yet" sentence so the file stays internally consistent
+- [x] T037 [P] Update `lefthook.yml` to run `bun run test` in the pre-push hook while leaving pre-commit unchanged, per CC-003 and FR-007
+- [x] T038 Run the full verification workflow from the repository root: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test`, and confirm the existing typecheck/lint gates still pass without regressions after all test infrastructure changes per FR-008 and `specs/002-layered-extension-testing/quickstart.md`
 
 ---
 
