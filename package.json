@@ -8,6 +8,13 @@
 		"type": "git",
 		"url": "git+https://github.com/victor-software-house/pi-prompt-composer.git"
 	},
+	"homepage": "https://github.com/victor-software-house/pi-prompt-composer#readme",
+	"bugs": {
+		"url": "https://github.com/victor-software-house/pi-prompt-composer/issues"
+	},
+	"engines": {
+		"node": ">=18"
+	},
 	"publishConfig": {
 		"access": "public",
 		"provenance": true
@@ -27,6 +34,7 @@
 	"type": "module",
 	"files": [
 		"extensions",
+		"examples",
 		"README.md",
 		"LICENSE"
 	],
