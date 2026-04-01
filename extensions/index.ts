@@ -368,13 +368,38 @@ function buildSelectListTheme(theme: Theme): SelectListTheme {
 function buildSelectorItems(group: EffectivePromptGroup): SelectItem[] {
 	return group.promptNames.map((n) => {
 		const p = group.promptsByName.get(n);
-		const hint = p ? formatArgsHint(p.args) : '';
 		return {
 			value: n,
-			label: `${n}${hint}`,
+			label: n,
 			description: p?.description ?? '',
 		};
 	});
+}
+
+/** Format the dynamic usage hint shown below the selector list. */
+function formatUsageHint(group: EffectivePromptGroup, promptName: string, theme: Theme): string {
+	const p = group.promptsByName.get(promptName);
+	if (!p) return '';
+
+	// Usage line: /group subcommand <required> [optional]
+	let usage = theme.fg('dim', `  /${group.name} ${promptName}`);
+	if (p.args && p.args.length > 0) {
+		const argTokens = p.args.map((a) =>
+			a.required ? theme.fg('accent', `<${a.name}>`) : theme.fg('muted', `[${a.name}]`),
+		);
+		usage += ` ${argTokens.join(' ')}`;
+	}
+
+	// Arg hints below the usage line
+	const lines = [usage];
+	if (p.args && p.args.length > 0) {
+		for (const arg of p.args) {
+			const marker = arg.required ? theme.fg('accent', '•') : theme.fg('muted', '◦');
+			lines.push(`  ${marker} ${theme.fg('muted', `${arg.name} — ${arg.hint}`)}`);
+		}
+	}
+
+	return lines.join('\n');
 }
 
 /**
@@ -397,14 +422,30 @@ class GroupSelectorComponent extends Container {
 		this.addChild(new Text(theme.fg('accent', group.description), 1, 0));
 		this.addChild(new Spacer(1));
 
-		// Rich select list with aligned label + description columns
+		// Rich select list — label is just the name, description is separate
 		this.selectList = new SelectList(items, Math.min(items.length, 12), buildSelectListTheme(theme), {
-			minPrimaryColumnWidth: 12,
-			maxPrimaryColumnWidth: 36,
+			minPrimaryColumnWidth: 10,
+			maxPrimaryColumnWidth: 24,
 		});
 		this.selectList.onSelect = (item) => onSelect(item.value);
 		this.selectList.onCancel = () => onCancel();
 		this.addChild(this.selectList);
+
+		// Dynamic usage hint — updates on navigation
+		this.addChild(new Spacer(1));
+		const usageHint = new Text('', 1, 0);
+		this.addChild(usageHint);
+
+		const updateHint = (name: string) => {
+			usageHint.setText(formatUsageHint(group, name, theme));
+		};
+
+		this.selectList.onSelectionChange = (item) => updateHint(item.value);
+
+		// Show hint for the initially selected item
+		if (items.length > 0 && items[0]) {
+			updateHint(items[0].value);
+		}
 
 		// Keyboard hints
 		this.addChild(new Spacer(1));
