@@ -92,6 +92,12 @@ If a nested prompt defines required `args` metadata and the operator omits one o
 
 This also applies when the operator starts from a bare grouped command like `/review`: after choosing a nested prompt from the selector, the extension gathers any missing required values and opens the rendered result in the editor before dispatch.
 
+## Known limitations
+
+- **Strict args validation**: if any arg item in frontmatter is incomplete (e.g., missing `hint`), the entire args array is silently discarded — no input prompt, no usage hint. Fix tracked as PPC-009.
+- **Warnings are console-only**: discovery warnings (malformed metadata, missing descriptions) go to `console.warn`, not Pi's notification UI.
+- See [`docs/ISSUES.md`](docs/ISSUES.md) for full details.
+
 ## Non-goals (this version)
 
 - No shell substitution or preprocessing
