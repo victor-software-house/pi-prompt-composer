@@ -137,7 +137,7 @@ PromptRoot (injected in tests)
 | Selector flow | — | — | ✓ direct |
 | Direct dispatch | — | — | ✓ direct |
 | Unknown subcommand | — | — | ✓ direct |
-| Autocomplete | — | — | ✓ direct |
+| Autocomplete | — | — | — (manual) |
 
 ## State Transitions
 

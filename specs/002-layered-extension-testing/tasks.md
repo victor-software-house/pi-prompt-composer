@@ -104,10 +104,10 @@
 ### Implementation for User Story 3
 
 - [ ] T029 [US3] Create `test/extension-flow.test.ts` with a fixture helper that builds a project-scoped prompt directory (`.pi/prompts/<group>/`) in a temp `cwd`, including `_index.md` with `type: group` and at least two nested `.md` prompts with `$1`/`$ARGUMENTS` placeholders; import `createTestSession` and related utilities from `@marcfargas/pi-test-harness`
-- [ ] T030 [US3] Add a direct-dispatch test in `test/extension-flow.test.ts`: create a session with the real `extensions/index.ts`, invoke `/group subcommand arg1 arg2` via playbook, and assert `sendUserMessage` is called with rendered content containing the substituted arguments
-- [ ] T031 [US3] Add a selector-flow test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning the first option, invoke bare `/group` via playbook, and assert `sendUserMessage` is called with the selected prompt's body content
+- [ ] T030 [US3] Add a direct-dispatch test in `test/extension-flow.test.ts`: create a session with the real `extensions/index.ts`, invoke `/group subcommand arg1 arg2` via playbook, and assert `sendUserMessage` is called with rendered content containing the substituted arguments and the `{ deliverAs: 'followUp' }` option (FR-005b)
+- [ ] T031 [US3] Add a selector-flow test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning the first option, invoke bare `/group` via playbook, and assert `sendUserMessage` is called with the selected prompt's **unsubstituted** body content and the `{ deliverAs: 'followUp' }` option (FR-005b)
 - [ ] T032 [US3] Add a selector-cancellation test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning `undefined`, invoke bare `/group` via playbook, and assert no `sendUserMessage` call is made
-- [ ] T033 [US3] Add an unknown-subcommand test in `test/extension-flow.test.ts`: create a session, invoke `/group nonexistent` via playbook, and assert `ctx.ui.notify` is called with a warning containing the unknown name and a list of available alternatives
+- [ ] T033 [US3] Add an unknown-subcommand test in `test/extension-flow.test.ts`: create a session, invoke `/group nonexistent` via playbook, and assert `ctx.ui.notify` is called with a message containing the unknown name and a list of available alternatives, using the `'warning'` severity level (FR-005b)
 - [ ] T034 [US3] Run `bun run test -- test/extension-flow.test.ts` and confirm all Layer 3 tests pass
 
 **Checkpoint**: Layer 3 tests prove the four operator-visible command flows work through the real Pi extension runtime. Extension behavior changes produce targeted failures.

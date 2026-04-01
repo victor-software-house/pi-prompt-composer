@@ -10,7 +10,7 @@ Add the repository's first automated test suite covering the currently implement
 ## Technical Context
 
 **Language/Version**: TypeScript 5.9, strict ESM  
-**Primary Dependencies**: `@mariozechner/pi-coding-agent@0.63.x` (runtime peer dep), `vitest@4.x` (test runner), `@marcfargas/pi-test-harness@0.5.0` (Layer 3 integration)  
+**Primary Dependencies**: `@mariozechner/pi-coding-agent@^0.63.0` (runtime peer dep), `vitest@4.x` (test runner), `@marcfargas/pi-test-harness@0.5.0` (Layer 3 integration)  
 **Storage**: N/A — tests use transient temp directories only  
 **Testing**: vitest (`bun run test` = `vitest --run`, `bun run test:watch` = `vitest`)  
 **Target Platform**: Developer machine running Bun and Pi  

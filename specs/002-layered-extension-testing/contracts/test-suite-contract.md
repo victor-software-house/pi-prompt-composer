@@ -118,10 +118,10 @@ No test files exist inside `extensions/` or any other runtime directory.
 
 | Behavior | Scenario | Observable |
 |----------|----------|------------|
-| Direct dispatch | `/group subcommand arg1 arg2` | `sendUserMessage` called with rendered content containing substituted args |
-| Selector flow | Bare `/group` → mock select picks first option | `sendUserMessage` called with selected prompt content |
+| Direct dispatch | `/group subcommand arg1 arg2` | `sendUserMessage` called with rendered content containing substituted args and `{ deliverAs: 'followUp' }` |
+| Selector flow | Bare `/group` → mock select picks first option | `sendUserMessage` called with unsubstituted prompt content and `{ deliverAs: 'followUp' }` |
 | Selector cancellation | Bare `/group` → mock select returns undefined | No `sendUserMessage` call |
-| Unknown subcommand | `/group nonexistent` | `notify` called with warning listing available alternatives |
+| Unknown subcommand | `/group nonexistent` | `notify` called with message and `'warning'` severity listing available alternatives |
 
 **Fixture requirement**: Prompt directories must exist in the test `cwd` before `createTestSession()` is called (extension discovery runs at session load time).
 
