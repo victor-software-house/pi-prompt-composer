@@ -10,11 +10,11 @@ Pure Python + Pillow. No external tools (no freeze, no imagemagick).
 Parses truecolor ANSI sequences and draws glyphs onto a Pillow canvas
 using the operator's monospace font.
 
-To regenerate from a fresh Pi capture:
-  1. Resize terminal to 120 cols, show the /review selector in Pi
-  2. Capture raw dump to pi-dump.txt (not committed)
-  3. Run: ./scripts/sanitize-dump.py
-  4. Run: ./scripts/generate-preview.py
+Usage:
+  ./scripts/generate-preview.py
+
+The sanitized dump (assets/preview-dump.ansi) is committed.
+To recapture from scratch (rare), see scripts/sanitize-dump.py.
 """
 import re
 import sys
