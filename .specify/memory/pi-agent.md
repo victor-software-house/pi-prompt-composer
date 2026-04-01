@@ -1,6 +1,6 @@
 # pi-prompt-composer Development Guidelines
 
-Last updated: 2026-03-30
+Last updated: 2026-04-01
 
 ## Active Technologies
 
@@ -84,6 +84,30 @@ bun run lint
   `pi-provider-utils` npm package.
 - Command dispatch uses `pi.sendUserMessage()` and `ctx.ui.select()`.
 
+## Testing Infrastructure
+
+- Test framework: vitest (via `bun run test` = `vitest --run`,
+  `bun run test:watch` = `vitest`)
+- Integration testing: Layer 3 uses direct mock-API approach (harness mock UI
+  does not reach extension command handler ctx parameters)
+- Three test layers:
+  1. **Layer 1 — helpers**: pure function unit tests (`test/helpers.test.ts`)
+  2. **Layer 2 — discovery**: filesystem-based tests with temp dirs
+     (`test/discovery.test.ts`)
+  3. **Layer 3 — extension-flow**: full Pi session via harness
+     (`test/extension-flow.test.ts`)
+- Test config: `vitest.config.ts` + `tsconfig.test.json` (extends base,
+  adds `test/` to include)
+- Dev deps for harness peer resolution: `@mariozechner/pi-ai`,
+  `@mariozechner/pi-agent-core`, `@marcfargas/pi-test-harness`
+- `extensions/index.ts` exports named functions and types for test access
+  alongside the default extension export
+- Production `tsconfig.json` unchanged — only includes `extensions/**/*.ts`
+- oxlint type-aware checks exclude `test/` (uses separate tsconfig)
+- lefthook pre-push runs `bun run test` (not pre-commit)
+- Full verification workflow: `bun install`, `bun run fix`,
+  `bun run typecheck`, `bun run lint`, `bun run test`
+
 ## Recent Changes
 
 - Native `/spec` scaffolding was initialized under `.specify/`.
@@ -92,6 +116,12 @@ bun run lint
   commands, and commit discipline.
 - `/spec plan` for `001-implement-core-grouped` added research, data model,
   quickstart, and grouped-command contract artifacts for the first useful slice.
+- `/spec plan` for `002-layered-extension-testing` designed a three-layer test
+  suite covering helpers, discovery, and extension-flow behavior. Research
+  resolved all unknowns (vitest, pi-test-harness, named-export testability
+  strategy, fixture design).
+- `/spec implement` for `002-layered-extension-testing` completed all 38 tasks:
+  65 tests across 3 layers, named exports, docs/hook/workflow updates.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

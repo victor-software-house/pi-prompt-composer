@@ -15,7 +15,7 @@ import type { AutocompleteItem } from '@mariozechner/pi-tui';
  * Parse command arguments respecting quoted strings (bash-style).
  * Near-verbatim copy of Pi's internal parseCommandArgs.
  */
-function parseCommandArgs(argsString: string): string[] {
+export function parseCommandArgs(argsString: string): string[] {
 	const args: string[] = [];
 	let current = '';
 	let inQuote: string | null = null;
@@ -49,7 +49,7 @@ function parseCommandArgs(argsString: string): string[] {
  * Supports $1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}.
  * Near-verbatim copy of Pi's internal substituteArgs.
  */
-function substituteArgs(content: string, args: string[]): string {
+export function substituteArgs(content: string, args: string[]): string {
 	let result = content;
 
 	// Replace $1, $2, etc. with positional args FIRST
@@ -79,20 +79,20 @@ function substituteArgs(content: string, args: string[]): string {
 // Grouped prompt types (data-model.md)
 // ---------------------------------------------------------------------------
 
-type PromptScope = 'user' | 'project';
+export type PromptScope = 'user' | 'project';
 
-interface PromptRoot {
+export interface PromptRoot {
 	scope: PromptScope;
 	rootPath: string;
 }
 
-interface ArgsItem {
+export interface ArgsItem {
 	name: string;
 	required: boolean;
 	hint: string;
 }
 
-interface NestedPrompt {
+export interface NestedPrompt {
 	name: string;
 	filePath: string;
 	description: string;
@@ -102,7 +102,7 @@ interface NestedPrompt {
 	groupName: string;
 }
 
-interface EffectivePromptGroup {
+export interface EffectivePromptGroup {
 	name: string;
 	scope: PromptScope;
 	directoryPath: string;
@@ -116,7 +116,7 @@ interface EffectivePromptGroup {
 // ---------------------------------------------------------------------------
 
 /** Normalize a filename stem to lowercase kebab-case. */
-function toKebabCase(input: string): string {
+export function toKebabCase(input: string): string {
 	return input
 		.replace(/\.md$/i, '')
 		.replace(/([a-z])([A-Z])/g, '$1-$2')
@@ -128,7 +128,7 @@ function toKebabCase(input: string): string {
 }
 
 /** Validate an args array item from frontmatter. */
-function isValidArgsItem(item: unknown): item is { name: string; required: boolean; hint: string } {
+export function isValidArgsItem(item: unknown): item is { name: string; required: boolean; hint: string } {
 	if (typeof item !== 'object' || item === null) return false;
 	return (
 		'name' in item &&
@@ -141,7 +141,7 @@ function isValidArgsItem(item: unknown): item is { name: string; required: boole
 }
 
 /** Validate an args array from frontmatter. Returns validated array or undefined. */
-function parseArgsMetadata(raw: unknown, filePath: string, warnings: string[]): ArgsItem[] | undefined {
+export function parseArgsMetadata(raw: unknown, filePath: string, warnings: string[]): ArgsItem[] | undefined {
 	if (raw === undefined || raw === null) return undefined;
 	if (!Array.isArray(raw)) {
 		warnings.push(`Malformed args in ${basename(filePath)}: expected array, treating as absent`);
@@ -175,12 +175,12 @@ function getPromptRoots(): PromptRoot[] {
 }
 
 /** Extract a string field from a frontmatter record, or return empty string. */
-function fmString(fm: Record<string, unknown>, key: string): string {
+export function fmString(fm: Record<string, unknown>, key: string): string {
 	const val = fm[key];
 	return typeof val === 'string' ? val : '';
 }
 
-function discoverGroups(roots: PromptRoot[], warnings: string[]): EffectivePromptGroup[] {
+export function discoverGroups(roots: PromptRoot[], warnings: string[]): EffectivePromptGroup[] {
 	const allCandidates: EffectivePromptGroup[] = [];
 
 	for (const root of roots) {
@@ -311,13 +311,13 @@ function discoverGroups(roots: PromptRoot[], warnings: string[]): EffectivePromp
 // Format helpers for UX
 // ---------------------------------------------------------------------------
 
-function formatArgsHint(args: ArgsItem[] | undefined): string {
+export function formatArgsHint(args: ArgsItem[] | undefined): string {
 	if (args === undefined || args.length === 0) return '';
 	const parts = args.map((a) => (a.required ? a.name : `${a.name}?`));
 	return ` [${parts.join(', ')}]`;
 }
 
-function formatSelectorLabel(prompt: NestedPrompt): string {
+export function formatSelectorLabel(prompt: NestedPrompt): string {
 	const hint = formatArgsHint(prompt.args);
 	return `${prompt.name}${hint} ${prompt.description}`;
 }
