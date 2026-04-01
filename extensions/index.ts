@@ -369,13 +369,14 @@ async function resolvePromptArgs(
 	return { args: resolvedArgs, didCollectMissingArgs };
 }
 
-async function editRenderedPrompt(
-	prompt: NestedPrompt,
-	rendered: string,
-	ctx: ExtensionCommandContext,
-): Promise<string | undefined> {
-	return ctx.ui.editor(`Edit /${prompt.groupName} ${prompt.name} prompt`, rendered);
-}
+// Reserved for future debugging / opt-in editor confirmation flow.
+// async function editRenderedPrompt(
+// 	prompt: NestedPrompt,
+// 	rendered: string,
+// 	ctx: ExtensionCommandContext,
+// ): Promise<string | undefined> {
+// 	return ctx.ui.editor(`Edit /${prompt.groupName} ${prompt.name} prompt`, rendered);
+// }
 
 // ---------------------------------------------------------------------------
 // Extension entry point
@@ -436,10 +437,7 @@ export default function (pi: ExtensionAPI) {
 						if (resolved === undefined) return;
 
 						const rendered = substituteArgs(prompt.content, resolved.args);
-						const edited = await editRenderedPrompt(prompt, rendered, ctx);
-						if (edited === undefined) return;
-
-						pi.sendUserMessage(edited, {
+						pi.sendUserMessage(rendered, {
 							deliverAs: 'followUp',
 						});
 						return;
@@ -466,16 +464,6 @@ export default function (pi: ExtensionAPI) {
 					if (resolved === undefined) return;
 
 					const rendered = substituteArgs(prompt.content, resolved.args);
-					if (resolved.didCollectMissingArgs) {
-						const edited = await editRenderedPrompt(prompt, rendered, ctx);
-						if (edited === undefined) return;
-
-						pi.sendUserMessage(edited, {
-							deliverAs: 'followUp',
-						});
-						return;
-					}
-
 					pi.sendUserMessage(rendered, {
 						deliverAs: 'followUp',
 					});
