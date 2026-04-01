@@ -122,6 +122,13 @@ bun run lint
   strategy, fixture design).
 - `/spec implement` for `002-layered-extension-testing` completed all 38 tasks:
   65 tests across 3 layers, named exports, docs/hook/workflow updates.
+- `/spec plan` for `003-publish-readiness` designed a package-polish slice that
+  keeps `extensions/index.ts` unchanged while adding planned `examples/`,
+  `assets/`, and `scripts/` paths for shipped prompt examples and a reproducible
+  package preview. Research chose semantic-release + npm trusted publishing
+  after a one-time manual bootstrap publish/tag/trust sequence, plus a single
+  committed SVG preview asset reused by both `README.md` and `package.json`
+  `pi.image` gallery metadata.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
