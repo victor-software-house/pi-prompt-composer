@@ -179,7 +179,7 @@ function main() {
 	const theme = new Theme(KANAGAWA_FG, KANAGAWA_BG, 'truecolor');
 
 	const terminal = new HeadlessTerminal(width, 30);
-	const _tui = new TUI(terminal);
+	new TUI(terminal);
 	const component = buildPreviewComponent(theme);
 
 	const lines = component.render(width);
