@@ -32,6 +32,7 @@ OUTPUT = Path("assets/preview.png")
 BG = "#121212"
 FONT_FILE = Path.home() / "Library/Fonts/FiraCodeNerdFontMono-Regular.ttf"
 CONTRAST = 1.3
+PADDING = "8,32,8,16"  # top,right,bottom,left — right needs extra for font metrics
 
 if not DUMP.exists():
     print(f"Error: {DUMP} not found.", file=sys.stderr)
@@ -48,7 +49,7 @@ with DUMP.open("rb") as f:
             "freeze",
             "--output", str(OUTPUT),
             "--background", BG,
-            "--padding", "0",
+            "--padding", PADDING,
             "--window=false",
             "--font.family", "FiraCode Nerd Font Mono",
             "--font.file", str(FONT_FILE),
