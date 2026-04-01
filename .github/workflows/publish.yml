@@ -46,6 +46,15 @@ jobs:
       - name: Lint (oxlint)
         run: bun run lint:oxlint
 
+      - name: Test
+        run: bun run test
+
+      - name: Commitlint
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            bunx commitlint --from ${{ github.event.before }} --to ${{ github.sha }}
+          fi
+
       - name: Verify package contents
         run: npm pack --dry-run
 
