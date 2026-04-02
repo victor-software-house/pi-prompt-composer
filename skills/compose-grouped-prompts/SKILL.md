@@ -96,6 +96,7 @@ Stop and ask before:
 3. Gather subcommand plan with `ask_user` confirmation
 4. Decide args per subcommand (use `ask_user` when ambiguous)
 5. Generate files following the quality bar above
+   - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body — not prose like "confirm with the user". See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies) and [references/examples.md](references/examples.md#example-3-interactive-group-with-confirmation-and-choices).
 6. Verify with bash checks
 7. Commit and report with a summary table
 
@@ -107,6 +108,7 @@ See: [references/workflow.md](references/workflow.md), [references/layout.md](re
 2. Propose additions with `ask_user` confirmation
 3. Check for name collisions with existing subcommands
 4. Generate files that **match the existing group's style exactly**
+   - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body. See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies).
 5. Verify and commit
 
 See: [references/operations.md](references/operations.md)
