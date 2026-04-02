@@ -1,3 +1,8 @@
+---
+name: compose-grouped-prompts
+description: Create, extend, and maintain grouped slash-command prompt sets for pi-prompt-composer. Use when creating a new grouped prompt group, adding subcommands to an existing group, removing or simplifying subcommands, understanding grouped-prompt layout and frontmatter conventions, or deciding between grouped prompts, flat prompts, and skills. Triggers on "compose grouped prompts", "create prompt group", "add subcommand", "remove subcommand", "grouped prompt conventions", "_index.md", "type: group", "/compose new", "/compose add", "/compose remove".
+---
+
 # Compose Grouped Prompts
 
 Create, extend, and maintain grouped slash-command prompts for `pi-prompt-composer`.
