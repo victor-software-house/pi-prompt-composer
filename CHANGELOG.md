@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.0...v1.0.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* add required YAML frontmatter to compose-grouped-prompts skill ([b014104](https://github.com/victor-software-house/pi-prompt-composer/commit/b014104eeca3fdce41e265218b794defbf6bb39b))
+
 # [1.0.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v0.1.1...v1.0.0) (2026-04-02)
 
 
