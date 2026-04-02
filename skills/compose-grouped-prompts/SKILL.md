@@ -46,8 +46,6 @@ Before generating any files:
 
 ## Interaction model
 
-### When `ask_user` is available
-
 Use structured `ask_user` calls for:
 
 - choosing the operation when the request is ambiguous
@@ -55,9 +53,7 @@ Use structured `ask_user` calls for:
 - confirming destructive operations (removals, renames)
 - selecting between multiple valid file layouts
 
-### When `ask_user` is not available
-
-Ask the same questions directly in chat. Present numbered options and wait for a response before generating files.
+`ask_user` is always available — it ships bundled with this package.
 
 ## Stop conditions
 
