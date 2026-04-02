@@ -116,7 +116,7 @@ Acceptance criteria:
 - at least one realistic grouped prompt example is included
 - docs clearly mark future conditional rendering as out of scope for the first useful release
 
-## PPC-009: Lenient args validation and operator-visible warnings (next — high priority)
+## PPC-009: Lenient args validation and operator-visible warnings (mostly complete)
 
 Harden the argument metadata pipeline so incomplete frontmatter degrades gracefully instead of silently breaking interactive collection.
 
@@ -124,12 +124,58 @@ See [`ISSUES.md`](ISSUES.md) for full defect descriptions (ISS-001 through ISS-0
 
 Acceptance criteria:
 
-- `parseArgsMetadata` / `isValidArgsItem` accept items with missing `hint` (defaults to empty string) and missing `required` (defaults to `false`); only missing `name` rejects an individual item
-- valid items in a partially malformed array are preserved; only the invalid items are dropped (with a per-item warning)
-- discovery warnings surface through Pi's `ctx.ui.notify()` at load, reload, and startup — not just `console.warn`
-- the dynamic usage hint and `ctx.ui.input()` title omit the ` — hint` suffix when hint is empty, rather than showing a dangling separator
-- mandatory vs optional args have a compact, obvious visual distinction in the selector (exact treatment to be validated visually before committing)
-- tests cover: args with missing hint, args with missing required, mixed valid/invalid items in one array, empty hint rendering in selector and input, and warning surfacing
+- ✅ `parseArgsMetadata` / `isValidArgsItem` accept items with missing `hint` (defaults to empty string) and missing `required` (defaults to `false`); only missing `name` rejects an individual item
+- ✅ valid items in a partially malformed array are preserved; only the invalid items are dropped (with a per-item warning)
+- ✅ discovery warnings surface through Pi's `ctx.ui.notify()` at load, reload, and startup — not just `console.warn`
+- ✅ the dynamic usage hint and `ctx.ui.input()` title omit the ` — hint` suffix when hint is empty, rather than showing a dangling separator
+- ⏳ mandatory vs optional args have a compact, obvious visual distinction in the selector (exact treatment to be validated visually before committing) — tracked as ISS-003
+- ✅ tests cover: args with missing hint, args with missing required, mixed valid/invalid items in one array, empty hint rendering in selector and input, and warning surfacing
+
+## PPC-011: Module extraction and test infrastructure (next — high priority)
+
+Restructure the single-file implementation and test suite to support reliable, low-maintenance expansion of the rendering pipeline.
+
+The current codebase ships all logic in one 586-line `extensions/index.ts` and tests it with hand-written assertions. This works for the current feature set but is not ready for PPC-006 (shell substitution) and beyond, where many rendering scenarios need snapshot validation and each pipeline stage needs independent testability.
+
+Scope:
+
+### Module extraction
+
+- Extract `extensions/index.ts` into focused modules under `src/`:
+  - `src/helpers.ts` — `parseCommandArgs`, `substituteArgs`, `toKebabCase`, `fmString`, and other pure helpers
+  - `src/discovery.ts` — `getPromptRoots`, `discoverGroups`, args metadata parsing
+  - `src/render.ts` — rendering pipeline: load template, substitute args, (future) preprocess, format output
+  - `src/ui.ts` — `GroupSelectorComponent`, `showPromptSelector`, `formatUsageHint`, theme helpers
+  - `src/types.ts` — shared interfaces (`ArgsItem`, `NestedPrompt`, `EffectivePromptGroup`, etc.)
+- `extensions/index.ts` becomes thin wiring: imports modules, registers commands, handles lifecycle events
+
+### Snapshot-based rendering tests
+
+- Add `test/render.test.ts` — isolated pipeline tests: raw template content + args → rendered output
+- Use `toMatchInlineSnapshot()` for all rendering and parsed-structure assertions
+- Existing helper and discovery tests migrate to inline snapshots where it reduces maintenance
+
+### Shared test fixtures
+
+- Add `test/fixtures/` with real `.md` prompt files covering common and edge-case scenarios
+- Add a `loadFixture()` helper or builder that returns `{ template, args, expected }` structs
+- Replace hand-rolled `writeFileSync` frontmatter strings in discovery and extension-flow tests
+
+### Mock factory hardening
+
+- Extend the mock `ExtensionAPI` factory with `exec` call capture (needed for PPC-006 shell substitution)
+- Add `on` event handler capture and invocation (needed to test `session_start` warning surfacing and reload)
+- Add dispatch-mode tracking (needed for PPC-010 operator-only prompts)
+
+Acceptance criteria:
+
+- `extensions/index.ts` is thin wiring; all logic lives in `src/` modules
+- each module is independently importable and testable
+- `test/render.test.ts` exists with snapshot-based assertions for the full substitution pipeline
+- `test/fixtures/` contains reusable `.md` prompt files used by discovery and extension-flow tests
+- existing 75 tests continue to pass with equivalent or stronger coverage
+- mock factory supports `exec`, `on` event capture, and dispatch-mode branching
+- `bun run typecheck && bun run lint && bun run test` passes cleanly
 
 ## PPC-010: Operator-only prompts with custom logic
 

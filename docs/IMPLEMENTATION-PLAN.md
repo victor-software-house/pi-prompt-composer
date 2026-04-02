@@ -451,7 +451,20 @@ Deliver:
 - clearer unknown-subcommand errors
 - richer selector descriptions from `_index.md`
 
-### Slice 3: preprocessing pipeline
+### Slice 3: module extraction and test infrastructure
+
+Prerequisite for Slice 4 (preprocessing pipeline). The single-file implementation and hand-assertion test suite do not scale to the rendering scenarios shell substitution and future preprocessing stages introduce.
+
+Deliver:
+
+- extract `extensions/index.ts` into focused `src/` modules: `helpers.ts`, `discovery.ts`, `render.ts`, `ui.ts`, `types.ts`
+- `extensions/index.ts` becomes thin lifecycle wiring
+- add `test/render.test.ts` with inline-snapshot assertions for the substitution pipeline
+- add `test/fixtures/` with reusable `.md` prompt files replacing hand-rolled fixture strings
+- extend mock `ExtensionAPI` factory with `exec` capture, `on` event capture, and dispatch-mode tracking
+- all existing tests continue to pass with equivalent or stronger coverage
+
+### Slice 4: preprocessing pipeline
 
 Deliver:
 
@@ -459,7 +472,7 @@ Deliver:
 - visible failure handling
 - operator-visible rendered results as the stable contract
 
-### Slice 4: runtime correctness and diagnostics
+### Slice 5: runtime correctness and diagnostics
 
 Deliver:
 
@@ -468,7 +481,7 @@ Deliver:
 - scope-aware internal debug output
 - documentation polish
 
-### Slice 5: future package-native rendering features
+### Slice 6: future package-native rendering features
 
 Candidates:
 
