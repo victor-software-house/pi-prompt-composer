@@ -121,7 +121,7 @@ Every new subcommand `.md` file **must** include:
 
 1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone.
 
-2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at $1 and parse its YAML frontmatter" not "look at the file".
+2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `\$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body.
 
 3. **`ask_user` for interactive decisions** — if the subcommand needs operator input during execution, include the **exact `ask_user` JSON payload**. Do not write "ask the user" — write the literal tool call with `question`, `context`, `options`, and `allowFreeform`.
 
@@ -130,6 +130,8 @@ Every new subcommand `.md` file **must** include:
 5. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty. At minimum: detect, report, suggest a fix.
 
 6. **Output format** — specify what the model reports after completion (table, summary, file list).
+
+7. **Substitution syntax** — when the generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs.
 
 ### Bad example (what not to generate):
 
