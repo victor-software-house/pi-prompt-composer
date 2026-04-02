@@ -24,6 +24,12 @@ If a task is mostly documentation, also read [`docs/AGENTS.md`](docs/AGENTS.md).
 
 ## Implementation rules
 
+### Prompt template escaping
+
+Pi substitutes `$1`, `$2`, `$@`, `$ARGUMENTS`, and `${@:N}` everywhere in prompt template bodies — including inside code blocks, JSON examples, and instructional text. When a prompt template needs to mention substitution syntax literally (e.g., teaching the model to use `$1` in generated prompts), escape with `\$`: write `\$1` in the source so the rendered output contains literal `$1`. This is test-covered in `test/bundled-compose.test.ts`.
+
+### General
+
 - Reuse Pi helpers such as `parseCommandArgs`, `substituteArgs`, and `parseFrontmatter` when public exports exist.
 - If Pi prompt helpers are not publicly exported, copy the smallest necessary logic locally and document that choice. Do not import hidden Pi internals.
 - Grouped commands must be extension commands layered on top of Pi's flat prompt-template system.

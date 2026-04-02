@@ -57,6 +57,12 @@ Use structured `ask_user` calls for:
 
 **Critical rule:** When writing `ask_user` calls, always include the **exact JSON payload** — `question`, `context`, `options`, and `allowFreeform`. Do not write "ask the user" without the literal tool call. The compose prompts (`/compose new`, `/compose add`, `/compose remove`) contain exact JSON examples for every interaction point.
 
+**Escaping rule:** Pi substitutes `$1`, `$2`, `$@`, `$ARGUMENTS`, and `${@:N}` everywhere in prompt template bodies — including inside code blocks and instructional text. When a compose prompt or a generated prompt needs to mention substitution syntax literally (e.g., documenting that a prompt should use `$1`), escape with `\$`: write `\$1` in the source so the rendered output contains literal `$1`. This applies to:
+
+- The quality rules sections in `/compose new` and `/compose add` that teach the model about substitution
+- Any generated prompt that references substitution syntax in its instructions
+- Example snippets showing how to write prompt bodies
+
 ## Quality bar for generated prompts
 
 Every subcommand `.md` file produced by the compose workflows **must** include:
