@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.1...v1.0.2) (2026-04-02)
+
+
+### Bug Fixes
+
+* remove name from skill frontmatter and fix YAML parsing error ([1155b3f](https://github.com/victor-software-house/pi-prompt-composer/commit/1155b3f840f7b1bfa5df36bd2afe944aa5de74df))
+
 ## [1.0.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.0...v1.0.1) (2026-04-02)
 
 
