@@ -35,11 +35,16 @@
 		"extensions": [
 			"./extensions"
 		],
+		"skills": [
+			"./skills"
+		],
 		"image": "https://raw.githubusercontent.com/victor-software-house/pi-prompt-composer/main/assets/preview.png"
 	},
 	"type": "module",
 	"files": [
 		"extensions",
+		"prompts",
+		"skills",
 		"examples",
 		"README.md",
 		"LICENSE"

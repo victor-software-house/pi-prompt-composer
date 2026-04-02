@@ -54,6 +54,32 @@ Flat `.md` files outside group directories continue to work as native Pi prompts
 | **Unknown subcommand** | Typos show a warning with available alternatives |
 | **Escape syntax** | `\$ARGUMENTS` renders as literal `$ARGUMENTS` |
 | **Discovery warnings** | Malformed metadata surfaces as Pi notifications on session start |
+| **Bundled `/compose`** | Built-in helpers for creating, extending, and simplifying grouped prompts |
+| **Authoring skill** | Comprehensive `compose-grouped-prompts` skill loaded on demand for deep guidance |
+
+## Bundled `/compose` command
+
+The package ships a built-in `/compose` grouped command for authoring grouped prompts:
+
+| Command | Purpose |
+|---------|---------|
+| `/compose` | Interactive selector for compose operations |
+| `/compose new <group-name>` | Create a new grouped prompt set |
+| `/compose add <group-name>` | Add subcommands to an existing group |
+| `/compose remove <group-name>` | Remove or simplify a subcommand |
+
+The bundled `/compose` is loaded with lowest precedence. If you create your own `compose/` group in user or project prompts, it overrides the built-in version.
+
+### Authoring skill
+
+The package also ships a `compose-grouped-prompts` skill with:
+
+- Workflow guidance for creating, adding, and removing prompts
+- Layout conventions and naming rules
+- Frontmatter and args reference
+- Realistic examples and anti-patterns
+
+The skill is loaded on demand when the model needs deeper guidance beyond what the `/compose` prompts provide.
 
 ## Writing prompts
 

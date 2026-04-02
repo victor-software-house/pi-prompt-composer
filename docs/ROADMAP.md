@@ -19,7 +19,7 @@ Acceptance criteria:
 - discovers subdirectories in both global and project prompt locations
 - loads `.md` files with Pi's `parseFrontmatter()` helper
 - derives descriptions from frontmatter or first non-empty body line, matching Pi behavior
-- records internal scope metadata (`user` or `project`) for each group and subcommand
+- records internal origin metadata (`bundled`, `user`, or `project`) for each group and subcommand
 - ignores flat `.md` files because Pi handles them natively
 - rebuilds the registry on startup and reload without stale duplicate state
 
@@ -176,6 +176,23 @@ Acceptance criteria:
 - existing 75 tests continue to pass with equivalent or stronger coverage
 - mock factory supports `exec`, `on` event capture, and dispatch-mode branching
 - `bun run typecheck && bun run lint && bun run test` passes cleanly
+
+## PPC-012: Bundled `/compose` helpers and authoring skill (complete)
+
+Ship a package-owned `/compose` grouped command and a comprehensive `compose-grouped-prompts` skill.
+
+Acceptance criteria:
+
+- ✅ comprehensive skill with progressive disclosure lives in `skills/compose-grouped-prompts/`
+- ✅ bundled `/compose new|add|remove` prompt files live in `prompts/compose/`
+- ✅ discovery supports exact group roots (Case A: root itself is a group directory)
+- ✅ bundled `/compose` is loaded first and can be overridden by user/project `/compose`
+- ✅ `PromptScope` renamed to `PromptOrigin` with `'bundled' | 'user' | 'project'` values
+- ✅ `resolveRelativePath()` uses `import.meta.url` for portable asset resolution
+- ✅ `loadSingleGroup()` extracted as reusable helper
+- ✅ `prompts/` and `skills/` included in package.json `files` and `pi` config
+- ✅ 83 tests passing (8 new for bundled root, exact group root, override ordering)
+- ✅ README documents `/compose` command and authoring skill
 
 ## PPC-010: Operator-only prompts with custom logic
 

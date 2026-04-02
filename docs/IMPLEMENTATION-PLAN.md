@@ -213,23 +213,31 @@ This is a public API limitation, not a package bug.
 
 ### 1. Scanner and registry
 
-At startup and on reload, scan:
+At startup and on reload, scan an ordered list of prompt roots:
 
-- `~/.pi/agent/prompts/`
-- `.pi/prompts/`
+1. **Bundled** — package-owned `prompts/compose/` (exact group root, lowest precedence)
+2. **User** — `~/.pi/agent/prompts/` (parent root)
+3. **Project** — `.pi/prompts/` (parent root, highest precedence)
+
+Roots are handled as one of two cases:
+
+- **Case A (exact group root):** The root directory itself contains `_index.md` with `type: group`. The directory name becomes the group name. Used by the bundled `/compose` root.
+- **Case B (parent root):** The root is scanned for child directories that are valid groups. Used by user and project roots.
 
 Rules:
 
 - only subdirectories participate in grouped routing
 - flat `.md` files remain Pi-native and are ignored by this package
-- `_index.md` is optional metadata for the group itself
+- `_index.md` is required group metadata (must contain `type: group`)
 - all other `.md` files in the directory are subcommands
 - scan is one level deep for v1
+
+Origin precedence within the same extension relies on `Map.set()` semantics — later registrations of the same command name overwrite earlier ones. This means project overrides user, user overrides bundled.
 
 Registry shape:
 
 - `groupName`
-- `scope` (`user` or `project`)
+- `origin` (`bundled`, `user`, or `project`)
 - `groupPath`
 - `indexTemplate` if present
 - `subcommands[]`
@@ -238,7 +246,7 @@ Registry shape:
   - `description`
   - `body`
   - `frontmatter`
-  - `scope`
+  - `origin`
 
 Parsing rules:
 
@@ -403,10 +411,11 @@ Conditional rendering syntax is intentionally undecided in v1.
 
 The package should track prompt origin in its own registry:
 
+- `bundled` for package-owned `prompts/<group>/...`
 - `user` for `~/.pi/agent/prompts/<group>/...`
 - `project` for `.pi/prompts/<group>/...`
 
-Use that internal scope for:
+Use that internal origin for:
 
 - selector UI
 - error messages

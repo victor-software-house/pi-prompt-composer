@@ -344,7 +344,7 @@ describe('formatSelectorLabel', () => {
 		description: 'Create a new thing',
 		args: undefined,
 		content: 'body',
-		scope: 'user',
+		origin: 'user',
 		groupName: 'test',
 	};
 
