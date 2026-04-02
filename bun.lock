@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "pi-prompt-composer",
+      "dependencies": {
+        "pi-ask-user": "^0.5.0",
+      },
       "devDependencies": {
         "@biomejs/biome": "^2.4.8",
         "@commitlint/cli": "^20.5.0",
@@ -1110,6 +1113,8 @@
     "pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 
     "pend": ["pend@1.2.0", "", {}, "sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg=="],
+
+    "pi-ask-user": ["pi-ask-user@0.5.1", "", { "peerDependencies": { "@mariozechner/pi-coding-agent": "*", "@mariozechner/pi-tui": "*", "@sinclair/typebox": "*" } }, "sha512-e8NU3NWKdh1t33VkC4Ao/gKMSJLJ9Mr6t1WZgWGZYpWEEB6Khpln/O7OnyWPOK41MxyVQ68cLQfLTJNDhVUL3A=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
