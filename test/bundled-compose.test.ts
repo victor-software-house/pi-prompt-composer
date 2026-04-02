@@ -184,9 +184,8 @@ describe('/compose new', () => {
 		expect(content).toContain('Create a new grouped prompt set named `review`.');
 		expect(content).toContain('Where should the /review group live?');
 		expect(content).toContain('ls -d ~/.pi/agent/prompts/review/ .pi/prompts/review/');
-		expect(content).toContain('What subcommands should /review have?');
-		// ${@:2} is empty when only group-name provided — shows literal \n in JSON context
-		expect(content).toContain('Based on: \\n\\nEach subcommand');
+		// ${@:2} is empty — the "no description" path triggers direct ask
+		expect(content).toContain('What should /review do? Describe the purpose');
 		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
 	});
 
@@ -269,7 +268,7 @@ describe('/compose add', () => {
 		const content = sentMessages[0].content;
 
 		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
-		expect(content).toContain('Based on: Add a checklist subcommand for security');
+		expect(content).toContain('based on: Add a checklist subcommand for security');
 	});
 
 	test('missing required group-name: collects via input', async () => {
@@ -319,12 +318,13 @@ describe('/compose remove', () => {
 		const content = sentMessages[0].content;
 
 		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
-		// $2 → "checklist" in "target that file directly"
+		// $2 → "checklist" in the verification command
 		expect(content).toContain('(`checklist`)');
-		// $2 in the grep commands
-		expect(content).toContain('/review checklist');
-		// $2 in the confirm question
-		expect(content).toContain('How should I handle /review checklist?');
+		// $2 substituted into TARGET assignment
+		expect(content).toContain('TARGET="checklist"');
+		// Subsequent references use $TARGET shell variable
+		expect(content).toContain('/review $TARGET');
+		expect(content).toContain('How should I handle /review $TARGET?');
 	});
 
 	test('with no args: collects required group-name via input', async () => {
