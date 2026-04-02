@@ -11,7 +11,7 @@ Read these files in order before changing behavior:
 3. [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered work items and acceptance criteria
 4. [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) — design constraints and intended architecture
 5. [`extensions/index.ts`](extensions/index.ts) — current implementation truth
-6. [`package.json`](package.json), [`biome.json`](biome.json), [`tsconfig.json`](tsconfig.json), [`lefthook.yml`](lefthook.yml), [`release.config.mjs`](release.config.mjs) — commands, lint/type rules, hooks, and release flow
+6. [`package.json`](package.json), [`mise.toml`](mise.toml), [`mise-tasks/`](mise-tasks/), [`biome.json`](biome.json), [`tsconfig.json`](tsconfig.json), [`lefthook.yml`](lefthook.yml), [`release.config.mjs`](release.config.mjs) — commands, task entrypoints, lint/type rules, hooks, and release flow
 
 If a task is mostly documentation, also read [`docs/AGENTS.md`](docs/AGENTS.md).
 
@@ -40,10 +40,13 @@ Run verification from the repo root.
 Required gate before committing:
 
 ```bash
-bun run typecheck
-bun run lint
-bun run test
+mise run hooks:typecheck
+mise run hooks:lint
+mise run hooks:test
+mise run skills:validate
 ```
+
+These `mise` tasks are the canonical local workflow entrypoints. `lefthook` should call `mise` tasks rather than duplicating command bodies.
 
 Useful helper before manual cleanup:
 
@@ -54,7 +57,8 @@ bun run fix
 Additional checks:
 
 - Run `bun install` when dependencies, hooks, or release tooling change.
-- The test suite uses vitest with three layers: helpers (`test/helpers.test.ts`), discovery (`test/discovery.test.ts`), and extension-flow (`test/extension-flow.test.ts`). Run `bun run test` to execute all layers, or `bun run test:watch` during development.
+- Validate skills with Pi's own parser via `mise run skills:validate` (this uses Pi's `loadSkillsFromDir()` directly and must stay warning-free).
+- The test suite uses vitest with four layers: helpers (`test/helpers.test.ts`), discovery (`test/discovery.test.ts`), extension-flow (`test/extension-flow.test.ts`), and bundled-compose end-to-end (`test/bundled-compose.test.ts`). Run `mise run hooks:test` to execute all layers, or `bun run test:watch` during development.
 - When touching packaging or release flow, verify `package.json`, `bun.lock`, `CHANGELOG.md`, and `release.config.mjs` stay aligned.
 
 ## Style and typing
@@ -69,8 +73,10 @@ Additional checks:
 - Use frequent small commits for logical, reviewable slices.
 - Use Conventional Commits; `commitlint.config.mjs` enforces them.
 - Keep `lefthook` protections working unless the user explicitly asks to change them.
-- Pre-commit currently runs `oxlint --fix`, `biome check --write`, `bun run lint`, and `bun run typecheck`.
-- Pre-push currently runs `bun install`, `bun run typecheck`, and `bun run lint`, and it blocks pushes if `bun.lock` changed.
+- Define hook command bodies in `mise-tasks/`; `lefthook.yml` should stay a thin caller of `mise run ...` entrypoints.
+- Pre-commit currently runs `mise` tasks for `hooks:oxlint-fix`, `hooks:format`, `hooks:lint`, `hooks:typecheck`, and `skills:validate`.
+- Pre-push currently runs `mise` tasks for `repo:lockfile-sync`, `hooks:typecheck`, `hooks:lint`, and `hooks:test`.
+- If you add a new repo workflow check, prefer adding a `mise` task first, then wiring `lefthook` to that task instead of embedding shell directly in `lefthook.yml`.
 - This repo uses feature branches plus pull requests. Prefer doing substantive work on a feature branch, not directly on `main`.
 - It is safe to push the current branch after committing validated work, unless the user says not to.
 - `semantic-release` publishes from `main`; avoid ad hoc release-file edits unless the task specifically requires them.

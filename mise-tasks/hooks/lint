@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Run full repository lint checks"
+
+set -euo pipefail
+
+bun run lint

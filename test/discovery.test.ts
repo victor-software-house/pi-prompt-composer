@@ -50,7 +50,7 @@ describe('group recognition', () => {
 		const groups = discoverGroups(roots(), warnings);
 
 		expect(groups).toHaveLength(1);
-		const g = groups[0]!;
+		const g = groups[0];
 		expect(g.name).toBe('review');
 		expect(g.origin).toBe('user');
 		expect(g.directoryPath).toBe(join(rootDir, 'review'));
@@ -113,7 +113,7 @@ describe('nested prompt filtering', () => {
 		const groups = discoverGroups(roots(), warnings);
 
 		expect(groups).toHaveLength(1);
-		const g = groups[0]!;
+		const g = groups[0];
 		expect(g.promptsByName.size).toBe(2);
 		expect(g.promptNames).toEqual(['build', 'deploy']);
 	});
@@ -159,7 +159,7 @@ describe('metadata fallbacks', () => {
 		const groups = discoverGroups(roots(), warnings);
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0]!.description).toBe('mygrp');
+		expect(groups[0].description).toBe('mygrp');
 		expect(warnings.some((w) => w.includes('missing description'))).toBe(true);
 	});
 
@@ -170,7 +170,7 @@ describe('metadata fallbacks', () => {
 		const groups = discoverGroups(roots(), warnings);
 
 		expect(groups).toHaveLength(1);
-		const prompt = groups[0]!.promptsByName.get('my-cmd');
+		const prompt = groups[0].promptsByName.get('my-cmd');
 		expect(prompt?.description).toBe('my-cmd');
 		expect(warnings.some((w) => w.includes('missing description'))).toBe(true);
 	});
@@ -184,8 +184,8 @@ describe('metadata fallbacks', () => {
 		const groups = discoverGroups(roots(), warnings);
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0]!.promptsByName.has('short')).toBe(true);
-		expect(groups[0]!.promptsByName.has('long-file-name')).toBe(false);
+		expect(groups[0].promptsByName.has('short')).toBe(true);
+		expect(groups[0].promptsByName.has('long-file-name')).toBe(false);
 	});
 });
 
@@ -206,7 +206,7 @@ Body`;
 
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots(), warnings);
-		const prompt = groups[0]!.promptsByName.get('cmd');
+		const prompt = groups[0].promptsByName.get('cmd');
 		expect(prompt?.args).toEqual([{ name: 'file', required: true, hint: 'path' }]);
 	});
 
@@ -215,7 +215,7 @@ Body`;
 
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots(), warnings);
-		const prompt = groups[0]!.promptsByName.get('cmd');
+		const prompt = groups[0].promptsByName.get('cmd');
 		expect(prompt?.args).toBeUndefined();
 		expect(warnings.filter((w) => w.includes('args'))).toHaveLength(0);
 	});
@@ -225,7 +225,7 @@ Body`;
 
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots(), warnings);
-		const prompt = groups[0]!.promptsByName.get('cmd');
+		const prompt = groups[0].promptsByName.get('cmd');
 		expect(prompt?.args).toBeUndefined();
 		expect(warnings.some((w) => w.includes('must be an array'))).toBe(true);
 	});
@@ -241,7 +241,7 @@ Body`;
 
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots(), warnings);
-		const prompt = groups[0]!.promptsByName.get('cmd');
+		const prompt = groups[0].promptsByName.get('cmd');
 		expect(prompt?.args).toBeUndefined();
 		expect(warnings.some((w) => w.includes('missing required "name"'))).toBe(true);
 	});
@@ -303,10 +303,10 @@ describe('exact group root (Case A)', () => {
 		const groups = discoverGroups(exactRoot, warnings);
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0]!.name).toBe('compose');
-		expect(groups[0]!.origin).toBe('bundled');
-		expect(groups[0]!.description).toBe('Compose helpers');
-		expect(groups[0]!.promptNames).toEqual(['add', 'new']);
+		expect(groups[0].name).toBe('compose');
+		expect(groups[0].origin).toBe('bundled');
+		expect(groups[0].description).toBe('Compose helpers');
+		expect(groups[0].promptNames).toEqual(['add', 'new']);
 
 		rmSync(groupDir, { recursive: true, force: true });
 	});
@@ -325,7 +325,7 @@ describe('exact group root (Case A)', () => {
 		const groups = discoverGroups(roots, warnings);
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0]!.name).toBe('child');
+		expect(groups[0].name).toBe('child');
 
 		rmSync(dir, { recursive: true, force: true });
 	});
@@ -357,8 +357,8 @@ describe('bundled root override ordering', () => {
 
 		// Both should be discovered (registration handles override)
 		expect(groups).toHaveLength(2);
-		expect(groups[0]!.origin).toBe('bundled');
-		expect(groups[1]!.origin).toBe('user');
+		expect(groups[0].origin).toBe('bundled');
+		expect(groups[1].origin).toBe('user');
 		expect(warnings.some((w) => w.includes('Duplicate group name'))).toBe(true);
 
 		rmSync(bundledDir, { recursive: true, force: true });

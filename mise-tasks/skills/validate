@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Validate skills/ with Pi's own loadSkillsFromDir() parser"
+
+set -euo pipefail
+
+bun scripts/validate-skills.ts

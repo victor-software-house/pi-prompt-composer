@@ -215,9 +215,9 @@ describe('direct dispatch', () => {
 
 		expect(inputCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Hello arg1');
-		expect(sentMessages[0]!.content).toContain('arg1 arg2');
-		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+		expect(sentMessages[0].content).toContain('Hello arg1');
+		expect(sentMessages[0].content).toContain('arg1 arg2');
+		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
 	});
 
 	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {
@@ -230,11 +230,11 @@ describe('direct dispatch', () => {
 		await cmd.handler('hello', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0]!.title).toContain('/testgrp hello');
-		expect(inputCalls[0]!.placeholder).toBe('Who should be greeted?');
+		expect(inputCalls[0].title).toContain('/testgrp hello');
+		expect(inputCalls[0].placeholder).toBe('Who should be greeted?');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Hello world and world');
-		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+		expect(sentMessages[0].content).toContain('Hello world and world');
+		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
 	});
 });
 
@@ -254,8 +254,8 @@ describe('selector flow', () => {
 
 		expect(inputCalls).toHaveLength(1);
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Hello Pi user and Pi user');
-		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+		expect(sentMessages[0].content).toContain('Hello Pi user and Pi user');
+		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
 	});
 
 	test('bare /testgrp selecting prompt with no args dispatches directly', async () => {
@@ -269,7 +269,7 @@ describe('selector flow', () => {
 
 		expect(inputCalls).toHaveLength(0);
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toBe('Goodbye everyone');
+		expect(sentMessages[0].content).toBe('Goodbye everyone');
 	});
 });
 
@@ -304,10 +304,10 @@ describe('unknown subcommand', () => {
 
 		expect(sentMessages).toHaveLength(0);
 		expect(notifyCalls).toHaveLength(1);
-		expect(notifyCalls[0]!.severity).toBe('warning');
-		expect(notifyCalls[0]!.message).toContain('nonexistent');
-		expect(notifyCalls[0]!.message).toContain('bye');
-		expect(notifyCalls[0]!.message).toContain('hello');
+		expect(notifyCalls[0].severity).toBe('warning');
+		expect(notifyCalls[0].message).toContain('nonexistent');
+		expect(notifyCalls[0].message).toContain('bye');
+		expect(notifyCalls[0].message).toContain('hello');
 	});
 });
 
@@ -323,6 +323,6 @@ describe('escape syntax', () => {
 		await cmd.handler('escaped Alice', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toBe('Hi Alice, use $ARGUMENTS to reference all args');
+		expect(sentMessages[0].content).toBe('Hi Alice, use $ARGUMENTS to reference all args');
 	});
 });
