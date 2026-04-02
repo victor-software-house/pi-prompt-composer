@@ -99,3 +99,73 @@ Skip `args` when:
 - The prompt is self-contained with no variable parts
 - The operator will provide context naturally in conversation
 - All arguments are optional and the prompt works without them
+
+## Interactive prompt bodies
+
+When a prompt body requires user confirmation or input collection during execution, use `ask_user` with the **full JSON payload** inline. Do not use prose like "ask the user", "confirm before proceeding", or "prompt for the value" — these are not actionable instructions for a model.
+
+### Confirmation pattern (destructive or irreversible operations)
+
+````markdown
+Use `ask_user` to confirm before proceeding:
+
+```json
+{
+  "question": "Remove the X session from the vault?",
+  "context": "<show the matched row or relevant details here>",
+  "options": [
+    { "title": "Yes, remove it" },
+    { "title": "Cancel" }
+  ],
+  "allowFreeform": false
+}
+```
+````
+
+### Choice pattern (selecting between options mid-operation)
+
+````markdown
+Use `ask_user` to collect the choice:
+
+```json
+{
+  "question": "Which fields should be updated for $1?",
+  "options": [
+    { "title": "Doing", "description": "Update the current task description" },
+    { "title": "Messages", "description": "Update the message count" },
+    { "title": "Cost", "description": "Update the session cost" }
+  ],
+  "allowFreeform": true,
+  "allowMultiple": true
+}
+```
+````
+
+### Input collection pattern (value only knowable at runtime)
+
+````markdown
+If the value isn't available in context, use `ask_user` to collect it:
+
+```json
+{
+  "question": "What is the session ID?",
+  "context": "The session ID is shown in the Pi session header.",
+  "allowFreeform": true
+}
+```
+````
+
+### `ask_user` vs `args` — when to use which
+
+| Situation | Use |
+|-----------|-----|
+| Value known upfront (path, name, ID) | `args` in frontmatter |
+| Confirmation before irreversible action | `ask_user` payload in body |
+| Choice between options mid-operation | `ask_user` payload in body |
+| Value only knowable at runtime (e.g. session ID from context) | `ask_user` payload in body |
+
+### Anti-patterns
+
+✘ `"Confirm with the user before removing"` — vague prose; use an `ask_user` payload with options\
+✘ `"Ask which fields to update"` — use an `ask_user` payload with an options array\
+✘ `"Prompt for the session ID if unavailable"` — use an `ask_user` payload with `allowFreeform: true`

@@ -136,20 +136,115 @@ Read the standup notes I'm about to paste and produce:
 Keep it brief.
 ```
 
+## Example 3: Interactive group with confirmation and choices
+
+A user-scoped group that manages a tracked list — demonstrates `ask_user` inside destructive and choice-driven prompt bodies.
+
+### Directory
+
+```
+~/.pi/agent/prompts/wip/
+├── _index.md
+├── list.md
+├── close.md
+└── update.md
+```
+
+### `_index.md`
+
+```markdown
+---
+type: group
+description: Track active Pi sessions in the vault — list, update, and close session rows
+---
+```
+
+### `list.md` (no interactivity — passive read)
+
+```markdown
+---
+description: Display active session table and flag rows older than 24 hours
+---
+Read `~/workspace/obsidian-vault/Tools/Pi/Active Sessions.md` and display the full session table.
+
+For each row, compute its age from the Started timestamp relative to the current time (`date`). Flag any session older than 24 hours as potentially stale.
+
+End with a one-line summary: total sessions, combined cost, and any staleness warnings.
+```
+
+### `close.md` (destructive — requires `ask_user` confirmation)
+
+````markdown
+---
+description: Remove a completed or stale session row from the vault
+args:
+  - name: session
+    required: true
+    hint: Session name or ID prefix to close
+---
+Close the `$1` session in `~/workspace/obsidian-vault/Tools/Pi/Active Sessions.md`.
+
+Match the row by Name (partial, case-insensitive) or leading ID characters. Show the matched row, then use `ask_user` to confirm:
+
+```json
+{
+  "question": "Remove this session from the vault?",
+  "context": "<show the matched row here>",
+  "options": [
+    { "title": "Yes, remove it" },
+    { "title": "Cancel" }
+  ],
+  "allowFreeform": false
+}
+```
+
+If confirmed, delete the row, write the file back, and report the remaining session count and combined cost.
+````
+
+### `update.md` (choice-driven — requires `ask_user` for field selection)
+
+````markdown
+---
+description: Update a session row's cost, message count, or current task
+args:
+  - name: session
+    required: true
+    hint: Session name or ID prefix to update
+---
+Update the `$1` session in `~/workspace/obsidian-vault/Tools/Pi/Active Sessions.md`.
+
+Match the row by Name (partial, case-insensitive) or leading ID characters. Then use `ask_user` to collect what to change:
+
+```json
+{
+  "question": "Which fields should be updated for $1?",
+  "options": [
+    { "title": "Doing", "description": "Update the current task description" },
+    { "title": "Messages", "description": "Update the message count" },
+    { "title": "Cost", "description": "Update the session cost" }
+  ],
+  "allowFreeform": true,
+  "allowMultiple": true
+}
+```
+
+Apply the selected changes, write the file back, and confirm the updated row.
+````
+
 ## Anti-patterns
 
 ### Too many subcommands
 
-❌ A group with 12 subcommands covering unrelated tasks. Split into focused groups.
+✘ A group with 12 subcommands covering unrelated tasks. Split into focused groups.
 
 ### Duplicate purpose
 
-❌ `/review quick` and `/review fast` that do the same thing. Pick one name.
+✘ `/review quick` and `/review fast` that do the same thing. Pick one name.
 
 ### Missing `_index.md`
 
-❌ A directory without `_index.md` is not recognized as a group. Always include it.
+✘ A directory without `_index.md` is not recognized as a group. Always include it.
 
 ### Vague descriptions
 
-❌ `description: Does stuff` — Write descriptions that help the operator choose between subcommands.
+✘ `description: Does stuff` — Write descriptions that help the operator choose between subcommands.
