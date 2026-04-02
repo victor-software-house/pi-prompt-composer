@@ -17,7 +17,7 @@ Use `ask_user` to confirm where the group should live:
 ```json
 {
   "question": "Where should the /$1 group live?",
-  "context": "User prompts (~/.pi/agent/prompts/) are personal and available everywhere. Project prompts (.pi/prompts/) are shared via the repo.",
+  "context": "User prompts (~/.pi/agent/prompts/) are personal and available everywhere.\nProject prompts (.pi/prompts/) are shared via the repo.",
   "options": [
     { "title": "Project (.pi/prompts/$1/)", "description": "Shared with the team via git" },
     { "title": "User (~/.pi/agent/prompts/$1/)", "description": "Personal, available in all projects" }
@@ -26,30 +26,40 @@ Use `ask_user` to confirm where the group should live:
 }
 ```
 
+Record the chosen root as `$PROMPT_ROOT` for all subsequent steps.
+
 ## Step 2 — Check for conflicts
 
-Before creating anything, verify the name is available:
-
 ```bash
-# Check both prompt roots for existing group
 ls -d ~/.pi/agent/prompts/$1/ .pi/prompts/$1/ 2>/dev/null
 ```
 
-If the directory exists, stop and tell the user. Suggest `/compose add $1` instead.
+If the directory exists in either root, **stop**. Tell the user and suggest `/compose add $1` instead. Do not proceed.
+
+Also verify the name does not collide with a built-in Pi command:
+
+```bash
+# Known built-in commands — reject if $1 matches any
+echo "help clear model reload config compact tree status" | tr ' ' '\n' | grep -x "$1" && echo "COLLISION" || echo "OK"
+```
+
+If there is a collision, use `ask_user` to pick an alternative name before continuing.
+
+**Done when:** no directory exists and no name collision found.
 
 ## Step 3 — Gather subcommands
 
-If a description was provided (`${@:2}`), use it as context for proposing subcommands.
+If a description was provided (`${@:2}`), use it as context for proposing subcommands. Propose 2–6 subcommands — never more without confirmation.
 
 Use `ask_user` to confirm the subcommand plan:
 
 ```json
 {
-  "question": "What subcommands should /$1 have?",
-  "context": "Based on: ${@:2}\n\nEach subcommand should perform one focused operation. Aim for 2–6. I'll propose a starting set — pick which to keep, or describe your own.",
+  "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
+  "context": "Based on: ${@:2}\n\nProposed subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
   "options": [
-    { "title": "Use proposed set", "description": "I'll generate the subcommands listed above" },
-    { "title": "Modify the set", "description": "I'll describe what I want instead" }
+    { "title": "Use this plan", "description": "Create the subcommands listed above" },
+    { "title": "Modify the plan", "description": "I'll describe what I want instead" }
   ],
   "allowFreeform": true
 }
@@ -64,28 +74,150 @@ If no description was provided, ask directly:
 }
 ```
 
-## Step 4 — Decide on args
+Then propose and confirm with the structured `ask_user` above.
 
-For each subcommand, determine whether it needs `args` metadata:
+**Done when:** the user has confirmed a specific list of subcommand names and purposes.
 
-- Use `args` when the prompt needs operator-provided values to be useful (file paths, names, specific targets)
-- Skip `args` when the prompt is self-contained or the model will gather context naturally
+## Step 4 — Decide on args per subcommand
+
+For each confirmed subcommand, determine whether it needs `args` metadata:
+
+- **Use `args`** when the prompt needs operator-provided values to be useful (file paths, names, specific targets)
+- **Skip `args`** when the prompt is self-contained or the model gathers context naturally
+
+Use `ask_user` to confirm args for any subcommand where it's ambiguous:
+
+```json
+{
+  "question": "Should /<group> <subcommand> take arguments?",
+  "context": "Purpose: <subcommand purpose>\n\nArguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
+  "options": [
+    { "title": "No args needed", "description": "The prompt is self-contained" },
+    { "title": "Yes, here's what it needs", "description": "I'll describe the expected arguments" }
+  ],
+  "allowFreeform": true
+}
+```
 
 ## Step 5 — Generate files
 
-Create the complete file set in the confirmed location:
+Create the complete file set in `$PROMPT_ROOT/$1/`.
 
-1. `_index.md` with `type: group` and a clear `description`
-2. One `.md` file per confirmed subcommand with:
-   - `description` in frontmatter (concise, shown in menus)
-   - `args` metadata when needed (each with `name`, `required`, `hint`)
-   - A focused prompt body using `$1`, `$2`, `$ARGUMENTS` substitution where appropriate
+### Quality rules for generated prompts
 
-Use kebab-case filenames. Output each file with its full relative path and complete content.
+Every generated subcommand `.md` file **must** meet these criteria:
 
-## Conventions
+1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`.
 
-- Group names: lowercase kebab-case, 1–3 words, no collisions with Pi built-in commands
-- Subcommand names: short verbs or verb phrases (`create`, `list`, `run-tests`)
-- Descriptions: one line, enough to choose between subcommands in a menu
-- Bodies: actionable instructions, not vague guidance
+2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*.
+
+3. **`ask_user` for interactive decisions**: If a subcommand needs operator input during execution (choosing between options, confirming destructive actions, providing missing context), include the **exact `ask_user` JSON payload** in the prompt body. Do not write "ask the user" — write the literal tool call.
+
+4. **Verification steps**: Include `bash` blocks that verify the operation completed correctly. The model should be able to confirm success programmatically.
+
+5. **Concrete output format**: Specify what the model should report after completion — a table, a summary, a file list. Do not leave the output format ambiguous.
+
+6. **Error handling**: Include what to do when things go wrong — file not found, name collision, empty results. At minimum: detect the error, report it clearly, suggest a fix.
+
+### Bad example (too vague):
+
+```markdown
+1. Read the file
+2. Make the changes
+3. Ask the user if they want to continue
+4. Save the result
+```
+
+### Good example (concrete and verifiable):
+
+```markdown
+1. Read the target file and parse its frontmatter:
+
+   ```bash
+   cat "$TARGET_FILE"
+   ```
+
+   If the file does not exist, stop and report: "File not found: $TARGET_FILE".
+
+2. Use `ask_user` to confirm the changes:
+
+   ```json
+   {
+     "question": "Apply these changes to <file>?",
+     "context": "Current state: <summary>\nProposed changes: <list>",
+     "options": [
+       { "title": "Apply", "description": "Write the changes" },
+       { "title": "Cancel", "description": "Discard and stop" }
+     ]
+   }
+   ```
+
+3. Write the updated file and verify:
+
+   ```bash
+   cat "$TARGET_FILE" | head -10
+   ```
+
+4. Report what changed:
+
+   | Field | Before | After |
+   |-------|--------|-------|
+   | ... | ... | ... |
+```
+
+### File generation order
+
+1. `_index.md` — with `type: group` and the confirmed `description`
+2. Each subcommand `.md` — in the order confirmed by the user
+
+Output each file with its full path.
+
+## Step 6 — Verify
+
+After generating all files:
+
+```bash
+# 1. Directory exists with correct structure
+ls "$PROMPT_ROOT/$1/"
+
+# 2. _index.md has type: group
+grep -q 'type: group' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: type: group" || echo "FAIL"
+
+# 3. Every subcommand has a description
+for f in "$PROMPT_ROOT/$1/"*.md; do
+  [ "$(basename "$f")" = "_index.md" ] && continue
+  grep -q 'description:' "$f" && echo "PASS: $(basename "$f")" || echo "FAIL: $(basename "$f") missing description"
+done
+
+# 4. No naming collisions with existing commands
+ls ~/.pi/agent/prompts/ .pi/prompts/ 2>/dev/null | grep -v "$1"
+```
+
+**Done when:** all verification checks pass and the user sees the file list.
+
+## Step 7 — Commit and next steps
+
+Commit the new group:
+
+```bash
+git add "$PROMPT_ROOT/$1/"
+git commit -m "feat: add /$1 grouped prompt set"
+```
+
+Report what was created as a table:
+
+| File | Subcommand | Purpose |
+|------|-----------|---------|
+| `_index.md` | — | Group root |
+| `<name>.md` | `/$1 <name>` | `<description>` |
+| ... | ... | ... |
+
+Tell the user: "Run `/reload` to pick up the new commands, then test with `/$1` to see the selector."
+
+## Stop conditions
+
+Stop and ask before:
+
+- Creating more than 6 subcommands without explicit confirmation
+- Using a name that shadows a built-in Pi command
+- Overwriting any existing files

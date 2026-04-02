@@ -40,7 +40,7 @@ Operator request
 
 Before generating any files:
 
-1. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Ask if ambiguous.
+1. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Use `ask_user` if ambiguous.
 2. **Scan for existing groups.** Check whether the group name already exists. Report conflicts before proceeding.
 3. **Confirm scope.** A group name must not collide with a flat Pi prompt template the operator wants to keep.
 
@@ -55,6 +55,22 @@ Use structured `ask_user` calls for:
 
 `ask_user` is always available — it ships bundled with this package.
 
+**Critical rule:** When writing `ask_user` calls, always include the **exact JSON payload** — `question`, `context`, `options`, and `allowFreeform`. Do not write "ask the user" without the literal tool call. The compose prompts (`/compose new`, `/compose add`, `/compose remove`) contain exact JSON examples for every interaction point.
+
+## Quality bar for generated prompts
+
+Every subcommand `.md` file produced by the compose workflows **must** include:
+
+1. **`description` in frontmatter** — concise, menu-friendly
+2. **`args` when needed** — each with `name`, `required`, and `hint`
+3. **Actionable body** — specific step-by-step instructions, not vague guidance
+4. **Exact `ask_user` JSON** — when the subcommand needs operator input during execution, include the literal tool call payload. Never write "ask the user" without the JSON.
+5. **Verification steps** — at least one `bash` block that confirms success
+6. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
+7. **Output format** — specify what the model reports (table, summary, file list)
+
+See the compose prompts themselves (`prompts/compose/new.md`, `prompts/compose/add.md`) for good-vs-bad examples.
+
 ## Stop conditions
 
 Stop and ask before:
@@ -68,34 +84,33 @@ Stop and ask before:
 
 ### Workflow A — Create a new grouped prompt set
 
-1. Gather purpose and target audience (operator-facing? team-shared?)
-2. Choose group name (lowercase kebab-case, no spaces)
-3. Define 2–N subcommands with names and one-line descriptions
-4. Generate `_index.md` with `type: group` and a `description`
-5. Generate each subcommand `.md` file with frontmatter and body
-6. Verify no naming overlap with existing groups
-
-Output: file-by-file content with exact paths.
+1. Use `ask_user` to confirm scope (user vs project prompts)
+2. Check for naming conflicts (existing groups, built-in commands)
+3. Gather subcommand plan with `ask_user` confirmation
+4. Decide args per subcommand (use `ask_user` when ambiguous)
+5. Generate files following the quality bar above
+6. Verify with bash checks
+7. Commit and report with a summary table
 
 See: [references/workflow.md](references/workflow.md), [references/layout.md](references/layout.md)
 
 ### Workflow B — Add subcommands to an existing group
 
-1. Read the existing group directory
-2. List current subcommands
-3. Identify gaps or overlap with proposed additions
-4. Generate new `.md` files matching the existing style
-5. Verify consistency: naming convention, frontmatter shape, description style
+1. Read all existing subcommands — note style, tone, field order
+2. Propose additions with `ask_user` confirmation
+3. Check for name collisions with existing subcommands
+4. Generate files that **match the existing group's style exactly**
+5. Verify and commit
 
 See: [references/operations.md](references/operations.md)
 
 ### Workflow C — Remove or simplify
 
 1. Read the existing group directory
-2. Determine whether to delete, merge, or deprecate
-3. Check whether other prompts or docs reference the target
-4. Confirm the change with the operator
-5. Apply minimal edits; update `_index.md` if the group description needs revision
+2. Use `ask_user` to select the target if not specified
+3. Check for references (other prompts, docs, scripts)
+4. Use `ask_user` to confirm action: delete, merge, simplify, or cancel
+5. Apply change, update references, verify, commit
 
 See: [references/operations.md](references/operations.md)
 
