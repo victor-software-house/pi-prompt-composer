@@ -33,8 +33,8 @@ function createGroup(
 	}
 }
 
-function roots(scope: 'user' | 'project' = 'user'): PromptRoot[] {
-	return [{ scope, rootPath: rootDir }];
+function roots(origin: 'bundled' | 'user' | 'project' = 'user'): PromptRoot[] {
+	return [{ origin, rootPath: rootDir }];
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ describe('group recognition', () => {
 		expect(groups).toHaveLength(1);
 		const g = groups[0]!;
 		expect(g.name).toBe('review');
-		expect(g.scope).toBe('user');
+		expect(g.origin).toBe('user');
 		expect(g.directoryPath).toBe(join(rootDir, 'review'));
 		expect(g.description).toBe('Test group');
 		expect(g.promptsByName.size).toBe(2);
@@ -122,8 +122,8 @@ describe('nested prompt filtering', () => {
 // ---------------------------------------------------------------------------
 // T023 — Scope attribution
 // ---------------------------------------------------------------------------
-describe('scope attribution', () => {
-	test('user root → scope: user, project root → scope: project', () => {
+describe('origin attribution', () => {
+	test('user root → origin: user, project root → origin: project', () => {
 		const userRoot = mkdtempSync(join(tmpdir(), 'pi-user-'));
 		const projRoot = mkdtempSync(join(tmpdir(), 'pi-proj-'));
 
@@ -131,8 +131,8 @@ describe('scope attribution', () => {
 		createGroup(projRoot, 'grp2', { 'b.md': '---\ndescription: B\n---\nBody' });
 
 		const twoRoots: PromptRoot[] = [
-			{ scope: 'user', rootPath: userRoot },
-			{ scope: 'project', rootPath: projRoot },
+			{ origin: 'user', rootPath: userRoot },
+			{ origin: 'project', rootPath: projRoot },
 		];
 		const warnings: string[] = [];
 		const groups = discoverGroups(twoRoots, warnings);
@@ -140,8 +140,8 @@ describe('scope attribution', () => {
 		expect(groups).toHaveLength(2);
 		const userGroup = groups.find((g) => g.name === 'grp');
 		const projGroup = groups.find((g) => g.name === 'grp2');
-		expect(userGroup?.scope).toBe('user');
-		expect(projGroup?.scope).toBe('project');
+		expect(userGroup?.origin).toBe('user');
+		expect(projGroup?.origin).toBe('project');
 
 		rmSync(userRoot, { recursive: true, force: true });
 		rmSync(projRoot, { recursive: true, force: true });
@@ -257,8 +257,8 @@ describe('duplicate group names', () => {
 		createGroup(root2, 'shared', { 'b.md': '---\ndescription: B\n---\nBody' });
 
 		const twoRoots: PromptRoot[] = [
-			{ scope: 'user', rootPath: rootDir },
-			{ scope: 'project', rootPath: root2 },
+			{ origin: 'user', rootPath: rootDir },
+			{ origin: 'project', rootPath: root2 },
 		];
 		const warnings: string[] = [];
 		const groups = discoverGroups(twoRoots, warnings);
@@ -275,7 +275,7 @@ describe('duplicate group names', () => {
 // ---------------------------------------------------------------------------
 describe('nonexistent root', () => {
 	test('root pointing to missing directory → skipped silently', () => {
-		const missing: PromptRoot[] = [{ scope: 'user', rootPath: '/tmp/does-not-exist-ever' }];
+		const missing: PromptRoot[] = [{ origin: 'user', rootPath: '/tmp/does-not-exist-ever' }];
 		const warnings: string[] = [];
 		const groups = discoverGroups(missing, warnings);
 
