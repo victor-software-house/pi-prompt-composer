@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#MISE description="Ensure bun.lock is in sync before push"
+
+set -euo pipefail
+
+bun install
+
+if ! git diff --quiet -- bun.lock; then
+  echo ""
+  echo "Lockfile is out of sync. Commit the updated lockfile before pushing:"
+  echo ""
+  git diff --stat -- bun.lock
+  echo ""
+  echo "  git add bun.lock && git commit -m 'chore: sync lockfile'"
+  echo ""
+  exit 1
+fi

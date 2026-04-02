@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Run oxlint --fix on staged JS/TS files"
+#USAGE arg "files..." help="Files to lint and auto-fix"
+
+set -euo pipefail
+
+if [ "$#" -eq 0 ]; then
+  exit 0
+fi
+
+bunx oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ "$@"

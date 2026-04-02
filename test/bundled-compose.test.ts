@@ -178,7 +178,7 @@ describe('/compose new', () => {
 		await cmd.handler('new review', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		// $1 → "review"
 		expect(content).toContain('Create a new grouped prompt set named `review`.');
@@ -187,7 +187,7 @@ describe('/compose new', () => {
 		expect(content).toContain('What subcommands should /review have?');
 		// ${@:2} is empty when only group-name provided — shows literal \n in JSON context
 		expect(content).toContain('Based on: \\n\\nEach subcommand');
-		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
 	});
 
 	test('with group-name and trailing description: ${@:2} captures all remaining args', async () => {
@@ -198,7 +198,7 @@ describe('/compose new', () => {
 		await cmd.handler('new review Code review prompts for PR quality', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		// $1 → "review"
 		expect(content).toContain('Create a new grouped prompt set named `review`.');
@@ -214,7 +214,7 @@ describe('/compose new', () => {
 		await cmd.handler('new "code-review" A set of review helpers', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		expect(content).toContain('Create a new grouped prompt set named `code-review`.');
 		expect(content).toContain('Based on: A set of review helpers');
@@ -230,10 +230,10 @@ describe('/compose new', () => {
 		await cmd.handler('new', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0]!.title).toContain('/compose new');
-		expect(inputCalls[0]!.placeholder).toBe('Name for the new command group (kebab-case)');
+		expect(inputCalls[0].title).toContain('/compose new');
+		expect(inputCalls[0].placeholder).toBe('Name for the new command group (kebab-case)');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Create a new grouped prompt set named `deploy`.');
+		expect(sentMessages[0].content).toContain('Create a new grouped prompt set named `deploy`.');
 	});
 });
 
@@ -250,7 +250,7 @@ describe('/compose add', () => {
 		await cmd.handler('add review', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
 		expect(content).toContain('~/.pi/agent/prompts/review');
@@ -266,7 +266,7 @@ describe('/compose add', () => {
 		await cmd.handler('add review Add a checklist subcommand for security', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
 		expect(content).toContain('Based on: Add a checklist subcommand for security');
@@ -282,9 +282,9 @@ describe('/compose add', () => {
 		await cmd.handler('add', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0]!.placeholder).toBe('Name of the existing command group');
+		expect(inputCalls[0].placeholder).toBe('Name of the existing command group');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Add subcommands to the `deploy` grouped prompt set.');
+		expect(sentMessages[0].content).toContain('Add subcommands to the `deploy` grouped prompt set.');
 	});
 });
 
@@ -301,7 +301,7 @@ describe('/compose remove', () => {
 		await cmd.handler('remove review', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
 		expect(content).toContain('~/.pi/agent/prompts/review');
@@ -316,7 +316,7 @@ describe('/compose remove', () => {
 		await cmd.handler('remove review checklist', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0]!.content;
+		const content = sentMessages[0].content;
 
 		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
 		// $2 → "checklist" in "target that file directly"
@@ -338,9 +338,9 @@ describe('/compose remove', () => {
 		await cmd.handler('remove', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0]!.placeholder).toBe('Name of the command group to modify');
+		expect(inputCalls[0].placeholder).toBe('Name of the command group to modify');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Remove or simplify subcommands in the `deploy` grouped prompt set.');
+		expect(sentMessages[0].content).toContain('Remove or simplify subcommands in the `deploy` grouped prompt set.');
 	});
 });
 
@@ -361,7 +361,7 @@ describe('bare /compose selector', () => {
 
 		// Selector should trigger, then new was selected, required arg collected
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toContain('Create a new grouped prompt set named `my-group`.');
+		expect(sentMessages[0].content).toContain('Create a new grouped prompt set named `my-group`.');
 	});
 });
 
@@ -394,7 +394,7 @@ describe('bundled /compose override', () => {
 		await cmd.handler('custom hello world', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]!.content).toBe('Custom body with hello world');
+		expect(sentMessages[0].content).toBe('Custom body with hello world');
 	});
 
 	test('project-level /compose replaces bundled autocomplete', async () => {
@@ -437,10 +437,10 @@ describe('bundled /compose unknown subcommand', () => {
 
 		expect(sentMessages).toHaveLength(0);
 		expect(notifyCalls).toHaveLength(1);
-		expect(notifyCalls[0]!.severity).toBe('warning');
-		expect(notifyCalls[0]!.message).toContain('nonexistent');
-		expect(notifyCalls[0]!.message).toContain('new');
-		expect(notifyCalls[0]!.message).toContain('add');
-		expect(notifyCalls[0]!.message).toContain('remove');
+		expect(notifyCalls[0].severity).toBe('warning');
+		expect(notifyCalls[0].message).toContain('nonexistent');
+		expect(notifyCalls[0].message).toContain('new');
+		expect(notifyCalls[0].message).toContain('add');
+		expect(notifyCalls[0].message).toContain('remove');
 	});
 });

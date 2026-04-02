@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Run Biome check --write on staged files"
+#USAGE arg "files..." help="Files to format"
+
+set -euo pipefail
+
+if [ "$#" -eq 0 ]; then
+  exit 0
+fi
+
+bunx biome check --write --no-errors-on-unmatched "$@"
