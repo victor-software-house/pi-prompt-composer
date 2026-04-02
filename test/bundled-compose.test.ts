@@ -235,6 +235,26 @@ describe('/compose new', () => {
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0].content).toContain('Create a new grouped prompt set named `deploy`.');
 	});
+
+	test('escaped \\$ references survive substitution as literal $', async () => {
+		const { commands, sentMessages } = await loadExtension(cwd);
+		const cmd = commands.get('compose')!;
+		const { ctx } = createContext();
+
+		await cmd.handler('new review', ctx);
+
+		const content = sentMessages[0].content;
+
+		// These escaped references must appear as literal $ syntax in the output,
+		// NOT substituted to "review". They teach the model about substitution syntax.
+		expect(content).toContain('`$1`');
+		expect(content).toContain('`$2`');
+		expect(content).toContain('`${@:2}`');
+		expect(content).toContain('`$ARGUMENTS`');
+		expect(content).toContain('`$@`');
+		// The instruction about substitution syntax must survive
+		expect(content).toContain('use Pi substitution syntax');
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -285,6 +305,23 @@ describe('/compose add', () => {
 		expect(inputCalls[0].placeholder).toBe('Name of the existing command group');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0].content).toContain('Add subcommands to the `deploy` grouped prompt set.');
+	});
+
+	test('escaped \\$ references survive substitution as literal $', async () => {
+		const { commands, sentMessages } = await loadExtension(cwd);
+		const cmd = commands.get('compose')!;
+		const { ctx } = createContext();
+
+		await cmd.handler('add review', ctx);
+
+		const content = sentMessages[0].content;
+
+		// Escaped $ refs in quality rules must survive as literal syntax docs
+		expect(content).toContain('`$1`');
+		expect(content).toContain('`$2`');
+		expect(content).toContain('`${@:2}`');
+		expect(content).toContain('`$ARGUMENTS`');
+		expect(content).toContain('use Pi substitution syntax');
 	});
 });
 

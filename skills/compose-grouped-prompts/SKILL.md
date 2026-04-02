@@ -68,6 +68,7 @@ Every subcommand `.md` file produced by the compose workflows **must** include:
 5. **Verification steps** — at least one `bash` block that confirms success
 6. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
 7. **Output format** — specify what the model reports (table, summary, file list)
+8. **Substitution syntax** — when the generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}` so operator input flows into the rendered prompt
 
 See the compose prompts themselves (`prompts/compose/new.md`, `prompts/compose/add.md`) for good-vs-bad examples.
 

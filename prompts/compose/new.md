@@ -109,7 +109,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`.
 
-2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*.
+2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body so the operator's input flows into the prompt.
 
 3. **`ask_user` for interactive decisions**: If a subcommand needs operator input during execution (choosing between options, confirming destructive actions, providing missing context), include the **exact `ask_user` JSON payload** in the prompt body. Do not write "ask the user" — write the literal tool call.
 
@@ -118,6 +118,8 @@ Every generated subcommand `.md` file **must** meet these criteria:
 5. **Concrete output format**: Specify what the model should report after completion — a table, a summary, a file list. Do not leave the output format ambiguous.
 
 6. **Error handling**: Include what to do when things go wrong — file not found, name collision, empty results. At minimum: detect the error, report it clearly, suggest a fix.
+
+7. **Substitution syntax**: When the generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs.
 
 ### Bad example (too vague):
 
