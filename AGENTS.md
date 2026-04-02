@@ -75,6 +75,14 @@ Additional checks:
 - It is safe to push the current branch after committing validated work, unless the user says not to.
 - `semantic-release` publishes from `main`; avoid ad hoc release-file edits unless the task specifically requires them.
 
+## Versioning
+
+This package has no `exports` field and no compiled output. Consumers cannot import its TypeScript types — Pi loads the extension at runtime via the `pi.extensions` entry in `package.json`. The public API is **runtime behavior only**: which commands are registered, how autocomplete works, how args are collected, and what gets dispatched.
+
+`BREAKING CHANGE:` applies only when that runtime behavior changes incompatibly for existing users — e.g. removing a bundled command, changing a required arg's position, altering dispatch output so existing prompts break. Internal type renames, helper refactors, and interface changes that only touch this repo's own source are never breaking.
+
+Lesson from v1.0.0: the `PromptScope → PromptOrigin` rename was internal-only and should have been a plain `feat:` (→ 0.2.0). The `BREAKING CHANGE:` footer in the PR squash body burned a major version permanently and needlessly.
+
 ## Docs synchronization
 
 - Keep human onboarding and install/usage guidance in [`README.md`](README.md).
