@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.2...v1.0.3) (2026-04-02)
+
+
+### Bug Fixes
+
+* use YAML block scalar for skill description to preserve quotes and colons ([d69e745](https://github.com/victor-software-house/pi-prompt-composer/commit/d69e745149f8308609da5019c858ee6fd77180ea))
+
 ## [1.0.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.1...v1.0.2) (2026-04-02)
 
 
