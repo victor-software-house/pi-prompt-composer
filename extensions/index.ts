@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
 	DynamicBorder,
 	type ExtensionAPI,
@@ -96,10 +97,10 @@ export function substituteArgs(content: string, args: string[]): string {
 // Grouped prompt types (data-model.md)
 // ---------------------------------------------------------------------------
 
-export type PromptScope = 'user' | 'project';
+export type PromptOrigin = 'bundled' | 'user' | 'project';
 
 export interface PromptRoot {
-	scope: PromptScope;
+	origin: PromptOrigin;
 	rootPath: string;
 }
 
@@ -115,13 +116,13 @@ export interface NestedPrompt {
 	description: string;
 	args: ArgsItem[] | undefined;
 	content: string;
-	scope: PromptScope;
+	origin: PromptOrigin;
 	groupName: string;
 }
 
 export interface EffectivePromptGroup {
 	name: string;
-	scope: PromptScope;
+	origin: PromptOrigin;
 	directoryPath: string;
 	description: string;
 	promptsByName: Map<string, NestedPrompt>;
@@ -224,17 +225,44 @@ export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArg
 // Discovery engine
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve a path relative to this source file.
+ * Portable across Node, Bun, and packaged npm installs.
+ */
+export function resolveRelativePath(relativePath: string): string {
+	return fileURLToPath(new URL(relativePath, import.meta.url));
+}
+
+/**
+ * Build the ordered list of prompt roots.
+ *
+ * Order matters — later command registrations within the same extension
+ * override earlier ones (Map.set semantics), so:
+ *   1. bundled compose/ (lowest precedence)
+ *   2. user prompts
+ *   3. project prompts (highest precedence)
+ */
 function getPromptRoots(): PromptRoot[] {
 	const roots: PromptRoot[] = [];
-	const userRoot = join(getAgentDir(), 'prompts');
-	const projectRoot = join(process.cwd(), '.pi', 'prompts');
 
+	// Bundled compose/ group root (exact group root — Case A)
+	const bundledCompose = resolveRelativePath('../prompts/compose');
+	if (existsSync(bundledCompose)) {
+		roots.push({ origin: 'bundled', rootPath: bundledCompose });
+	}
+
+	// User prompt root (parent root — Case B)
+	const userRoot = join(getAgentDir(), 'prompts');
 	if (existsSync(userRoot)) {
-		roots.push({ scope: 'user', rootPath: userRoot });
+		roots.push({ origin: 'user', rootPath: userRoot });
 	}
+
+	// Project prompt root (parent root — Case B)
+	const projectRoot = join(process.cwd(), '.pi', 'prompts');
 	if (existsSync(projectRoot)) {
-		roots.push({ scope: 'project', rootPath: projectRoot });
+		roots.push({ origin: 'project', rootPath: projectRoot });
 	}
+
 	return roots;
 }
 
@@ -244,10 +272,144 @@ export function fmString(fm: Record<string, unknown>, key: string): string {
 	return typeof val === 'string' ? val : '';
 }
 
+/**
+ * Load a single grouped prompt directory and return an EffectivePromptGroup,
+ * or undefined if the directory is not a valid group.
+ */
+export function loadSingleGroup(
+	dirPath: string,
+	groupName: string,
+	origin: PromptOrigin,
+	warnings: string[],
+): EffectivePromptGroup | undefined {
+	const indexPath = join(dirPath, '_index.md');
+
+	// Hard gate: _index.md must exist with type: group
+	if (!existsSync(indexPath)) return undefined;
+
+	let indexContent: string;
+	try {
+		indexContent = readFileSync(indexPath, 'utf-8');
+	} catch {
+		return undefined;
+	}
+
+	const { frontmatter: indexFm } = parseFrontmatter(indexContent);
+	if (indexFm['type'] !== 'group') {
+		return undefined;
+	}
+
+	// Group description (recommended, warn + fallback)
+	const groupDesc = fmString(indexFm, 'description');
+	if (groupDesc === '') {
+		warnings.push(`Group "${groupName}": _index.md missing description, using directory name as fallback`);
+	}
+	const effectiveGroupDesc = groupDesc === '' ? groupName : groupDesc;
+
+	// Discover nested prompts
+	const promptsByName = new Map<string, NestedPrompt>();
+	let fileNames: string[];
+	try {
+		fileNames = readdirSync(dirPath, { encoding: 'utf-8' });
+	} catch {
+		return undefined;
+	}
+
+	for (const fileName of fileNames) {
+		const filePath = join(dirPath, fileName);
+		try {
+			if (!statSync(filePath).isFile()) continue;
+		} catch {
+			continue;
+		}
+		if (!fileName.endsWith('.md')) continue;
+		if (fileName === '_index.md') continue;
+		let rawContent: string;
+		try {
+			rawContent = readFileSync(filePath, 'utf-8');
+		} catch {
+			continue;
+		}
+
+		const { frontmatter: fm } = parseFrontmatter(rawContent);
+		const body = stripFrontmatter(rawContent);
+
+		// Name: optional override, otherwise kebab-case filename stem
+		const nameOverride = fmString(fm, 'name');
+		const stem = fileName.replace(/\.md$/i, '');
+		const effectiveName = nameOverride === '' ? toKebabCase(stem) : nameOverride;
+
+		// Description (recommended, warn + fallback)
+		const desc = fmString(fm, 'description');
+		if (desc === '') {
+			warnings.push(`Group "${groupName}": ${fileName} missing description, using filename stem as fallback`);
+		}
+		const effectiveDesc = desc === '' ? stem : desc;
+
+		// Args (optional)
+		const args = parseArgsMetadata(fm['args'], filePath, warnings);
+
+		const prompt: NestedPrompt = {
+			name: effectiveName,
+			filePath,
+			description: effectiveDesc,
+			args,
+			content: body,
+			origin,
+			groupName,
+		};
+
+		promptsByName.set(effectiveName, prompt);
+	}
+
+	// Skip groups with no runnable nested prompts
+	if (promptsByName.size === 0) return undefined;
+
+	return {
+		name: groupName,
+		origin,
+		directoryPath: dirPath,
+		description: effectiveGroupDesc,
+		promptsByName,
+		promptNames: [...promptsByName.keys()].sort(),
+	};
+}
+
+/**
+ * Discover grouped prompt directories from an ordered list of roots.
+ *
+ * Each root is handled as one of two cases:
+ *   Case A — the root itself is a grouped prompt directory (has _index.md with type: group).
+ *            The directory name becomes the group name.
+ *   Case B — the root is a parent directory whose child directories are scanned.
+ */
 export function discoverGroups(roots: PromptRoot[], warnings: string[]): EffectivePromptGroup[] {
 	const allCandidates: EffectivePromptGroup[] = [];
 
 	for (const root of roots) {
+		// Case A: root itself is an exact grouped prompt directory
+		const indexPath = join(root.rootPath, '_index.md');
+		if (existsSync(indexPath)) {
+			let indexContent: string | undefined;
+			try {
+				indexContent = readFileSync(indexPath, 'utf-8');
+			} catch {
+				// fall through to Case B
+			}
+			if (indexContent !== undefined) {
+				const { frontmatter: indexFm } = parseFrontmatter(indexContent);
+				if (indexFm['type'] === 'group') {
+					const groupName = basename(root.rootPath);
+					const group = loadSingleGroup(root.rootPath, groupName, root.origin, warnings);
+					if (group !== undefined) {
+						allCandidates.push(group);
+					}
+					continue; // root consumed as exact group, skip Case B
+				}
+			}
+		}
+
+		// Case B: root is a parent directory — scan child directories
 		let entryNames: string[];
 		try {
 			entryNames = readdirSync(root.rootPath, { encoding: 'utf-8' });
@@ -263,108 +425,21 @@ export function discoverGroups(roots: PromptRoot[], warnings: string[]): Effecti
 				continue;
 			}
 
-			const indexPath = join(dirPath, '_index.md');
-
-			// Hard gate: _index.md must exist with type: group
-			if (!existsSync(indexPath)) continue;
-
-			let indexContent: string;
-			try {
-				indexContent = readFileSync(indexPath, 'utf-8');
-			} catch {
-				continue;
+			const group = loadSingleGroup(dirPath, entryName, root.origin, warnings);
+			if (group !== undefined) {
+				allCandidates.push(group);
 			}
-
-			const { frontmatter: indexFm } = parseFrontmatter(indexContent);
-			if (indexFm['type'] !== 'group') {
-				continue;
-			}
-
-			// Group description (recommended, warn + fallback)
-			const groupDesc = fmString(indexFm, 'description');
-			if (groupDesc === '') {
-				warnings.push(`Group "${entryName}": _index.md missing description, using directory name as fallback`);
-			}
-			const effectiveGroupDesc = groupDesc === '' ? entryName : groupDesc;
-
-			// Discover nested prompts
-			const promptsByName = new Map<string, NestedPrompt>();
-			let fileNames: string[];
-			try {
-				fileNames = readdirSync(dirPath, { encoding: 'utf-8' });
-			} catch {
-				continue;
-			}
-
-			for (const fileName of fileNames) {
-				const filePath = join(dirPath, fileName);
-				try {
-					if (!statSync(filePath).isFile()) continue;
-				} catch {
-					continue;
-				}
-				if (!fileName.endsWith('.md')) continue;
-				if (fileName === '_index.md') continue;
-				let rawContent: string;
-				try {
-					rawContent = readFileSync(filePath, 'utf-8');
-				} catch {
-					continue;
-				}
-
-				const { frontmatter: fm } = parseFrontmatter(rawContent);
-				const body = stripFrontmatter(rawContent);
-
-				// Name: optional override, otherwise kebab-case filename stem
-				const nameOverride = fmString(fm, 'name');
-				const stem = fileName.replace(/\.md$/i, '');
-				const effectiveName = nameOverride === '' ? toKebabCase(stem) : nameOverride;
-
-				// Description (recommended, warn + fallback)
-				const desc = fmString(fm, 'description');
-				if (desc === '') {
-					warnings.push(`Group "${entryName}": ${fileName} missing description, using filename stem as fallback`);
-				}
-				const effectiveDesc = desc === '' ? stem : desc;
-
-				// Args (optional)
-				const args = parseArgsMetadata(fm['args'], filePath, warnings);
-
-				const prompt: NestedPrompt = {
-					name: effectiveName,
-					filePath,
-					description: effectiveDesc,
-					args,
-					content: body,
-					scope: root.scope,
-					groupName: entryName,
-				};
-
-				promptsByName.set(effectiveName, prompt);
-			}
-
-			// Skip groups with no runnable nested prompts
-			if (promptsByName.size === 0) continue;
-
-			allCandidates.push({
-				name: entryName,
-				scope: root.scope,
-				directoryPath: dirPath,
-				description: effectiveGroupDesc,
-				promptsByName,
-				promptNames: [...promptsByName.keys()].sort(),
-			});
 		}
 	}
 
-	// Warn on duplicate group names across scopes
-	const seen = new Map<string, PromptScope>();
+	// Warn on duplicate group names across origins
+	const seen = new Map<string, PromptOrigin>();
 	for (const group of allCandidates) {
 		const prev = seen.get(group.name);
 		if (prev !== undefined) {
-			warnings.push(`Duplicate group name "${group.name}" found in both ${prev} and ${group.scope} scopes`);
+			warnings.push(`Duplicate group name "${group.name}" found in both ${prev} and ${group.origin} origins`);
 		} else {
-			seen.set(group.name, group.scope);
+			seen.set(group.name, group.origin);
 		}
 	}
 

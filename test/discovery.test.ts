@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { discoverGroups } from '../extensions/index';
+import { discoverGroups, loadSingleGroup, resolveRelativePath } from '../extensions/index';
 import type { PromptRoot } from '../extensions/index';
 
 // ---------------------------------------------------------------------------
@@ -33,8 +33,8 @@ function createGroup(
 	}
 }
 
-function roots(scope: 'user' | 'project' = 'user'): PromptRoot[] {
-	return [{ scope, rootPath: rootDir }];
+function roots(origin: 'bundled' | 'user' | 'project' = 'user'): PromptRoot[] {
+	return [{ origin, rootPath: rootDir }];
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ describe('group recognition', () => {
 		expect(groups).toHaveLength(1);
 		const g = groups[0]!;
 		expect(g.name).toBe('review');
-		expect(g.scope).toBe('user');
+		expect(g.origin).toBe('user');
 		expect(g.directoryPath).toBe(join(rootDir, 'review'));
 		expect(g.description).toBe('Test group');
 		expect(g.promptsByName.size).toBe(2);
@@ -122,8 +122,8 @@ describe('nested prompt filtering', () => {
 // ---------------------------------------------------------------------------
 // T023 — Scope attribution
 // ---------------------------------------------------------------------------
-describe('scope attribution', () => {
-	test('user root → scope: user, project root → scope: project', () => {
+describe('origin attribution', () => {
+	test('user root → origin: user, project root → origin: project', () => {
 		const userRoot = mkdtempSync(join(tmpdir(), 'pi-user-'));
 		const projRoot = mkdtempSync(join(tmpdir(), 'pi-proj-'));
 
@@ -131,8 +131,8 @@ describe('scope attribution', () => {
 		createGroup(projRoot, 'grp2', { 'b.md': '---\ndescription: B\n---\nBody' });
 
 		const twoRoots: PromptRoot[] = [
-			{ scope: 'user', rootPath: userRoot },
-			{ scope: 'project', rootPath: projRoot },
+			{ origin: 'user', rootPath: userRoot },
+			{ origin: 'project', rootPath: projRoot },
 		];
 		const warnings: string[] = [];
 		const groups = discoverGroups(twoRoots, warnings);
@@ -140,8 +140,8 @@ describe('scope attribution', () => {
 		expect(groups).toHaveLength(2);
 		const userGroup = groups.find((g) => g.name === 'grp');
 		const projGroup = groups.find((g) => g.name === 'grp2');
-		expect(userGroup?.scope).toBe('user');
-		expect(projGroup?.scope).toBe('project');
+		expect(userGroup?.origin).toBe('user');
+		expect(projGroup?.origin).toBe('project');
 
 		rmSync(userRoot, { recursive: true, force: true });
 		rmSync(projRoot, { recursive: true, force: true });
@@ -257,8 +257,8 @@ describe('duplicate group names', () => {
 		createGroup(root2, 'shared', { 'b.md': '---\ndescription: B\n---\nBody' });
 
 		const twoRoots: PromptRoot[] = [
-			{ scope: 'user', rootPath: rootDir },
-			{ scope: 'project', rootPath: root2 },
+			{ origin: 'user', rootPath: rootDir },
+			{ origin: 'project', rootPath: root2 },
 		];
 		const warnings: string[] = [];
 		const groups = discoverGroups(twoRoots, warnings);
@@ -275,11 +275,152 @@ describe('duplicate group names', () => {
 // ---------------------------------------------------------------------------
 describe('nonexistent root', () => {
 	test('root pointing to missing directory → skipped silently', () => {
-		const missing: PromptRoot[] = [{ scope: 'user', rootPath: '/tmp/does-not-exist-ever' }];
+		const missing: PromptRoot[] = [{ origin: 'user', rootPath: '/tmp/does-not-exist-ever' }];
 		const warnings: string[] = [];
 		const groups = discoverGroups(missing, warnings);
 
 		expect(groups).toHaveLength(0);
 		expect(warnings).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T028 — Exact group root (Case A)
+// ---------------------------------------------------------------------------
+describe('exact group root (Case A)', () => {
+	test('root that is itself a valid group directory → loaded as single group', () => {
+		// Create a group directory directly (not inside a parent)
+		const groupDir = mkdtempSync(join(tmpdir(), 'pi-exact-compose-'));
+		const composePath = join(groupDir, 'compose');
+		mkdirSync(composePath, { recursive: true });
+		writeFileSync(join(composePath, '_index.md'), '---\ntype: group\ndescription: Compose helpers\n---\n');
+		writeFileSync(join(composePath, 'new.md'), '---\ndescription: Create new group\n---\nCreate a new group');
+		writeFileSync(join(composePath, 'add.md'), '---\ndescription: Add subcommands\n---\nAdd subcommands');
+
+		// Point root directly at the compose directory (exact group root)
+		const exactRoot: PromptRoot[] = [{ origin: 'bundled', rootPath: composePath }];
+		const warnings: string[] = [];
+		const groups = discoverGroups(exactRoot, warnings);
+
+		expect(groups).toHaveLength(1);
+		expect(groups[0]!.name).toBe('compose');
+		expect(groups[0]!.origin).toBe('bundled');
+		expect(groups[0]!.description).toBe('Compose helpers');
+		expect(groups[0]!.promptNames).toEqual(['add', 'new']);
+
+		rmSync(groupDir, { recursive: true, force: true });
+	});
+
+	test('root with _index.md but wrong type → treated as parent root (Case B)', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'pi-notgroup-'));
+		writeFileSync(join(dir, '_index.md'), '---\ntype: prompt\ndescription: Not a group\n---\n');
+		// Add a child group inside
+		const childGroup = join(dir, 'child');
+		mkdirSync(childGroup, { recursive: true });
+		writeFileSync(join(childGroup, '_index.md'), '---\ntype: group\ndescription: Child group\n---\n');
+		writeFileSync(join(childGroup, 'cmd.md'), '---\ndescription: A cmd\n---\nBody');
+
+		const roots: PromptRoot[] = [{ origin: 'user', rootPath: dir }];
+		const warnings: string[] = [];
+		const groups = discoverGroups(roots, warnings);
+
+		expect(groups).toHaveLength(1);
+		expect(groups[0]!.name).toBe('child');
+
+		rmSync(dir, { recursive: true, force: true });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T029 — Bundled root override by user/project
+// ---------------------------------------------------------------------------
+describe('bundled root override ordering', () => {
+	test('bundled root loaded first, user/project can produce same group name', () => {
+		const bundledDir = mkdtempSync(join(tmpdir(), 'pi-bundled-'));
+		const composeBundled = join(bundledDir, 'compose');
+		mkdirSync(composeBundled, { recursive: true });
+		writeFileSync(join(composeBundled, '_index.md'), '---\ntype: group\ndescription: Bundled compose\n---\n');
+		writeFileSync(join(composeBundled, 'new.md'), '---\ndescription: Bundled new\n---\nBundled body');
+
+		const userDir = mkdtempSync(join(tmpdir(), 'pi-user-override-'));
+		createGroup(userDir, 'compose', {
+			'new.md': '---\ndescription: User new\n---\nUser body',
+			'custom.md': '---\ndescription: User custom\n---\nCustom body',
+		}, '---\ntype: group\ndescription: User compose\n---\n');
+
+		const orderedRoots: PromptRoot[] = [
+			{ origin: 'bundled', rootPath: composeBundled },
+			{ origin: 'user', rootPath: userDir },
+		];
+		const warnings: string[] = [];
+		const groups = discoverGroups(orderedRoots, warnings);
+
+		// Both should be discovered (registration handles override)
+		expect(groups).toHaveLength(2);
+		expect(groups[0]!.origin).toBe('bundled');
+		expect(groups[1]!.origin).toBe('user');
+		expect(warnings.some((w) => w.includes('Duplicate group name'))).toBe(true);
+
+		rmSync(bundledDir, { recursive: true, force: true });
+		rmSync(userDir, { recursive: true, force: true });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T030 — loadSingleGroup helper
+// ---------------------------------------------------------------------------
+describe('loadSingleGroup', () => {
+	test('loads a valid group directory', () => {
+		createGroup(rootDir, 'mygrp', {
+			'cmd.md': '---\ndescription: A command\n---\nBody',
+		});
+		const warnings: string[] = [];
+		const group = loadSingleGroup(join(rootDir, 'mygrp'), 'mygrp', 'user', warnings);
+
+		expect(group).toBeDefined();
+		expect(group!.name).toBe('mygrp');
+		expect(group!.origin).toBe('user');
+		expect(group!.promptNames).toEqual(['cmd']);
+	});
+
+	test('returns undefined for directory without _index.md', () => {
+		const dir = join(rootDir, 'noindex');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'cmd.md'), '---\ndescription: A cmd\n---\nBody');
+
+		const warnings: string[] = [];
+		const group = loadSingleGroup(dir, 'noindex', 'user', warnings);
+		expect(group).toBeUndefined();
+	});
+
+	test('returns undefined for group with wrong type', () => {
+		createGroup(rootDir, 'wrongtype', {
+			'cmd.md': '---\ndescription: A cmd\n---\nBody',
+		}, '---\ntype: prompt\n---\n');
+		const warnings: string[] = [];
+		const group = loadSingleGroup(join(rootDir, 'wrongtype'), 'wrongtype', 'user', warnings);
+		expect(group).toBeUndefined();
+	});
+
+	test('returns undefined for empty group', () => {
+		const dir = join(rootDir, 'emptygrp');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, '_index.md'), '---\ntype: group\ndescription: Empty\n---\n');
+
+		const warnings: string[] = [];
+		const group = loadSingleGroup(dir, 'emptygrp', 'user', warnings);
+		expect(group).toBeUndefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T031 — resolveRelativePath
+// ---------------------------------------------------------------------------
+describe('resolveRelativePath', () => {
+	test('resolves a relative path from extensions/index.ts location', () => {
+		const resolved = resolveRelativePath('../prompts/compose');
+		expect(resolved).toContain('prompts');
+		expect(resolved).toContain('compose');
+		expect(resolved).not.toContain('file://');
 	});
 });
