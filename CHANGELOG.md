@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.3.0...v1.3.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* remove prompts manifest entry causing duplicate flat prompt registration ([9d513b2](https://github.com/victor-software-house/pi-prompt-composer/commit/9d513b2d05e6064ee059c151d72cd81a84646037))
+
 # [1.3.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.3...v1.3.0) (2026-04-03)
 
 
