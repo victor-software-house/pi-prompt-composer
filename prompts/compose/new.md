@@ -109,7 +109,8 @@ Create the complete file set in `$PROMPT_ROOT/$1/`.
 
 Every generated subcommand `.md` file **must** meet these criteria:
 
-1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`.
+1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
+   Unquoted colons in YAML values cause parse errors that crash the extension.
 
 2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body so the operator's input flows into the prompt.
 

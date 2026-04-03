@@ -121,7 +121,8 @@ Create new `.md` files that **match the existing group's style exactly**.
 
 Every new subcommand `.md` file **must** include:
 
-1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone.
+1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
+   Unquoted colons in YAML values cause parse errors that crash the extension.
 
 2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `\$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body.
 

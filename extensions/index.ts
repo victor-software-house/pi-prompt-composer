@@ -335,6 +335,19 @@ function getPromptRoots(): PromptRoot[] {
 	return roots;
 }
 
+/**
+ * Safely parse frontmatter from markdown content.
+ * Returns the parsed record, or undefined (with a warning) on malformed YAML.
+ */
+function safeParseFrontmatter(content: string, label: string, warnings: string[]): Record<string, unknown> | undefined {
+	try {
+		return parseFrontmatter(content).frontmatter;
+	} catch {
+		warnings.push(`${label}: malformed frontmatter, skipping`);
+		return undefined;
+	}
+}
+
 /** Extract a string field from a frontmatter record, or return empty string. */
 export function fmString(fm: Record<string, unknown>, key: string): string {
 	const val = fm[key];
@@ -363,8 +376,8 @@ export function loadSingleGroup(
 		return undefined;
 	}
 
-	const { frontmatter: indexFm } = parseFrontmatter(indexContent);
-	if (indexFm['type'] !== 'group') {
+	const indexFm = safeParseFrontmatter(indexContent, `Group "${groupName}": _index.md`, warnings);
+	if (!indexFm || indexFm['type'] !== 'group') {
 		return undefined;
 	}
 
@@ -400,7 +413,8 @@ export function loadSingleGroup(
 			continue;
 		}
 
-		const { frontmatter: fm } = parseFrontmatter(rawContent);
+		const fm = safeParseFrontmatter(rawContent, `Group "${groupName}": ${fileName}`, warnings);
+		if (!fm) continue;
 		const body = stripFrontmatter(rawContent);
 
 		// Name: optional override, otherwise kebab-case filename stem
@@ -466,8 +480,8 @@ export function discoverGroups(roots: PromptRoot[], warnings: string[]): Effecti
 				// fall through to Case B
 			}
 			if (indexContent !== undefined) {
-				const { frontmatter: indexFm } = parseFrontmatter(indexContent);
-				if (indexFm['type'] === 'group') {
+				const indexFm = safeParseFrontmatter(indexContent, `Root "${root.rootPath}": _index.md`, warnings);
+				if (indexFm?.['type'] === 'group') {
 					const groupName = basename(root.rootPath);
 					const group = loadSingleGroup(root.rootPath, groupName, root.origin, warnings);
 					if (group !== undefined) {
