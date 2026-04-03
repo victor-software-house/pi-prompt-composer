@@ -64,11 +64,17 @@ The package ships a built-in `/compose` grouped command for authoring grouped pr
 | Command | Purpose |
 |---------|---------|
 | `/compose` | Interactive selector for compose operations |
+| `/compose status` | Check whether recommended packages are installed |
+| `/compose setup` | Install missing recommended packages |
 | `/compose new <group-name>` | Create a new grouped prompt set |
 | `/compose add <group-name>` | Add subcommands to an existing group |
 | `/compose remove <group-name>` | Remove or simplify a subcommand |
 
-The bundled `/compose` is loaded with lowest precedence. If you create your own `compose/` group in user or project prompts, it overrides the built-in version.
+The bundled `/compose` is loaded with lowest precedence. If you create your own `compose/` group in user or project prompts, it overrides the built-in prompt subcommands. The `status` and `setup` built-in subcommands are always available regardless of override.
+
+### Recommended packages
+
+The `/compose` prompts work best with [`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) installed — it provides the `ask_user` tool for interactive decision handshakes during prompt authoring. Run `/compose status` to check and `/compose setup` to install.
 
 ### Authoring skill
 
