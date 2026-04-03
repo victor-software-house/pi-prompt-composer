@@ -800,4 +800,11 @@ export default function (pi: ExtensionAPI) {
 		}
 		checkRequiredTools(pi, ctx);
 	});
+
+	// Re-check on turn_start — catches tool state changes that happen after
+	// session_start (e.g. /tools restoring persisted disabled state, mid-session
+	// toggles, extension reloads). The check is two Set lookups — negligible.
+	pi.on('turn_start', async (_event, ctx) => {
+		checkRequiredTools(pi, ctx);
+	});
 }
