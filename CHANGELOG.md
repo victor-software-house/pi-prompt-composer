@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.0...v1.2.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* make order instructions deterministic in compose prompts ([fc0c26b](https://github.com/victor-software-house/pi-prompt-composer/commit/fc0c26b9c76b2799f39e9c855427fb63de2c44d8))
+
 # [1.2.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.2...v1.2.0) (2026-04-03)
 
 
