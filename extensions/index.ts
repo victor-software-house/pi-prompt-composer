@@ -741,6 +741,11 @@ export default function (pi: ExtensionAPI) {
 				},
 
 				async handler(argsString, ctx) {
+					// Re-check required tools on every command invocation — by now all
+					// session_start handlers have completed, so this catches the ordering
+					// race and any mid-session tool state changes.
+					checkRequiredTools(pi, ctx);
+
 					const trimmed = argsString.trim();
 
 					// Bare /group -> rich selector flow
@@ -793,18 +798,17 @@ export default function (pi: ExtensionAPI) {
 	// Initial discovery on extension load
 	registerGroupedCommands();
 
-	// Surface discovery warnings and check required tools on session start
+	// --- Required-tool guard --------------------------------------------------
+	// Check on session lifecycle events + before our own command dispatch.
+	// No per-turn overhead — the command handler check catches the ordering
+	// race where other session_start handlers haven't restored state yet.
 	pi.on('session_start', async (_event, ctx) => {
 		for (const w of lastWarnings) {
 			ctx.ui.notify(`[prompt-composer] ${w}`, 'warning');
 		}
 		checkRequiredTools(pi, ctx);
 	});
-
-	// Re-check on turn_start — catches tool state changes that happen after
-	// session_start (e.g. /tools restoring persisted disabled state, mid-session
-	// toggles, extension reloads). The check is two Set lookups — negligible.
-	pi.on('turn_start', async (_event, ctx) => {
+	pi.on('session_tree', async (_event, ctx) => {
 		checkRequiredTools(pi, ctx);
 	});
 }

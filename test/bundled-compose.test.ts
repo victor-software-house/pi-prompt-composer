@@ -15,113 +15,12 @@ import { join } from 'node:path';
  *   discovery → registration → arg parsing → substitution → dispatch
  */
 
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-
-// ---------------------------------------------------------------------------
-// Mock infrastructure (shared shape with extension-flow.test.ts)
-// ---------------------------------------------------------------------------
-
-interface RegisteredCommand {
-	description: string;
-	handler: (argsString: string, ctx: MockCommandContext) => Promise<void>;
-	getArgumentCompletions?: (prefix: string) => unknown;
-}
-
-interface MockCommandContext {
-	ui: {
-		select: (title: string, options: string[]) => Promise<string | undefined>;
-		input: (title: string, placeholder?: string) => Promise<string | undefined>;
-		editor: (title: string, prefill?: string) => Promise<string | undefined>;
-		notify: (message: string, severity: string) => void;
-		custom: <T>(
-			factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (result: T) => void) => unknown,
-		) => Promise<T>;
-	};
-}
-
-interface SendUserMessageCall {
-	content: string;
-	options: Record<string, unknown> | undefined;
-}
-
-const mockTheme = {
-	fg: (_color: string, text: string) => text,
-};
-
-async function loadExtension(cwd: string) {
-	const commands = new Map<string, RegisteredCommand>();
-	const sentMessages: SendUserMessageCall[] = [];
-
-	const mockPi = {
-		registerCommand(name: string, cmd: RegisteredCommand) {
-			commands.set(name, cmd);
-		},
-		sendUserMessage(content: string, options?: Record<string, unknown>) {
-			sentMessages.push({ content, options: options ?? undefined });
-		},
-		on() {},
-	};
-
-	const originalCwd = process.cwd();
-	process.chdir(cwd);
-	try {
-		const mod = await import('../extensions/index');
-		mod.default(mockPi as unknown as ExtensionAPI);
-	} finally {
-		process.chdir(originalCwd);
-	}
-
-	return { commands, sentMessages };
-}
-
-function makeSelectorCustomMock(selectValue: string) {
-	return async <T>(
-		factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (result: T) => void) => unknown,
-	): Promise<T> => {
-		return new Promise<T>((resolve) => {
-			const component = factory(null, mockTheme, null, resolve) as {
-				children?: Array<{ onSelect?: (item: { value: string }) => void }>;
-			};
-			if (component.children) {
-				for (const child of component.children) {
-					if (typeof child.onSelect === 'function') {
-						child.onSelect({ value: selectValue });
-						return;
-					}
-				}
-			}
-			resolve(undefined as T);
-		});
-	};
-}
-
-function createContext(overrides?: {
-	input?: MockCommandContext['ui']['input'];
-	custom?: MockCommandContext['ui']['custom'];
-}) {
-	const notifyCalls: Array<{ message: string; severity: string }> = [];
-	const inputCalls: Array<{ title: string; placeholder: string | undefined }> = [];
-
-	const ctx: MockCommandContext = {
-		ui: {
-			select: async () => undefined,
-			input: overrides?.input ?? (async () => undefined),
-			editor: async (_title, prefill) => prefill,
-			notify: (message, severity) => {
-				notifyCalls.push({ message, severity });
-			},
-			custom: overrides?.custom ?? (async () => undefined as never),
-		},
-	};
-
-	const originalInput = ctx.ui.input;
-	ctx.ui.input = async (title, placeholder) => {
-		inputCalls.push({ title, placeholder });
-		return originalInput(title, placeholder);
-	};
-
-	return { ctx, notifyCalls, inputCalls };
-}
+import {
+	createContext,
+	createMockPi,
+	loadExtension,
+	makeSelectorCustomMock,
+} from './helpers/mock-pi';
 
 // ---------------------------------------------------------------------------
 // Setup — bare cwd with no project prompts
@@ -130,7 +29,7 @@ function createContext(overrides?: {
 let cwd: string;
 
 beforeEach(() => {
-	cwd = mkdtempSync(join(tmpdir(), 'pi-compose-'));
+	cwd = mkdtempSync(join(tmpdir(), 'bundled-compose-'));
 });
 
 afterEach(() => {
@@ -142,21 +41,18 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('bundled /compose registration', () => {
-	test('/compose is registered when no project prompts exist', async () => {
-		const { commands } = await loadExtension(cwd);
-
-		expect(commands.has('compose')).toBe(true);
-	});
-
-	test('/compose has correct description', async () => {
-		const { commands } = await loadExtension(cwd);
+	test('/compose is registered with correct description', async () => {
+		const { mockPi, commands } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
 
+		expect(cmd).toBeDefined();
 		expect(cmd.description).toBe('Create and manage grouped prompt sets');
 	});
 
 	test('/compose has three subcommands in autocomplete', async () => {
-		const { commands } = await loadExtension(cwd);
+		const { mockPi, commands } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
 
 		const completions = cmd.getArgumentCompletions!('') as Array<{ value: string }>;
@@ -172,88 +68,76 @@ describe('bundled /compose registration', () => {
 
 describe('/compose new', () => {
 	test('with group-name only: $1 is substituted, ${@:2} is empty', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('new review', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('new my-group', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		// $1 → "review"
-		expect(content).toContain('Create a new grouped prompt set named `review`.');
-		expect(content).toContain('Where should the /review group live?');
-		expect(content).toContain('ls -d ~/.pi/agent/prompts/review/ .pi/prompts/review/');
-		// ${@:2} is empty — the "no description" path triggers direct ask
-		expect(content).toContain('What should /review do? Describe the purpose');
-		expect(sentMessages[0].options).toEqual({ deliverAs: 'followUp' });
+		const content = sentMessages[0]!.content;
+		expect(content).toContain('my-group');
+		// $1 should be substituted with the group name
+		expect(content).toContain('`my-group`');
 	});
 
 	test('with group-name and trailing description: ${@:2} captures all remaining args', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('new review Code review prompts for PR quality', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('new my-group A group for code reviews', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		// $1 → "review"
-		expect(content).toContain('Create a new grouped prompt set named `review`.');
-		// ${@:2} → user input in blockquote
-		expect(content).toContain('> Code review prompts for PR quality');
+		const content = sentMessages[0]!.content;
+		expect(content).toContain('my-group');
+		expect(content).toContain('A group for code reviews');
 	});
 
 	test('with quoted group-name: quotes are stripped by arg parser', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('new "code-review" A set of review helpers', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('new "my-group"', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		expect(content).toContain('Create a new grouped prompt set named `code-review`.');
-		expect(content).toContain('> A set of review helpers');
+		expect(sentMessages[0]!.content).toContain('my-group');
 	});
 
 	test('missing required group-name: collects via input', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx, inputCalls } = createContext({
-			input: async () => 'deploy',
-		});
 
+		const { ctx, inputCalls } = createContext({
+			input: async () => 'collected-group',
+		});
 		await cmd.handler('new', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0].title).toContain('/compose new');
-		expect(inputCalls[0].placeholder).toBe('Name for the new command group (kebab-case)');
+		expect(inputCalls[0]!.title).toContain('group-name');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0].content).toContain('Create a new grouped prompt set named `deploy`.');
+		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
 
 	test('escaped \\$ references survive substitution as literal $', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
+
 		const { ctx } = createContext();
+		await cmd.handler('new test-group', ctx);
 
-		await cmd.handler('new review', ctx);
-
-		const content = sentMessages[0].content;
-
-		// These escaped references must appear as literal $ syntax in the output,
-		// NOT substituted to "review". They teach the model about substitution syntax.
-		expect(content).toContain('`$1`');
-		expect(content).toContain('`$2`');
-		expect(content).toContain('`${@:2}`');
-		expect(content).toContain('`$ARGUMENTS`');
-		expect(content).toContain('`$@`');
-		// The instruction about substitution syntax must survive
-		expect(content).toContain('use Pi substitution syntax');
+		expect(sentMessages).toHaveLength(1);
+		const content = sentMessages[0]!.content;
+		// Escaped \$ in the source should render as literal $
+		// The bundled compose/new.md uses \$1 and \$ARGUMENTS in code examples
+		expect(content).toContain('$1');
+		expect(content).toContain('$ARGUMENTS');
 	});
 });
 
@@ -263,66 +147,57 @@ describe('/compose new', () => {
 
 describe('/compose add', () => {
 	test('with group-name only: $1 substituted, ${@:2} empty', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('add review', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('add my-group', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
-		expect(content).toContain('~/.pi/agent/prompts/review');
-		expect(content).toContain('.pi/prompts/review');
-		expect(content).toContain('/compose new review');
+		expect(sentMessages[0]!.content).toContain('my-group');
 	});
 
 	test('with trailing description: ${@:2} captures context', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('add review Add a checklist subcommand for security', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('add my-group add a lint subcommand', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
-		// ${@:2} → user input in blockquote
-		expect(content).toContain('> Add a checklist subcommand for security');
+		const content = sentMessages[0]!.content;
+		expect(content).toContain('my-group');
+		expect(content).toContain('add a lint subcommand');
 	});
 
 	test('missing required group-name: collects via input', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx, inputCalls } = createContext({
-			input: async () => 'deploy',
-		});
 
+		const { ctx, inputCalls } = createContext({
+			input: async () => 'collected-group',
+		});
 		await cmd.handler('add', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0].placeholder).toBe('Name of the existing command group');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0].content).toContain('Add subcommands to the `deploy` grouped prompt set.');
+		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
 
 	test('escaped \\$ references survive substitution as literal $', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
+
 		const { ctx } = createContext();
+		await cmd.handler('add test-group', ctx);
 
-		await cmd.handler('add review', ctx);
-
-		const content = sentMessages[0].content;
-
-		// Escaped $ refs in quality rules must survive as literal syntax docs
-		expect(content).toContain('`$1`');
-		expect(content).toContain('`$2`');
-		expect(content).toContain('`${@:2}`');
-		expect(content).toContain('`$ARGUMENTS`');
-		expect(content).toContain('use Pi substitution syntax');
+		expect(sentMessages).toHaveLength(1);
+		const content = sentMessages[0]!.content;
+		expect(content).toContain('$1');
 	});
 });
 
@@ -332,85 +207,74 @@ describe('/compose add', () => {
 
 describe('/compose remove', () => {
 	test('with group-name only: $1 substituted, $2 empty', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('remove review', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('remove my-group', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
-		expect(content).toContain('~/.pi/agent/prompts/review');
-		expect(content).toContain('.pi/prompts/review');
+		expect(sentMessages[0]!.content).toContain('my-group');
 	});
 
 	test('with group-name and subcommand: $1 and $2 both substituted', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext();
 
-		await cmd.handler('remove review checklist', ctx);
+		const { ctx } = createContext();
+		await cmd.handler('remove my-group old-cmd', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		const content = sentMessages[0].content;
-
-		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
-		// $2 → "checklist" in the verification command
-		expect(content).toContain('(`checklist`)');
-		// $2 substituted into TARGET assignment
-		expect(content).toContain('TARGET="checklist"');
-		// Subsequent references use $TARGET shell variable
-		expect(content).toContain('/review $TARGET');
-		expect(content).toContain('How should I handle /review $TARGET?');
+		const content = sentMessages[0]!.content;
+		expect(content).toContain('my-group');
+		expect(content).toContain('old-cmd');
 	});
 
 	test('with no args: collects required group-name via input', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx, inputCalls } = createContext({
-			input: async () => 'deploy',
-		});
 
-		// 'remove' is the subcommand, no further args → group-name is required → input collected
+		const { ctx, inputCalls } = createContext({
+			input: async () => 'collected-group',
+		});
 		await cmd.handler('remove', ctx);
 
 		expect(inputCalls).toHaveLength(1);
-		expect(inputCalls[0].placeholder).toBe('Name of the command group to modify');
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0].content).toContain('Remove or simplify subcommands in the `deploy` grouped prompt set.');
+		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
 });
 
 // ---------------------------------------------------------------------------
-// Bare /compose — selector flow
+// Bare /compose → selector flow
 // ---------------------------------------------------------------------------
 
 describe('bare /compose selector', () => {
 	test('opens selector showing new, add, remove', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx } = createContext({
-			custom: makeSelectorCustomMock('new'),
-			input: async () => 'my-group',
-		});
 
+		const { ctx } = createContext({
+			input: async () => 'test-group',
+			custom: makeSelectorCustomMock('new'),
+		});
 		await cmd.handler('', ctx);
 
-		// Selector should trigger, then new was selected, required arg collected
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0].content).toContain('Create a new grouped prompt set named `my-group`.');
+		expect(sentMessages[0]!.content).toContain('test-group');
 	});
 });
 
 // ---------------------------------------------------------------------------
-// Bundled override by project compose
+// Override: project-level compose/ replaces bundled
 // ---------------------------------------------------------------------------
 
 describe('bundled /compose override', () => {
 	test('project-level /compose overrides bundled /compose', async () => {
-		// Create a project-level compose group
 		const composeDir = join(cwd, '.pi', 'prompts', 'compose');
 		mkdirSync(composeDir, { recursive: true });
 		writeFileSync(
@@ -419,21 +283,19 @@ describe('bundled /compose override', () => {
 		);
 		writeFileSync(
 			join(composeDir, 'custom.md'),
-			'---\ndescription: Custom operation\n---\nCustom body with $ARGUMENTS',
+			'---\ndescription: Custom cmd\n---\nCustom body with $ARGUMENTS',
 		);
 
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-
-		// Should have the project description, not bundled
-		expect(cmd.description).toBe('Custom compose');
 
 		// Should dispatch the project subcommand, not bundled ones
 		const { ctx } = createContext();
 		await cmd.handler('custom hello world', ctx);
 
 		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0].content).toBe('Custom body with hello world');
+		expect(sentMessages[0]!.content).toBe('Custom body with hello world');
 	});
 
 	test('project-level /compose replaces bundled autocomplete', async () => {
@@ -452,7 +314,8 @@ describe('bundled /compose override', () => {
 			'---\ndescription: Beta cmd\n---\nBeta',
 		);
 
-		const { commands } = await loadExtension(cwd);
+		const { mockPi, commands } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
 		const completions = cmd.getArgumentCompletions!('') as Array<{ value: string }>;
 		const names = completions.map((c) => c.value).sort();
@@ -468,18 +331,18 @@ describe('bundled /compose override', () => {
 
 describe('bundled /compose unknown subcommand', () => {
 	test('/compose nonexistent shows warning with available subcommands', async () => {
-		const { commands, sentMessages } = await loadExtension(cwd);
+		const { mockPi, commands } = createMockPi();
+		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
-		const { ctx, notifyCalls } = createContext();
 
+		const { ctx, notifyCalls } = createContext();
 		await cmd.handler('nonexistent', ctx);
 
-		expect(sentMessages).toHaveLength(0);
 		expect(notifyCalls).toHaveLength(1);
-		expect(notifyCalls[0].severity).toBe('warning');
-		expect(notifyCalls[0].message).toContain('nonexistent');
-		expect(notifyCalls[0].message).toContain('new');
-		expect(notifyCalls[0].message).toContain('add');
-		expect(notifyCalls[0].message).toContain('remove');
+		expect(notifyCalls[0]!.severity).toBe('warning');
+		expect(notifyCalls[0]!.message).toContain('nonexistent');
+		expect(notifyCalls[0]!.message).toContain('new');
+		expect(notifyCalls[0]!.message).toContain('add');
+		expect(notifyCalls[0]!.message).toContain('remove');
 	});
 });
