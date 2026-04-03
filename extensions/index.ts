@@ -381,6 +381,23 @@ export function loadSingleGroup(
 		return undefined;
 	}
 
+	// Custom subcommand order (optional)
+	const rawOrder = indexFm['order'];
+	let order: string[] | undefined;
+	if (rawOrder !== undefined && rawOrder !== null) {
+		if (Array.isArray(rawOrder)) {
+			order = rawOrder.filter((item): item is string => {
+				if (typeof item !== 'string') {
+					warnings.push(`Group "${groupName}": order contains non-string entry, ignoring`);
+					return false;
+				}
+				return true;
+			});
+		} else {
+			warnings.push(`Group "${groupName}": order must be an array, ignoring`);
+		}
+	}
+
 	// Group description (recommended, warn + fallback)
 	const groupDesc = fmString(indexFm, 'description');
 	if (groupDesc === '') {
@@ -448,13 +465,32 @@ export function loadSingleGroup(
 	// Skip groups with no runnable nested prompts
 	if (promptsByName.size === 0) return undefined;
 
+	// Build ordered name list: explicit order first, then remaining alphabetically
+	const allNames = new Set(promptsByName.keys());
+	const orderedNames: string[] = [];
+
+	if (order) {
+		for (const name of order) {
+			if (allNames.has(name)) {
+				orderedNames.push(name);
+				allNames.delete(name);
+			} else {
+				warnings.push(`Group "${groupName}": order lists unknown subcommand "${name}", ignoring`);
+			}
+		}
+	}
+	// Append remaining (unlisted) names alphabetically
+	for (const name of [...allNames].sort()) {
+		orderedNames.push(name);
+	}
+
 	return {
 		name: groupName,
 		origin,
 		directoryPath: dirPath,
 		description: effectiveGroupDesc,
 		promptsByName,
-		promptNames: [...promptsByName.keys()].sort(),
+		promptNames: orderedNames,
 	};
 }
 

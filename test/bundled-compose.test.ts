@@ -56,9 +56,10 @@ describe('bundled /compose registration', () => {
 		const cmd = commands.get('compose')!;
 
 		const completions = cmd.getArgumentCompletions!('') as Array<{ value: string }>;
-		const names = completions.map((c) => c.value).sort();
+		const names = completions.map((c) => c.value);
 
-		expect(names).toEqual(['add', 'new', 'remove']);
+		// Order matches _index.md order: [new, add, remove]
+		expect(names).toEqual(['new', 'add', 'remove']);
 	});
 });
 

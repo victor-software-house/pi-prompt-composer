@@ -97,10 +97,13 @@ The skill is loaded on demand when the model needs deeper guidance beyond what t
 ---
 type: group
 description: Review workflows
+order: [summary, fix]
 ---
 ```
 
 `type: group` is the hard gate — directories without it are ignored.
+
+`order` is optional — controls subcommand display order in autocomplete and the selector. Listed names appear first in the given order; unlisted subcommands are appended alphabetically. Omit for default alphabetical ordering.
 
 ### Nested prompt files
 
