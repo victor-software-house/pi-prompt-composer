@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.2...v1.2.3) (2026-04-03)
+
+
+### Bug Fixes
+
+* make all ask_user payloads and bash blocks deterministic ([043eab2](https://github.com/victor-software-house/pi-prompt-composer/commit/043eab2a20144c9b5458ede09efaccbad9b75dd1))
+
 ## [1.2.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.1...v1.2.2) (2026-04-03)
 
 
