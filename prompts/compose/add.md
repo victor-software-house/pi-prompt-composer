@@ -44,23 +44,11 @@ Extract and record:
 
 ## Step 2 — Determine what to add
 
-If a description was provided (`${@:2}`), use it to propose specific subcommands. Match the existing group's scope — do not propose subcommands that drift into a different domain.
+The operator provided this description of what to add:
 
-Use `ask_user` to confirm:
+> ${@:2}
 
-```json
-{
-  "question": "Here are my proposed additions to /$1. Confirm or adjust:",
-  "context": "Existing subcommands:\n<list each existing subcommand with its description>\n\nProposed new subcommands (based on: ${@:2}):\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation that complements the existing set.",
-  "options": [
-    { "title": "Use these additions", "description": "Create the subcommands listed above" },
-    { "title": "Modify the list", "description": "I'll describe what I want instead" }
-  ],
-  "allowFreeform": true
-}
-```
-
-If no description was provided, ask directly:
+If the quoted block above is empty, the operator did not provide a description — use `ask_user` to collect one:
 
 ```json
 {
@@ -70,7 +58,21 @@ If no description was provided, ask directly:
 }
 ```
 
-Then propose and confirm with the structured `ask_user` above.
+Once you have a description (from the block above or from `ask_user`), propose specific subcommands based on it. Match the existing group's scope — do not propose subcommands that drift into a different domain.
+
+Use `ask_user` to confirm:
+
+```json
+{
+  "question": "Here are my proposed additions to /$1. Confirm or adjust:",
+  "context": "Existing subcommands:\n<list each existing subcommand with its description>\n\nProposed new subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation that complements the existing set.",
+  "options": [
+    { "title": "Use these additions", "description": "Create the subcommands listed above" },
+    { "title": "Modify the list", "description": "I'll describe what I want instead" }
+  ],
+  "allowFreeform": true
+}
+```
 
 **Done when:** the user has confirmed specific subcommand names and purposes.
 

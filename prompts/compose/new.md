@@ -49,23 +49,11 @@ If there is a collision, use `ask_user` to pick an alternative name before conti
 
 ## Step 3 — Gather subcommands
 
-If a description was provided (`${@:2}`), use it as context for proposing subcommands. Propose 2–6 subcommands — never more without confirmation.
+The operator provided this description of what the group should do:
 
-Use `ask_user` to confirm the subcommand plan:
+> ${@:2}
 
-```json
-{
-  "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
-  "context": "Based on: ${@:2}\n\nProposed subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
-  "options": [
-    { "title": "Use this plan", "description": "Create the subcommands listed above" },
-    { "title": "Modify the plan", "description": "I'll describe what I want instead" }
-  ],
-  "allowFreeform": true
-}
-```
-
-If no description was provided, ask directly:
+If the quoted block above is empty, the operator did not provide a description — use `ask_user` to collect one:
 
 ```json
 {
@@ -74,7 +62,21 @@ If no description was provided, ask directly:
 }
 ```
 
-Then propose and confirm with the structured `ask_user` above.
+Once you have a description (from the block above or from `ask_user`), propose 2–6 subcommands based on it. Never propose more than 6 without confirmation.
+
+Use `ask_user` to confirm the subcommand plan:
+
+```json
+{
+  "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
+  "context": "Proposed subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
+  "options": [
+    { "title": "Use this plan", "description": "Create the subcommands listed above" },
+    { "title": "Modify the plan", "description": "I'll describe what I want instead" }
+  ],
+  "allowFreeform": true
+}
+```
 
 **Done when:** the user has confirmed a specific list of subcommand names and purposes.
 
