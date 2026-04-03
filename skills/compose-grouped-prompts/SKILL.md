@@ -68,14 +68,15 @@ Use structured `ask_user` calls for:
 
 Every subcommand `.md` file produced by the compose workflows **must** include:
 
-1. **`description` in frontmatter** — concise, menu-friendly
-2. **`args` when needed** — each with `name`, `required`, and `hint`
-3. **Actionable body** — specific step-by-step instructions, not vague guidance
-4. **Exact `ask_user` JSON** — when the subcommand needs operator input during execution, include the literal tool call payload. Never write "ask the user" without the JSON.
-5. **Verification steps** — at least one `bash` block that confirms success
-6. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
-7. **Output format** — specify what the model reports (table, summary, file list)
-8. **Substitution syntax** — when the generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}` so operator input flows into the rendered prompt
+1. **`description` in frontmatter** — concise, menu-friendly. Quote values containing colons or brackets.
+2. **`args` when needed** — each with `name`, `required`, and `hint`. Quote `hint` values containing colons.
+3. **`order` in `_index.md`** — list subcommand names in the desired display order. Unlisted subcommands are appended alphabetically.
+4. **Actionable body** — specific step-by-step instructions, not vague guidance
+5. **Exact `ask_user` JSON** — when the subcommand needs operator input during execution, include the literal tool call payload. Never write "ask the user" without the JSON.
+6. **Verification steps** — at least one `bash` block that confirms success
+7. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
+8. **Output format** — specify what the model reports (table, summary, file list)
+9. **Substitution syntax** — when the generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}` so operator input flows into the rendered prompt
 
 See the compose prompts themselves (`prompts/compose/new.md`, `prompts/compose/add.md`) for good-vs-bad examples.
 

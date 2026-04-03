@@ -185,6 +185,20 @@ Every new subcommand `.md` file **must** include:
 
 Output each new file with its full path under `$GROUP_DIR/`.
 
+After generating the new files, update `_index.md` to include the new subcommands in the `order` array. If no `order` field exists, add one listing all subcommands in the desired display order. Use `ask_user` to confirm the order if it's not obvious:
+
+```json
+{
+  "question": "What order should the subcommands appear in the selector?",
+  "context": "Current subcommands: <existing>\nNew subcommands: <new>\n\nThe order field controls display in autocomplete and the selector.",
+  "options": [
+    { "title": "Append new at the end", "description": "Keep existing order, add new subcommands after" },
+    { "title": "Custom order", "description": "I'll specify the full order" }
+  ],
+  "allowFreeform": true
+}
+```
+
 ## Step 5 — Verify
 
 ```bash

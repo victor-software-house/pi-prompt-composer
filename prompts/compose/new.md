@@ -172,7 +172,15 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 ### File generation order
 
-1. `_index.md` — with `type: group` and the confirmed `description`
+1. `_index.md` — with `type: group`, the confirmed `description`, and an `order` array listing subcommand names in the display order confirmed by the user. Example:
+   ```yaml
+   ---
+   type: group
+   description: Review workflows
+   order: [summary, fix, lint]
+   ---
+   ```
+   The `order` field controls how subcommands appear in autocomplete and the selector. Unlisted subcommands are appended alphabetically.
 2. Each subcommand `.md` — in the order confirmed by the user
 
 Output each file with its full path.
