@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.1...v1.2.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* audit and fix consistency gaps across compose prompts and skill ([952ef02](https://github.com/victor-software-house/pi-prompt-composer/commit/952ef02a30d1b31b7023c0ba7c3c17901e6c08bb))
+
 ## [1.2.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.0...v1.2.1) (2026-04-03)
 
 
