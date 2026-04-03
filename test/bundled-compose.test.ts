@@ -202,8 +202,8 @@ describe('/compose new', () => {
 
 		// $1 → "review"
 		expect(content).toContain('Create a new grouped prompt set named `review`.');
-		// ${@:2} → "Code review prompts for PR quality"
-		expect(content).toContain('Based on: Code review prompts for PR quality');
+		// ${@:2} → user input in blockquote
+		expect(content).toContain('> Code review prompts for PR quality');
 	});
 
 	test('with quoted group-name: quotes are stripped by arg parser', async () => {
@@ -217,7 +217,7 @@ describe('/compose new', () => {
 		const content = sentMessages[0].content;
 
 		expect(content).toContain('Create a new grouped prompt set named `code-review`.');
-		expect(content).toContain('Based on: A set of review helpers');
+		expect(content).toContain('> A set of review helpers');
 	});
 
 	test('missing required group-name: collects via input', async () => {
@@ -289,7 +289,8 @@ describe('/compose add', () => {
 		const content = sentMessages[0].content;
 
 		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
-		expect(content).toContain('based on: Add a checklist subcommand for security');
+		// ${@:2} → user input in blockquote
+		expect(content).toContain('> Add a checklist subcommand for security');
 	});
 
 	test('missing required group-name: collects via input', async () => {
