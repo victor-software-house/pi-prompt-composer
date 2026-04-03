@@ -193,8 +193,7 @@ function checkRequiredTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
 		if (disabled.length > 0) {
 			const names = disabled.map((m) => theme.fg('accent', m.tool)).join(', ');
 			segments.push(
-				`${theme.fg('warning', 'Disabled:')} ${names}` +
-					`${theme.fg('dim', ' — run ')}${theme.fg('accent', '/tools')}${theme.fg('dim', ' to enable')}`,
+				`${theme.fg('warning', 'Disabled:')} ${names}` + `${theme.fg('dim', ' — enable in tool configuration')}`,
 			);
 		}
 
