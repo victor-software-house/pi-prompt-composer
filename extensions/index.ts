@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +5,7 @@ import {
 	DynamicBorder,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
+	type ExtensionContext,
 	getAgentDir,
 	parseFrontmatter,
 	stripFrontmatter,
@@ -136,88 +136,45 @@ export interface ResolvedPromptArgs {
 }
 
 // ---------------------------------------------------------------------------
-// Built-in subcommands (deterministic, code-driven)
+// Required tools — persistent widget guard
 // ---------------------------------------------------------------------------
 
-/** A code-driven subcommand registered directly in the extension. */
-interface BuiltinSubcommand {
-	name: string;
-	description: string;
-	handler: (ctx: ExtensionCommandContext) => Promise<void>;
-}
+/** Tools that grouped prompts expect to be available at runtime. */
+const REQUIRED_TOOLS: readonly { tool: string; package: string }[] = [{ tool: 'ask_user', package: 'pi-ask-user' }];
 
-/** Packages that compose prompts recommend but that are not bundled. */
-const RECOMMENDED_PACKAGES = [
-	{ name: 'pi-ask-user', description: 'Interactive decision handshake tool (ask_user)' },
-] as const;
+const WIDGET_KEY = 'prompt-composer-missing-tools';
 
-/** Check whether a global npm package is installed (fast, no network). */
-function isGloballyInstalled(packageName: string): boolean {
-	try {
-		execSync(`npm ls -g --depth=0 ${packageName} 2>/dev/null`, { stdio: 'pipe', timeout: 10_000 });
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-/** `/compose status` — report recommended package install state. */
-async function handleStatus(ctx: ExtensionCommandContext): Promise<void> {
-	const lines: string[] = ['[prompt-composer] Recommended packages:'];
-	let allInstalled = true;
-
-	for (const pkg of RECOMMENDED_PACKAGES) {
-		const installed = isGloballyInstalled(pkg.name);
-		if (!installed) allInstalled = false;
-		const marker = installed ? '✔' : '✘';
-		lines.push(`  ${marker} ${pkg.name} — ${pkg.description}${installed ? '' : '  (missing)'}`);
-	}
-
-	if (allInstalled) {
-		lines.push('All recommended packages are installed.');
-	} else {
-		lines.push('Run /compose setup to install missing packages.');
-	}
-
-	ctx.ui.notify(lines.join('\n'), allInstalled ? 'info' : 'warning');
-}
-
-/** `/compose setup` — install missing recommended packages globally. */
-async function handleSetup(ctx: ExtensionCommandContext): Promise<void> {
-	const missing: string[] = [];
-	for (const pkg of RECOMMENDED_PACKAGES) {
-		if (!isGloballyInstalled(pkg.name)) {
-			missing.push(pkg.name);
-		}
-	}
+/**
+ * Check whether all required tools are registered and show/hide a
+ * persistent warning widget accordingly. Non-blocking — prompt dispatch
+ * continues regardless.
+ */
+function checkRequiredTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
+	const allToolNames = new Set(pi.getAllTools().map((t) => t.name));
+	const missing = REQUIRED_TOOLS.filter((r) => !allToolNames.has(r.tool));
 
 	if (missing.length === 0) {
-		ctx.ui.notify('[prompt-composer] All recommended packages are already installed.', 'info');
+		ctx.ui.setWidget(WIDGET_KEY, undefined);
 		return;
 	}
 
-	ctx.ui.notify(`[prompt-composer] Installing: ${missing.join(', ')}…`, 'info');
+	const installHints = missing.map((m) => m.package).join(' ');
 
-	const cmd = `npm install -g ${missing.join(' ')}`;
-	try {
-		execSync(cmd, { stdio: 'pipe', timeout: 60_000 });
-		ctx.ui.notify(`[prompt-composer] ✔ Installed: ${missing.join(', ')}. Reload Pi to pick up new extensions.`, 'info');
-	} catch (err) {
-		const msg = err instanceof Error ? err.message : String(err);
-		ctx.ui.notify(`[prompt-composer] ✘ Install failed: ${msg}`, 'error');
-	}
+	ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => {
+		const container = new Container();
+		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
+		container.addChild(
+			new Text(
+				` ${theme.fg('warning', 'Missing tools:')} ${missing.map((m) => theme.fg('accent', m.tool)).join(', ')}` +
+					`${theme.fg('dim', ' — run ')}${theme.fg('accent', `pi install ${installHints}`)}`,
+				1,
+				0,
+			),
+		);
+		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
+		return container;
+	});
 }
-
-/** Built-in subcommands per group name. */
-const BUILTIN_SUBCOMMANDS: ReadonlyMap<string, BuiltinSubcommand[]> = new Map([
-	[
-		'compose',
-		[
-			{ name: 'status', description: 'Check recommended package install status', handler: handleStatus },
-			{ name: 'setup', description: 'Install missing recommended packages', handler: handleSetup },
-		],
-	],
-]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -563,14 +520,7 @@ function buildSelectListTheme(theme: Theme): SelectListTheme {
 
 /** Build SelectItem[] from group prompts for the rich selector. */
 function buildSelectorItems(group: EffectivePromptGroup): SelectItem[] {
-	const builtins = BUILTIN_SUBCOMMANDS.get(group.name) ?? [];
-	const builtinItems: SelectItem[] = builtins.map((b) => ({
-		value: b.name,
-		label: b.name,
-		description: b.description,
-	}));
-
-	const promptItems: SelectItem[] = group.promptNames.map((n) => {
+	return group.promptNames.map((n) => {
 		const p = group.promptsByName.get(n);
 		return {
 			value: n,
@@ -578,8 +528,6 @@ function buildSelectorItems(group: EffectivePromptGroup): SelectItem[] {
 			description: p?.description ?? '',
 		};
 	});
-
-	return [...builtinItems, ...promptItems];
 }
 
 /** Format the dynamic usage hint shown below the selector list. */
@@ -747,24 +695,12 @@ export default function (pi: ExtensionAPI) {
 		lastWarnings = warnings;
 
 		for (const group of groups) {
-			const builtins = BUILTIN_SUBCOMMANDS.get(group.name) ?? [];
-			const builtinMap = new Map(builtins.map((b) => [b.name, b]));
-
 			pi.registerCommand(group.name, {
 				description: group.description,
 
 				getArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
 					const prefix = argumentPrefix.trim().toLowerCase();
-
-					const builtinCompletions: AutocompleteItem[] = builtins
-						.filter((b) => b.name.startsWith(prefix))
-						.map((b) => ({
-							value: b.name,
-							label: b.name,
-							description: b.description,
-						}));
-
-					const promptCompletions: AutocompleteItem[] = group.promptNames
+					return group.promptNames
 						.filter((n) => n.startsWith(prefix))
 						.map((n) => {
 							const prompt = group.promptsByName.get(n);
@@ -775,8 +711,6 @@ export default function (pi: ExtensionAPI) {
 								description: prompt ? `${hint !== '' ? `${hint.trim()} ` : ''}${prompt.description}` : '',
 							};
 						});
-
-					return [...builtinCompletions, ...promptCompletions];
 				},
 
 				async handler(argsString, ctx) {
@@ -786,13 +720,6 @@ export default function (pi: ExtensionAPI) {
 					if (trimmed === '') {
 						const selectedName = await showPromptSelector(group, ctx);
 						if (selectedName === undefined) return;
-
-						// Check built-in subcommands first
-						const builtin = builtinMap.get(selectedName);
-						if (builtin) {
-							await builtin.handler(ctx);
-							return;
-						}
 
 						const prompt = group.promptsByName.get(selectedName);
 						if (prompt === undefined) return;
@@ -812,18 +739,10 @@ export default function (pi: ExtensionAPI) {
 					const subcommandName = parsed[0];
 					if (subcommandName === undefined) return;
 
-					// Check built-in subcommands first
-					const builtin = builtinMap.get(subcommandName);
-					if (builtin) {
-						await builtin.handler(ctx);
-						return;
-					}
-
 					const prompt = group.promptsByName.get(subcommandName);
 					if (prompt === undefined) {
 						// Unknown subcommand feedback
-						const builtinNames = builtins.map((b) => b.name);
-						const available = [...builtinNames, ...group.promptNames].join(', ');
+						const available = group.promptNames.join(', ');
 						ctx.ui.notify(
 							`Unknown subcommand "${subcommandName}" for /${group.name}. Available: ${available}`,
 							'warning',
@@ -847,10 +766,11 @@ export default function (pi: ExtensionAPI) {
 	// Initial discovery on extension load
 	registerGroupedCommands();
 
-	// Surface discovery warnings through Pi's notification UI
+	// Surface discovery warnings and check required tools on session start
 	pi.on('session_start', async (_event, ctx) => {
 		for (const w of lastWarnings) {
 			ctx.ui.notify(`[prompt-composer] ${w}`, 'warning');
 		}
+		checkRequiredTools(pi, ctx);
 	});
 }

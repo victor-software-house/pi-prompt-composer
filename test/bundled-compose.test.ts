@@ -162,7 +162,7 @@ describe('bundled /compose registration', () => {
 		const completions = cmd.getArgumentCompletions!('') as Array<{ value: string }>;
 		const names = completions.map((c) => c.value).sort();
 
-		expect(names).toEqual(['add', 'new', 'remove', 'setup', 'status']);
+		expect(names).toEqual(['add', 'new', 'remove']);
 	});
 });
 
@@ -457,8 +457,8 @@ describe('bundled /compose override', () => {
 		const completions = cmd.getArgumentCompletions!('') as Array<{ value: string }>;
 		const names = completions.map((c) => c.value).sort();
 
-		// Should show project subcommands (not bundled new/add/remove) plus built-in subcommands
-		expect(names).toEqual(['alpha', 'beta', 'setup', 'status']);
+		// Should show project subcommands, not bundled new/add/remove
+		expect(names).toEqual(['alpha', 'beta']);
 	});
 });
 
