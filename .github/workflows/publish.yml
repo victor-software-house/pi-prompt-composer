@@ -73,4 +73,5 @@ jobs:
       - name: Release
         run: bunx semantic-release
         env:
+          LEFTHOOK: '0'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
