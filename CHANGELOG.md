@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.5...v1.1.0) (2026-04-03)
+
+
+### Features
+
+* replace bundled pi-ask-user with persistent tool guard widget ([#5](https://github.com/victor-software-house/pi-prompt-composer/issues/5)) ([114597b](https://github.com/victor-software-house/pi-prompt-composer/commit/114597b90a3b013c5b9f70ecb611d73b3e104538))
+
 ## [1.0.5](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.4...v1.0.5) (2026-04-03)
 
 
