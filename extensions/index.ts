@@ -145,32 +145,60 @@ const REQUIRED_TOOLS: readonly { tool: string; package: string }[] = [{ tool: 'a
 const WIDGET_KEY = 'prompt-composer-missing-tools';
 
 /**
- * Check whether all required tools are registered and show/hide a
- * persistent warning widget accordingly. Non-blocking — prompt dispatch
- * continues regardless.
+ * Check whether all required tools are registered and active, then
+ * show/hide a persistent warning widget accordingly.
+ *
+ * Three states per tool:
+ *   1. Not installed  — not in getAllTools()     → suggest `pi install npm:<pkg>`
+ *   2. Disabled       — in getAllTools() but not  → suggest `/tools` to re-enable
+ *                        in getActiveTools()
+ *   3. Active         — in both                  → all good
+ *
+ * Non-blocking — prompt dispatch continues regardless.
  */
 function checkRequiredTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
-	const allToolNames = new Set(pi.getAllTools().map((t) => t.name));
-	const missing = REQUIRED_TOOLS.filter((r) => !allToolNames.has(r.tool));
+	const activeToolNames = new Set(pi.getActiveTools());
+	const unavailable = REQUIRED_TOOLS.filter((r) => !activeToolNames.has(r.tool));
 
-	if (missing.length === 0) {
+	if (unavailable.length === 0) {
 		ctx.ui.setWidget(WIDGET_KEY, undefined);
 		return;
 	}
 
-	const installHints = missing.map((m) => m.package).join(' ');
+	// Only call getAllTools() when something is missing — distinguish "not installed" from "disabled"
+	const allToolNames = new Set(pi.getAllTools().map((t) => t.name));
+	const notInstalled = unavailable.filter((r) => !allToolNames.has(r.tool));
+	const disabled = unavailable.filter((r) => allToolNames.has(r.tool));
+
+	if (notInstalled.length === 0 && disabled.length === 0) {
+		ctx.ui.setWidget(WIDGET_KEY, undefined);
+		return;
+	}
 
 	ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => {
 		const container = new Container();
 		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
-		container.addChild(
-			new Text(
-				` ${theme.fg('warning', 'Missing tools:')} ${missing.map((m) => theme.fg('accent', m.tool)).join(', ')}` +
-					`${theme.fg('dim', ' — run ')}${theme.fg('accent', `pi install ${installHints}`)}`,
-				1,
-				0,
-			),
-		);
+
+		const segments: string[] = [];
+
+		if (notInstalled.length > 0) {
+			const names = notInstalled.map((m) => theme.fg('accent', m.tool)).join(', ');
+			const pkgs = notInstalled.map((m) => `npm:${m.package}`).join(' ');
+			segments.push(
+				`${theme.fg('warning', 'Not installed:')} ${names}` +
+					`${theme.fg('dim', ' — run ')}${theme.fg('accent', `pi install ${pkgs}`)}`,
+			);
+		}
+
+		if (disabled.length > 0) {
+			const names = disabled.map((m) => theme.fg('accent', m.tool)).join(', ');
+			segments.push(
+				`${theme.fg('warning', 'Disabled:')} ${names}` +
+					`${theme.fg('dim', ' — run ')}${theme.fg('accent', '/tools')}${theme.fg('dim', ' to enable')}`,
+			);
+		}
+
+		container.addChild(new Text(` ${segments.join('  ')}`, 1, 0));
 		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
 		return container;
 	});
