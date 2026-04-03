@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.0...v1.1.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* re-check required tools on turn_start ([db1d164](https://github.com/victor-software-house/pi-prompt-composer/commit/db1d164b845eb2cd69d3bd6b4fe5d3329b190062))
+
 # [1.1.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.5...v1.1.0) (2026-04-03)
 
 
