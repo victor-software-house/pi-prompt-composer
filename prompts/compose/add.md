@@ -6,7 +6,7 @@ args:
     hint: Name of the existing command group
   - name: description
     required: false
-    hint: What the new subcommand(s) should do (optional — will ask if missing)
+    hint: "What the new subcommand(s) should do (enter to skip)"
 ---
 Add subcommands to the `$1` grouped prompt set.
 

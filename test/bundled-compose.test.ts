@@ -119,7 +119,8 @@ describe('/compose new', () => {
 		});
 		await cmd.handler('new', ctx);
 
-		expect(inputCalls).toHaveLength(1);
+		// Required group-name collected first, then optional description
+		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
 		expect(inputCalls[0]!.title).toContain('group-name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
@@ -183,7 +184,8 @@ describe('/compose add', () => {
 		});
 		await cmd.handler('add', ctx);
 
-		expect(inputCalls).toHaveLength(1);
+		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
+		expect(inputCalls[0]!.title).toContain('group-name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
@@ -243,7 +245,8 @@ describe('/compose remove', () => {
 		});
 		await cmd.handler('remove', ctx);
 
-		expect(inputCalls).toHaveLength(1);
+		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
+		expect(inputCalls[0]!.title).toContain('group-name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
 	});

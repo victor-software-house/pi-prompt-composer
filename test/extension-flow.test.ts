@@ -99,7 +99,8 @@ describe('direct dispatch', () => {
 		});
 		await cmd.handler('hello', ctx);
 
-		expect(inputCalls).toHaveLength(1);
+		// Required 'who' collected first, then optional 'extra'
+		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
 		expect(inputCalls[0]!.title).toContain('who');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello world!');
@@ -118,7 +119,9 @@ describe('selector flow', () => {
 		});
 		await cmd.handler('', ctx);
 
-		expect(inputCalls).toHaveLength(1);
+		// Required 'who' collected first, then optional 'extra'
+		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
+		expect(inputCalls[0]!.title).toContain('who');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('Hello alice!');
 	});

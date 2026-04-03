@@ -726,23 +726,33 @@ async function resolvePromptArgs(
 	let didCollectMissingArgs = false;
 
 	for (const [index, arg] of (prompt.args ?? []).entries()) {
-		if (!arg.required) continue;
+		// Already provided via command line — skip
 		if (resolvedArgs[index] !== undefined && resolvedArgs[index] !== '') continue;
 
-		let value: string | undefined;
-		do {
-			const inputTitle =
-				arg.hint !== ''
-					? `/${prompt.groupName} ${prompt.name} — ${arg.name}`
-					: `/${prompt.groupName} ${prompt.name}: ${arg.name}`;
-			value = await ctx.ui.input(inputTitle, arg.hint || undefined);
+		const inputTitle = arg.required
+			? `/${prompt.groupName} ${prompt.name} — ${arg.name}`
+			: `/${prompt.groupName} ${prompt.name} — ${arg.name} (optional)`;
+		const inputHint = arg.hint !== '' ? arg.hint : arg.required ? undefined : 'enter to skip';
+
+		if (arg.required) {
+			// Required: loop until non-empty
+			let value: string | undefined;
+			do {
+				value = await ctx.ui.input(inputTitle, inputHint);
+				if (value === undefined) return undefined;
+				if (value.trim() === '') {
+					ctx.ui.notify(`Argument "${arg.name}" is required`, 'warning');
+				}
+			} while (value.trim() === '');
+			resolvedArgs[index] = value;
+			didCollectMissingArgs = true;
+		} else {
+			// Optional: prompt once, accept empty
+			const value = await ctx.ui.input(inputTitle, inputHint);
 			if (value === undefined) return undefined;
-			if (value.trim() === '') {
-				ctx.ui.notify(`Argument "${arg.name}" is required`, 'warning');
-			}
-		} while (value.trim() === '');
-		resolvedArgs[index] = value;
-		didCollectMissingArgs = true;
+			resolvedArgs[index] = value;
+			if (value.trim() !== '') didCollectMissingArgs = true;
+		}
 	}
 
 	return { args: resolvedArgs, didCollectMissingArgs };

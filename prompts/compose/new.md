@@ -6,7 +6,7 @@ args:
     hint: Name for the new command group (kebab-case)
   - name: description
     required: false
-    hint: What this group is for (optional — will ask if missing)
+    hint: "What this group is for (enter to skip)"
 ---
 Create a new grouped prompt set named `$1`.
 

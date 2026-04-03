@@ -118,7 +118,7 @@ export function createContext(overrides?: {
 	const ctx: MockCommandContext = {
 		ui: {
 			select: async () => undefined,
-			input: overrides?.input ?? (async () => undefined),
+			input: overrides?.input ?? (async () => ''),
 			editor: async (_title, prefill) => prefill,
 			notify: (message, severity) => {
 				notifyCalls.push({ message, severity });
