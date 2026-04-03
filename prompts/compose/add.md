@@ -41,6 +41,7 @@ Extract and record:
 - Whether existing subcommands use `ask_user` calls
 - Whether existing subcommands have verification steps
 - Naming convention (verbs? nouns? kebab-case patterns?)
+- **Current `order` field in `_index.md`** — if present, note the existing display order so new subcommands can be inserted appropriately
 
 ## Step 2 — Determine what to add
 
@@ -185,19 +186,32 @@ Every new subcommand `.md` file **must** include:
 
 Output each new file with its full path under `$GROUP_DIR/`.
 
-After generating the new files, update `_index.md` to include the new subcommands in the `order` array. If no `order` field exists, add one listing all subcommands in the desired display order. Use `ask_user` to confirm the order if it's not obvious:
+After generating the new files, update `_index.md` to include the new subcommands in the `order` array.
+
+First, extract the current `order` field:
+
+```bash
+grep '^order:' "$GROUP_DIR/_index.md" || echo "No order field found"
+```
+
+- **If `order` exists**: read the current list, then use `ask_user` to confirm where the new subcommands go
+- **If `order` is absent**: add one listing all subcommands in the desired display order
+
+Use the extracted value verbatim in the `ask_user` context — do not paraphrase or omit it:
 
 ```json
 {
-  "question": "What order should the subcommands appear in the selector?",
-  "context": "Current subcommands: <existing>\nNew subcommands: <new>\n\nThe order field controls display in autocomplete and the selector.",
+  "question": "Where should the new subcommands appear in the display order?",
+  "context": "Current order line from _index.md: <paste the exact grep output or 'No order field found'>\nExisting subcommands: <comma-separated list from ls>\nNew subcommands: <comma-separated list being added>\n\nThe order array in _index.md controls display in autocomplete and the selector. Subcommands not listed are appended alphabetically.",
   "options": [
-    { "title": "Append new at the end", "description": "Keep existing order, add new subcommands after" },
+    { "title": "Append at the end", "description": "Keep current order, add new subcommands after: [<existing>, <new1>, <new2>]" },
     { "title": "Custom order", "description": "I'll specify the full order" }
   ],
   "allowFreeform": true
 }
 ```
+
+After confirmation, write the updated `order` array into `_index.md`.
 
 ## Step 5 — Verify
 

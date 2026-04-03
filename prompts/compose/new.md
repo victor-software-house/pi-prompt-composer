@@ -78,7 +78,25 @@ Use `ask_user` to confirm the subcommand plan:
 }
 ```
 
-**Done when:** the user has confirmed a specific list of subcommand names and purposes.
+**Done when:** the user has confirmed a specific list of subcommand names and purposes. The order they are listed in the confirmed plan becomes the default display order in the selector and autocomplete.
+
+Use `ask_user` to confirm the display order:
+
+Use the exact subcommand names from the confirmed plan — do not use placeholders:
+
+```json
+{
+  "question": "Should the subcommands appear in this order in the selector?",
+  "context": "Proposed display order (matching the confirmed plan above):\n1. <exact-name-1>\n2. <exact-name-2>\n3. <exact-name-3>\n\nThis becomes the order array in _index.md. It controls autocomplete and the interactive selector. Subcommands not listed are appended alphabetically.",
+  "options": [
+    { "title": "Use this order", "description": "order: [<exact-name-1>, <exact-name-2>, <exact-name-3>]" },
+    { "title": "Custom order", "description": "I'll specify a different order" }
+  ],
+  "allowFreeform": true
+}
+```
+
+Record the confirmed order — it becomes the `order` field in `_index.md`.
 
 ## Step 4 — Decide on args per subcommand
 
