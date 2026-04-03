@@ -5,6 +5,7 @@ import {
 	DynamicBorder,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
+	type ExtensionContext,
 	getAgentDir,
 	parseFrontmatter,
 	stripFrontmatter,
@@ -132,6 +133,74 @@ export interface EffectivePromptGroup {
 export interface ResolvedPromptArgs {
 	args: string[];
 	didCollectMissingArgs: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Required tools — persistent widget guard
+// ---------------------------------------------------------------------------
+
+/** Tools that grouped prompts expect to be available at runtime. */
+const REQUIRED_TOOLS: readonly { tool: string; package: string }[] = [{ tool: 'ask_user', package: 'pi-ask-user' }];
+
+const WIDGET_KEY = 'prompt-composer-missing-tools';
+
+/**
+ * Check whether all required tools are registered and active, then
+ * show/hide a persistent warning widget accordingly.
+ *
+ * Three states per tool:
+ *   1. Not installed  — not in getAllTools()     → suggest `pi install npm:<pkg>`
+ *   2. Disabled       — in getAllTools() but not  → suggest `/tools` to re-enable
+ *                        in getActiveTools()
+ *   3. Active         — in both                  → all good
+ *
+ * Non-blocking — prompt dispatch continues regardless.
+ */
+function checkRequiredTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
+	const activeToolNames = new Set(pi.getActiveTools());
+	const unavailable = REQUIRED_TOOLS.filter((r) => !activeToolNames.has(r.tool));
+
+	if (unavailable.length === 0) {
+		ctx.ui.setWidget(WIDGET_KEY, undefined);
+		return;
+	}
+
+	// Only call getAllTools() when something is missing — distinguish "not installed" from "disabled"
+	const allToolNames = new Set(pi.getAllTools().map((t) => t.name));
+	const notInstalled = unavailable.filter((r) => !allToolNames.has(r.tool));
+	const disabled = unavailable.filter((r) => allToolNames.has(r.tool));
+
+	if (notInstalled.length === 0 && disabled.length === 0) {
+		ctx.ui.setWidget(WIDGET_KEY, undefined);
+		return;
+	}
+
+	ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => {
+		const container = new Container();
+		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
+
+		const segments: string[] = [];
+
+		if (notInstalled.length > 0) {
+			const names = notInstalled.map((m) => theme.fg('accent', m.tool)).join(', ');
+			const pkgs = notInstalled.map((m) => `npm:${m.package}`).join(' ');
+			segments.push(
+				`${theme.fg('warning', 'Not installed:')} ${names}` +
+					`${theme.fg('dim', ' — run ')}${theme.fg('accent', `pi install ${pkgs}`)}`,
+			);
+		}
+
+		if (disabled.length > 0) {
+			const names = disabled.map((m) => theme.fg('accent', m.tool)).join(', ');
+			segments.push(
+				`${theme.fg('warning', 'Disabled:')} ${names}` + `${theme.fg('dim', ' — enable in tool configuration')}`,
+			);
+		}
+
+		container.addChild(new Text(` ${segments.join('  ')}`, 1, 0));
+		container.addChild(new DynamicBorder((s: string) => theme.fg('warning', s)));
+		return container;
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -724,10 +793,11 @@ export default function (pi: ExtensionAPI) {
 	// Initial discovery on extension load
 	registerGroupedCommands();
 
-	// Surface discovery warnings through Pi's notification UI
+	// Surface discovery warnings and check required tools on session start
 	pi.on('session_start', async (_event, ctx) => {
 		for (const w of lastWarnings) {
 			ctx.ui.notify(`[prompt-composer] ${w}`, 'warning');
 		}
+		checkRequiredTools(pi, ctx);
 	});
 }

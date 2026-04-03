@@ -70,6 +70,14 @@ The package ships a built-in `/compose` grouped command for authoring grouped pr
 
 The bundled `/compose` is loaded with lowest precedence. If you create your own `compose/` group in user or project prompts, it overrides the built-in version.
 
+### Required tools
+
+The `/compose` prompts work best with [`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) installed — it provides the `ask_user` tool for interactive decision handshakes during prompt authoring. If required tools are missing, a persistent warning banner appears at session start:
+
+```
+ Missing tools: ask_user — run pi install pi-ask-user
+```
+
 ### Authoring skill
 
 The package also ships a `compose-grouped-prompts` skill with:

@@ -40,9 +40,10 @@ Operator request
 
 Before generating any files:
 
-1. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Use `ask_user` if ambiguous.
-2. **Scan for existing groups.** Check whether the group name already exists. Report conflicts before proceeding.
-3. **Confirm scope.** A group name must not collide with a flat Pi prompt template the operator wants to keep.
+1. **Check prerequisites.** Run `/compose status` to verify recommended packages (e.g., `pi-ask-user`) are installed. If anything is missing, suggest `/compose setup` before proceeding.
+2. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Use `ask_user` if ambiguous.
+3. **Scan for existing groups.** Check whether the group name already exists. Report conflicts before proceeding.
+4. **Confirm scope.** A group name must not collide with a flat Pi prompt template the operator wants to keep.
 
 ## Interaction model
 
@@ -53,7 +54,7 @@ Use structured `ask_user` calls for:
 - confirming destructive operations (removals, renames)
 - selecting between multiple valid file layouts
 
-`ask_user` is always available — it ships bundled with this package.
+`ask_user` requires the `pi-ask-user` package to be installed separately. Run `/compose status` to check, `/compose setup` to install.
 
 **Critical rule:** When writing `ask_user` calls, always include the **exact JSON payload** — `question`, `context`, `options`, and `allowFreeform`. Do not write "ask the user" without the literal tool call. The compose prompts (`/compose new`, `/compose add`, `/compose remove`) contain exact JSON examples for every interaction point.
 

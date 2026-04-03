@@ -33,31 +33,23 @@
 	],
 	"pi": {
 		"extensions": [
-			"./extensions",
-			"node_modules/pi-ask-user/index.ts"
+			"./extensions"
 		],
 		"skills": [
-			"./skills",
-			"node_modules/pi-ask-user/skills"
+			"./skills"
 		],
 		"prompts": [
 			"./prompts"
 		],
 		"image": "https://raw.githubusercontent.com/victor-software-house/pi-prompt-composer/main/assets/preview.png"
 	},
-	"dependencies": {
-		"pi-ask-user": "^0.5.0"
-	},
-	"bundledDependencies": [
-		"pi-ask-user"
-	],
+
 	"type": "module",
 	"files": [
 		"extensions",
 		"prompts",
 		"skills",
 		"examples",
-		"node_modules/pi-ask-user",
 		"README.md",
 		"LICENSE"
 	],
