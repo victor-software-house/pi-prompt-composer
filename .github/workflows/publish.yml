@@ -33,13 +33,9 @@ jobs:
       - name: Set up mise
         uses: jdx/mise-action@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Set up Node.js
+      - name: Configure npm registry
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
