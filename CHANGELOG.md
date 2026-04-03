@@ -1,3 +1,15 @@
+## [1.0.4](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.3...v1.0.4) (2026-04-03)
+
+
+### Bug Fixes
+
+* add missing vitest globals reference to bundled-compose test ([bfe1965](https://github.com/victor-software-house/pi-prompt-composer/commit/bfe1965a94888e6dee77aa5b7088566bf236ff9f))
+* bundle pi-ask-user as dependency for compose prompts ([3286a9c](https://github.com/victor-software-house/pi-prompt-composer/commit/3286a9c3f572f52b3345cd7cb99c14729bd77c66))
+* **ci:** disable lefthook in release step ([c39f9b7](https://github.com/victor-software-house/pi-prompt-composer/commit/c39f9b7bf90ab535f6342a05303777433d78320c))
+* escape literal $ references in compose prompts ([c1610d5](https://github.com/victor-software-house/pi-prompt-composer/commit/c1610d54d67d472fbcdfaa4295242ea4073a01fa)), closes [#7](https://github.com/victor-software-house/pi-prompt-composer/issues/7)
+* present user description in dedicated blockquote section ([9b66fac](https://github.com/victor-software-house/pi-prompt-composer/commit/9b66fac200fbfdd172f3596a95437b3776c81591))
+* rewrite compose prompts with speckit-level quality patterns ([25b85dd](https://github.com/victor-software-house/pi-prompt-composer/commit/25b85ddf4926db0e9727944f4943a3d2d287ca6e)), closes [hi#quality](https://github.com/hi/issues/quality)
+
 ## [1.0.3](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.2...v1.0.3) (2026-04-02)
 
 
