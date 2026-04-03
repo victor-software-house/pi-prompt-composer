@@ -45,14 +45,15 @@ If the file doesn't exist, **stop**. Report which subcommands are available and 
 
 If no subcommand was specified, use `ask_user` to let the operator choose:
 
+Build the options from the Step 1 output — use the actual filenames and their `description:` lines:
+
 ```json
 {
   "question": "Which subcommand(s) should I remove from /$1?",
-  "context": "Current subcommands:\n<list each subcommand name and its description from frontmatter>",
+  "context": "Current subcommands (from Step 1):\n<paste each filename and its description: line from the output above>",
   "options": [
-    { "title": "<subcommand-1>", "description": "<description from frontmatter>" },
-    { "title": "<subcommand-2>", "description": "<description from frontmatter>" },
-    { "title": "<subcommand-3>", "description": "<description from frontmatter>" }
+    { "title": "<actual-filename-1>", "description": "<actual description from frontmatter>" },
+    { "title": "<actual-filename-2>", "description": "<actual description from frontmatter>" }
   ],
   "allowFreeform": true,
   "allowMultiple": true
@@ -84,10 +85,12 @@ Record any references found — they must be addressed in the removal plan.
 
 Use `ask_user` with the full context of what was found:
 
+Paste the actual grep results from Step 3 into the context:
+
 ```json
 {
   "question": "How should I handle /$1 $TARGET?",
-  "context": "<If references found: 'References found in: <list files>'>\n<If no references: 'No references found to this subcommand.'>\n\nCurrent subcommand count: <N>. After removal: <N-1>.",
+  "context": "<paste Step 3 grep output, or 'No references found to this subcommand.' if grep returned nothing>\n\nCurrent subcommand count: <actual count from ls>. After removal: <count minus 1>.",
   "options": [
     { "title": "Delete", "description": "Remove the .md file entirely" },
     { "title": "Merge into another subcommand", "description": "Move useful content into an existing subcommand — I'll choose which one" },
@@ -142,13 +145,15 @@ rm -r "$GROUP_DIR"
 
 Use `ask_user` to choose the merge target:
 
+Build the options from the remaining subcommands (excluding the target):
+
 ```json
 {
   "question": "Which subcommand should absorb the content from $TARGET?",
-  "context": "Available subcommands:\n<list remaining subcommands with descriptions>",
+  "context": "Available subcommands (excluding $TARGET):\n<paste each remaining filename and its description: line>",
   "options": [
-    { "title": "<subcommand-a>", "description": "<description>" },
-    { "title": "<subcommand-b>", "description": "<description>" }
+    { "title": "<actual-remaining-name>", "description": "<actual description from frontmatter>" },
+    { "title": "<actual-remaining-name>", "description": "<actual description from frontmatter>" }
   ],
   "allowFreeform": true
 }
@@ -174,10 +179,11 @@ If references were found in Step 3, update them:
 - If the subcommand was **merged**: update the reference to point to the merge target
 - If the subcommand was **simplified**: no reference changes needed
 
-For each updated file:
+For each file that contained a reference, update it and verify:
 
 ```bash
-echo "Updated: <file path>"
+# After updating each file, confirm the stale reference is gone
+grep -c "/$1 $TARGET" "<updated-file>" && echo "FAIL: stale ref remains" || echo "PASS: <updated-file>"
 ```
 
 ## Step 7 — Update group metadata
@@ -209,6 +215,9 @@ fi
 
 # 3. No stale references remain
 grep -r "/$1 $TARGET" ~/.pi/agent/prompts/ .pi/prompts/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
+
+# 4. Order array does not contain the removed name
+grep '^order:' "$GROUP_DIR/_index.md" 2>/dev/null | grep -q "$TARGET" && echo "FAIL: $TARGET still in order" || echo "PASS: order clean"
 ```
 
 Commit the changes:

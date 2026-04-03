@@ -107,10 +107,12 @@ For each confirmed subcommand, determine whether it needs `args` metadata:
 
 Use `ask_user` to confirm args for any subcommand where it's ambiguous:
 
+Substitute the actual group name and subcommand name from the confirmed plan:
+
 ```json
 {
-  "question": "Should /<group> <subcommand> take arguments?",
-  "context": "Purpose: <subcommand purpose>\n\nArguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
+  "question": "Should /$1 <confirmed-subcommand-name> take arguments?",
+  "context": "Purpose: <paste the confirmed one-line purpose from Step 3>\n\nArguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
   "options": [
     { "title": "No args needed", "description": "The prompt is self-contained" },
     { "title": "Yes, here's what it needs", "description": "I'll describe the expected arguments" }
@@ -220,7 +222,10 @@ for f in "$PROMPT_ROOT/$1/"*.md; do
   grep -q 'description:' "$f" && echo "PASS: $(basename "$f")" || echo "FAIL: $(basename "$f") missing description"
 done
 
-# 4. No naming collisions with existing commands
+# 4. _index.md has order field
+grep -q '^order:' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: order field" || echo "FAIL: missing order"
+
+# 5. No naming collisions with existing commands
 ls ~/.pi/agent/prompts/ .pi/prompts/ 2>/dev/null | grep -v "$1"
 ```
 

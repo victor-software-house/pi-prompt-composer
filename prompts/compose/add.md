@@ -81,18 +81,22 @@ Use `ask_user` to confirm:
 
 Before generating, verify the proposed names don't collide with existing subcommands:
 
+Substitute the actual confirmed names from Step 2:
+
 ```bash
-for proposed in <proposed-names>; do
+for proposed in <confirmed-name-1> <confirmed-name-2>; do
   [ -f "$GROUP_DIR/$proposed.md" ] && echo "COLLISION: $proposed already exists" || echo "OK: $proposed"
 done
 ```
 
 If there is overlap, use `ask_user` to resolve:
 
+Substitute the actual collision details:
+
 ```json
 {
-  "question": "The name '<name>' already exists in /$1. How should I handle this?",
-  "context": "Existing subcommand description: <existing description>\nProposed purpose: <proposed purpose>",
+  "question": "The name '<colliding-name>' already exists in /$1. How should I handle this?",
+  "context": "Existing subcommand description: <paste the description: line from the existing file>\nProposed purpose: <paste the confirmed purpose from Step 2>",
   "options": [
     { "title": "Replace it", "description": "Overwrite the existing subcommand" },
     { "title": "Pick a different name", "description": "I'll suggest an alternative" },
@@ -215,18 +219,23 @@ After confirmation, write the updated `order` array into `_index.md`.
 
 ## Step 5 — Verify
 
+Substitute the actual confirmed subcommand names from Step 2:
+
 ```bash
 # 1. New files exist
-for f in <new-filenames>; do
+for f in <confirmed-name-1> <confirmed-name-2>; do
   [ -f "$GROUP_DIR/$f.md" ] && echo "PASS: $f" || echo "FAIL: $f missing"
 done
 
 # 2. Every new file has a description
-for f in <new-filenames>; do
+for f in <confirmed-name-1> <confirmed-name-2>; do
   grep -q 'description:' "$GROUP_DIR/$f.md" && echo "PASS: $f" || echo "FAIL: $f missing description"
 done
 
-# 3. Total subcommand count is still reasonable (warn if > 8)
+# 3. Order field is up to date
+grep '^order:' "$GROUP_DIR/_index.md" || echo "WARNING: no order field"
+
+# 4. Total subcommand count is still reasonable (warn if > 8)
 count=$(ls "$GROUP_DIR"/*.md | grep -v _index.md | wc -l)
 echo "Total subcommands: $count"
 [ "$count" -gt 8 ] && echo "WARNING: consider splitting this group"
