@@ -33,7 +33,7 @@ jobs:
       - name: Set up mise
         uses: jdx/mise-action@v4
 
-      - name: Configure npm registry
+      - name: Configure npm registry for OIDC publishing
         uses: actions/setup-node@v6
         with:
           registry-url: https://registry.npmjs.org
