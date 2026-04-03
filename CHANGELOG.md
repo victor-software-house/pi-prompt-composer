@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.2...v1.2.0) (2026-04-03)
+
+
+### Features
+
+* add order field for custom subcommand display order ([706b082](https://github.com/victor-software-house/pi-prompt-composer/commit/706b0825bb3e85471c79c918f3fb30df594e7926))
+
 ## [1.1.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.1...v1.1.2) (2026-04-03)
 
 
