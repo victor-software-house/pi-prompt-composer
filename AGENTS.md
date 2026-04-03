@@ -28,6 +28,20 @@ If a task is mostly documentation, also read [`docs/AGENTS.md`](docs/AGENTS.md).
 
 Pi substitutes `$1`, `$2`, `$@`, `$ARGUMENTS`, and `${@:N}` everywhere in prompt template bodies — including inside code blocks, JSON examples, and instructional text. When a prompt template needs to mention substitution syntax literally (e.g., teaching the model to use `$1` in generated prompts), escape with `\$`: write `\$1` in the source so the rendered output contains literal `$1`. This is test-covered in `test/bundled-compose.test.ts`.
 
+### YAML frontmatter safety
+
+Always quote `description` and `hint` values in prompt frontmatter when they contain colons, brackets, or other special YAML characters. Unquoted colons cause YAML parse errors that silently skip the prompt.
+
+```yaml
+# Bad — YAML parser sees a nested mapping at the colon
+hint: Session name, ID prefix, or "all" (default: all)
+
+# Good — quoted value is safe
+hint: "Session name, ID prefix, or 'all' (default: all)"
+```
+
+The extension handles malformed frontmatter gracefully (warns and skips), but the prompt still won't load. The examples in [`examples/prompts/`](examples/prompts/) demonstrate correct quoting — models replicate what they see in examples, so keep them clean.
+
 ### General
 
 - Reuse Pi helpers such as `parseCommandArgs`, `substituteArgs`, and `parseFrontmatter` when public exports exist.
