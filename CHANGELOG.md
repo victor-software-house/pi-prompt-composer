@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.1...v1.1.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* gracefully handle malformed YAML frontmatter in prompt files ([e2ac5dc](https://github.com/victor-software-house/pi-prompt-composer/commit/e2ac5dce0ca7667798686f2ff0b0dd2d9c00d13f))
+
 ## [1.1.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.1.0...v1.1.1) (2026-04-03)
 
 
