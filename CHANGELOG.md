@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.3...v1.3.0) (2026-04-03)
+
+
+### Features
+
+* prompt for optional args with enter-to-skip UX ([6df9fbb](https://github.com/victor-software-house/pi-prompt-composer/commit/6df9fbbe7d58ccc9ec42ed434747e4bf7678708b))
+
 ## [1.2.3](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.2.2...v1.2.3) (2026-04-03)
 
 
