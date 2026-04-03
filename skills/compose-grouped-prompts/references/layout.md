@@ -6,7 +6,7 @@
 prompts/
 ├── flat-prompt.md              ← Pi-native flat prompt (ignored by composer)
 ├── my-group/
-│   ├── _index.md               ← required: type: group + description
+│   ├── _index.md               ← required: type: group + description + optional order
 │   ├── create.md               ← subcommand: /my-group create
 │   ├── list.md                 ← subcommand: /my-group list
 │   └── delete.md               ← subcommand: /my-group delete

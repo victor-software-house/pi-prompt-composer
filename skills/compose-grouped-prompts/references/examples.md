@@ -20,6 +20,7 @@ A project-scoped group for code review workflows.
 ---
 type: group
 description: Code review workflows
+order: [summary, security, fix]
 ---
 ```
 
@@ -102,6 +103,7 @@ A user-scoped group for daily standup helpers.
 ---
 type: group
 description: Daily standup helpers
+order: [prep, summary]
 ---
 ```
 
@@ -156,6 +158,7 @@ A user-scoped group that manages a tracked list — demonstrates `ask_user` insi
 ---
 type: group
 description: Track active Pi sessions in the vault — list, update, and close session rows
+order: [list, update, close]
 ---
 ```
 

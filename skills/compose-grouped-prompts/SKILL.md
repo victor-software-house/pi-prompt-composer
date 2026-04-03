@@ -40,7 +40,7 @@ Operator request
 
 Before generating any files:
 
-1. **Check prerequisites.** Run `/compose status` to verify recommended packages (e.g., `pi-ask-user`) are installed. If anything is missing, suggest `/compose setup` before proceeding.
+1. **Check prerequisites.** Verify recommended packages (e.g., `pi-ask-user`) are installed. If the `ask_user` tool is missing, a persistent warning banner will appear with install instructions.
 2. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Use `ask_user` if ambiguous.
 3. **Scan for existing groups.** Check whether the group name already exists. Report conflicts before proceeding.
 4. **Confirm scope.** A group name must not collide with a flat Pi prompt template the operator wants to keep.
@@ -54,7 +54,7 @@ Use structured `ask_user` calls for:
 - confirming destructive operations (removals, renames)
 - selecting between multiple valid file layouts
 
-`ask_user` requires the `pi-ask-user` package to be installed separately. Run `/compose status` to check, `/compose setup` to install.
+`ask_user` requires the `pi-ask-user` package to be installed separately (`pi install npm:pi-ask-user`). The extension shows a persistent warning banner when required tools are missing.
 
 **Critical rule:** When writing `ask_user` calls, always include the **exact JSON payload** — `question`, `context`, `options`, and `allowFreeform`. Do not write "ask the user" without the literal tool call. The compose prompts (`/compose new`, `/compose add`, `/compose remove`) contain exact JSON examples for every interaction point.
 
@@ -96,22 +96,24 @@ Stop and ask before:
 1. Use `ask_user` to confirm scope (user vs project prompts)
 2. Check for naming conflicts (existing groups, built-in commands)
 3. Gather subcommand plan with `ask_user` confirmation
-4. Decide args per subcommand (use `ask_user` when ambiguous)
-5. Generate files following the quality bar above
+4. Confirm display order with `ask_user` — the confirmed order becomes the `order` field in `_index.md`
+5. Decide args per subcommand (use `ask_user` when ambiguous)
+6. Generate files following the quality bar above
    - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body — not prose like "confirm with the user". See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies) and [references/examples.md](references/examples.md#example-3-interactive-group-with-confirmation-and-choices).
-6. Verify with bash checks
-7. Commit and report with a summary table
+7. Verify with bash checks
+8. Commit and report with a summary table
 
 See: [references/workflow.md](references/workflow.md), [references/layout.md](references/layout.md)
 
 ### Workflow B — Add subcommands to an existing group
 
-1. Read all existing subcommands — note style, tone, field order
+1. Read all existing subcommands — note style, tone, field order, and current `order` in `_index.md`
 2. Propose additions with `ask_user` confirmation
 3. Check for name collisions with existing subcommands
 4. Generate files that **match the existing group's style exactly**
    - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body. See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies).
-5. Verify and commit
+5. Update `_index.md` `order` array — extract current order with `grep`, confirm placement with `ask_user`
+6. Verify and commit
 
 See: [references/operations.md](references/operations.md)
 
@@ -121,7 +123,9 @@ See: [references/operations.md](references/operations.md)
 2. Use `ask_user` to select the target if not specified
 3. Check for references (other prompts, docs, scripts)
 4. Use `ask_user` to confirm action: delete, merge, simplify, or cancel
-5. Apply change, update references, verify, commit
+5. Apply change, update references
+6. Update `_index.md` — remove deleted name from `order` array, update `description` if scope changed
+7. Verify, commit
 
 See: [references/operations.md](references/operations.md)
 

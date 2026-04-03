@@ -38,10 +38,11 @@ Every group directory needs `_index.md`:
 ---
 type: group
 description: Short description of what this group does
+order: [subcommand-a, subcommand-b, subcommand-c]
 ---
 ```
 
-The `type: group` field is required. The `description` is strongly recommended — it appears in menus and autocomplete.
+The `type: group` field is required. The `description` is strongly recommended — it appears in menus and autocomplete. The `order` array is optional — it controls display order in autocomplete and the selector. Unlisted subcommands are appended alphabetically.
 
 ## Step 5 — Write subcommand files
 

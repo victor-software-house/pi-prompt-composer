@@ -54,7 +54,7 @@ If the quoted block above is empty, the operator did not provide a description â
 ```json
 {
   "question": "What subcommands should I add to /$1?",
-  "context": "Existing subcommands:\n<list each with description>\n\nDescribe what new subcommands you need and I'll propose specific additions.",
+  "context": "Existing subcommands (from Step 1 output):\n<paste each filename and its description: line from the cat output above>\n\nDescribe what new subcommands you need and I'll propose specific additions.",
   "allowFreeform": true
 }
 ```
@@ -66,7 +66,7 @@ Use `ask_user` to confirm:
 ```json
 {
   "question": "Here are my proposed additions to /$1. Confirm or adjust:",
-  "context": "Existing subcommands:\n<list each existing subcommand with its description>\n\nProposed new subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation that complements the existing set.",
+  "context": "Existing subcommands (from Step 1):\n<paste each existing name: description>\n\nProposed new subcommands:\n- <proposed-name>: <one-line purpose>\n- <proposed-name>: <one-line purpose>\n\nEach performs one focused operation that complements the existing set.",
   "options": [
     { "title": "Use these additions", "description": "Create the subcommands listed above" },
     { "title": "Modify the list", "description": "I'll describe what I want instead" }

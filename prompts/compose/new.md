@@ -64,12 +64,12 @@ If the quoted block above is empty, the operator did not provide a description �
 
 Once you have a description (from the block above or from `ask_user`), propose 2–6 subcommands based on it. Never propose more than 6 without confirmation.
 
-Use `ask_user` to confirm the subcommand plan:
+Use `ask_user` to confirm the subcommand plan. Substitute the actual proposed names and purposes into the context — do not use angle-bracket placeholders:
 
 ```json
 {
   "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
-  "context": "Proposed subcommands:\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n- <name>: <one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
+  "context": "Proposed subcommands:\n- <actual-name>: <actual one-line purpose>\n- <actual-name>: <actual one-line purpose>\n- <actual-name>: <actual one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
   "options": [
     { "title": "Use this plan", "description": "Create the subcommands listed above" },
     { "title": "Modify the plan", "description": "I'll describe what I want instead" }

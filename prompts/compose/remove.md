@@ -182,11 +182,17 @@ echo "Updated: <file path>"
 
 ## Step 7 — Update group metadata
 
-If the removal changes the group's overall scope:
+After the removal, update `$GROUP_DIR/_index.md`:
 
-1. Read `$GROUP_DIR/_index.md`
-2. Update `description` to reflect the current set of subcommands
-3. Write the updated file
+1. Extract the current `order` field:
+
+   ```bash
+   grep '^order:' "$GROUP_DIR/_index.md" || echo "No order field found"
+   ```
+
+2. If `order` exists and contains the removed subcommand name, remove it from the array and write the updated `_index.md`.
+
+3. If the removal changes the group's overall scope, update `description` to reflect the current set of subcommands.
 
 ## Step 8 — Verify and commit
 
