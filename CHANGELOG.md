@@ -1,3 +1,11 @@
+## [1.0.5](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.4...v1.0.5) (2026-04-03)
+
+
+### Bug Fixes
+
+* **ci:** install mise in release workflow ([3de7f57](https://github.com/victor-software-house/pi-prompt-composer/commit/3de7f57e2e092bfd633462b676ce9728a3802add))
+* **ci:** let mise manage bun and node, keep setup-node for registry only ([2ed6646](https://github.com/victor-software-house/pi-prompt-composer/commit/2ed66464e1ef610f3463d0f2348ae9e3a62b3ade))
+
 ## [1.0.4](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.0.3...v1.0.4) (2026-04-03)
 
 
