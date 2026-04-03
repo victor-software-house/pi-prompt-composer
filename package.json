@@ -38,9 +38,6 @@
 		"skills": [
 			"./skills"
 		],
-		"prompts": [
-			"./prompts"
-		],
 		"image": "https://raw.githubusercontent.com/victor-software-house/pi-prompt-composer/main/assets/preview.png"
 	},
 	"type": "module",
