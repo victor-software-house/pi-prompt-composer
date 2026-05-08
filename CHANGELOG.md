@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.4.0...v1.5.0) (2026-05-08)
+
+
+### Features
+
+* add trusted liquid shell execution ([73287ab](https://github.com/victor-software-house/pi-prompt-composer/commit/73287aba9f6a2408a21d356028145184ce1ec894))
+
 # [1.4.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.3.1...v1.4.0) (2026-05-08)
 
 
