@@ -10,31 +10,36 @@ It should improve prompt organization and authoring power without replacing Pi's
 
 Operators should be able to:
 
-- organize prompts by folder
-- invoke them as grouped slash commands
+- create single-file composer prompts under `.pi/composed/`
+- organize related prompts by folder under `.pi/composed/`
+- invoke them as flat or grouped slash commands
 - open an interactive menu from bare `/command`
 - provide missing prompt arguments through guided input
-- keep Pi-native frontmatter and argument semantics
-- opt into package-native preprocessing features that render before dispatch and remain fully visible in the resulting user message
+- keep Pi-native frontmatter and argument semantics when using `engine: pi`
+- opt into Liquid rendering for conditionals, loops, data shaping, JSON snippets, XML-style prompt blocks, and safe command-batch text
+- see every rendered prompt as normal visible user-message content before the agent responds
 
 Example:
 
 ```text
-prompts/
+.pi/composed/
 ├── workspace.md
-├── superset/
-│   ├── _index.md
-│   ├── create.md
-│   ├── list.md
-│   └── tasks.md
+├── review.md
+└── superset/
+    ├── _index.md
+    ├── create.md
+    ├── list.md
+    └── tasks.md
 ```
 
 Expected behavior:
 
-- `workspace.md` stays native Pi `/workspace`
-- `superset/create.md` becomes `/superset create`
-- `superset/list.md` becomes `/superset list`
+- `.pi/composed/workspace.md` becomes composer-owned `/workspace`
+- `.pi/composed/review.md` becomes composer-owned `/review`
+- `.pi/composed/superset/create.md` becomes `/superset create`
+- `.pi/composed/superset/list.md` becomes `/superset list`
 - `/superset` opens an interactive menu for the nested prompts
+- native Pi prompts under `.pi/prompts/*.md` remain native and are not composer-owned
 
 ## Design principles
 
@@ -42,7 +47,7 @@ Expected behavior:
 - **Pi-native semantics first** — reuse Pi frontmatter parsing, argument parsing, substitution, Markdown delivery, and prompt authoring conventions before adding package-owned behavior.
 - **Explicit layering** — keep Pi-native rendering and package-native preprocessing as separate stages.
 - **Visible rendering** — the operator should see the final expanded prompt text in the conversation, including preprocessing results.
-- **Add structure, not a new language** — improve organization and rendering power without jumping immediately to a large programmable template system.
+- **Add structure where it helps** — grouped routing for related prompts, flat files for one-off commands, Liquid only when prompt logic earns it.
 - **Predictable behavior** — command precedence, missing-argument handling, and preprocessing failures must be explicit.
 
 ## Product model
@@ -59,31 +64,38 @@ This layer should preserve Pi behavior for:
 - positional and slice substitution
 - final Markdown delivery as a user message
 
-### Layer 2: package-native preprocessing
+### Layer 2: Liquid rendering and package-native helpers
 
 This layer adds rendering features Pi does not provide natively, such as:
 
-- inline shell command substitution inside prompt bodies
-- future conditional rendering
-- future explicit render-time variables or supporting-file patterns
+- named args with `{{ args.name }}`
+- conditionals and loops
+- declarative data shaping through Liquid built-ins like `where`, `map`, `join`, and `size`
+- XML-style prompt blocks with `{% xml "tag" %}` that omit empty sections
+- safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
+- command-batch rendering as text for operator/model review
 
-These features belong to the package, not to Pi's native prompt-template contract.
+These features belong to the package, not to Pi's native prompt-template contract. Templates do **not** execute shell commands; they only render command text into the visible prompt.
 
 ## Priorities
 
-### Priority 1: Core grouped prompt routing
+### Priority 1: Core composer prompt routing
 
-1.1 **Folder-to-command grouping** — A prompt directory becomes one slash command group.
+1.1 **Location-based ownership** — Files under `.pi/composed/` and `~/.pi/agent/composed/` are composer-owned without `type` markers.
 
-1.2 **File-to-subcommand mapping** — Markdown files inside the directory become subcommands.
+1.2 **Flat file commands** — A `.md` file directly under a composed root becomes one slash command.
 
-1.3 **Interactive bare command menu** — Bare `/command` opens a menu where each nested prompt is an option.
+1.3 **Folder-to-command grouping** — A composed prompt directory with `_index.md` becomes one slash command group.
 
-1.4 **Guided argument collection** — If a prompt is missing required arguments, the extension asks for them and waits before rendering. Args parsing is lenient: missing `hint` defaults to empty, missing `required` defaults to `false`.
+1.4 **File-to-subcommand mapping** — Markdown files inside a group directory become subcommands.
 
-1.5 **Pi-native prompt compatibility** — Frontmatter, argument parsing, substitution, Markdown rendering, and user-message delivery stay Pi-native.
+1.5 **Interactive bare command menu** — Bare `/command` opens a menu where each nested prompt is an option.
 
-1.6 **Coexistence with flat prompts** — Native flat `.md` prompts keep working unchanged.
+1.6 **Guided argument collection** — If a prompt is missing required arguments, the extension asks for them and waits before rendering. Args parsing is lenient: missing `hint` defaults to empty, missing `required` defaults to `false`.
+
+1.7 **Pi-native prompt compatibility** — `engine: pi` preserves Pi-style argument parsing, substitution, Markdown rendering, and user-message delivery.
+
+1.8 **Coexistence with native prompts** — Native flat `.md` prompts under `prompts/` keep working unchanged.
 
 ### Priority 2: Discoverability and operator UX
 
@@ -97,15 +109,19 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 2.5 **Internal scope awareness** — The package tracks whether grouped prompts come from user or project prompt roots and surfaces that in its own UI and diagnostics.
 
-### Priority 3: Package-native preprocessing
+### Priority 3: Liquid rendering and prompt power
 
-3.1 **Prompt-body shell substitution** — Support inline shell command substitution inside grouped prompt bodies.
+3.1 **Liquid engine opt-in** — `engine: liquid` renders prompts through LiquidJS with named args.
 
-3.2 **Deterministic render order** — Pi-native argument substitution happens before package-native preprocessing.
+3.2 **Declarative prompt logic** — Support `if`, `for`, `assign`, `where`, `map`, `join`, `size`, `default`, and other safe Liquid built-ins.
 
-3.3 **Visible preprocessing results** — Preprocessing output is rendered into the final message sent to the agent.
+3.3 **Structured prompt blocks** — `{% xml "tag" %}` renders Claude Code skill-style XML blocks and omits empty bodies.
 
-3.4 **Future render-stage extensibility** — Leave room for later conditional rendering without committing to a large template language in v1.
+3.4 **Safe formatting helpers** — Ship `present`, `quote`, `tokens`, `json`, and `shell_quote` filters.
+
+3.5 **Command-batch rendering** — Prompt authors can render shell command blocks with safe quoting; templates do not execute commands.
+
+3.6 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
 
 ### Priority 4: Reliability and runtime behavior
 
@@ -148,11 +164,12 @@ Keep these out of scope:
 - deep multi-level nesting such as `/a b c`
 - aliases or alternate command names
 - pretending grouped commands are native Pi prompt commands inside Pi's internal command metadata
-- a large custom template language in v1
+- arbitrary JavaScript or unbounded template execution
 - hidden preprocessing that the operator cannot inspect after dispatch
 - prompt inheritance across directories
 - dynamic generated subcommands
 - grouped-prompt-specific permission systems
+- shell command execution from Liquid templates
 
 ## Roadmap guidance
 
@@ -164,4 +181,4 @@ Implement these phases in order:
 4. **Runtime correctness and diagnostics**
 5. **Documentation and examples**
 
-A first useful release is done when grouped prompts route correctly, bare commands open a usable menu, missing arguments are collected interactively, Pi-native argument semantics are preserved, prompt-body shell substitution works, the operator can see the final rendered prompt in the conversation history, and the known Pi API limitations are documented clearly.
+A first useful release is done when grouped prompts route correctly, flat composer prompts work under `composed/`, bare commands open a usable menu, missing arguments are collected interactively, Pi-native argument semantics are preserved, Liquid templating renders powerful structured prompt output safely, the operator can see the final rendered prompt in the conversation history, and the known Pi API limitations are documented clearly.

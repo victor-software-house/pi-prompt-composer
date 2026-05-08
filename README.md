@@ -1,12 +1,12 @@
 # pi-prompt-composer
 
-Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for [Pi](https://github.com/badlogic/pi-mono).
+Build composer-owned slash commands from plain Markdown prompts — flat files, grouped menus, typed args, Liquid templating, and visible dispatch for [Pi](https://github.com/badlogic/pi-mono).
 
 <p align="center">
   <img src="assets/preview.png" alt="Grouped prompt selector preview" width="700">
 </p>
 
-Turn a directory of `.md` prompt files into a single `/command` with Tab-completable subcommands, a rich interactive selector, and automatic missing-argument collection.
+Turn `.md` files under `composed/` into single slash commands, or turn directories into grouped commands with Tab-completable subcommands, a rich interactive selector, automatic missing-argument collection, and optional Liquid-powered rendering.
 
 ## Quick start
 
@@ -22,6 +22,26 @@ cp -r $(pi resolve pi-prompt-composer)/examples/prompts/review/* .pi/composed/re
 #   /review           → interactive selector
 #   /review summary   → asks for missing "change" arg, then sends
 #   /review fix "bug" → dispatches immediately
+
+# Or create a single Liquid-powered command
+cat > .pi/composed/ship.md <<'EOF'
+---
+description: Prepare a ship checklist
+engine: liquid
+args:
+  - name: change
+    required: true
+    hint: What changed?
+---
+Prepare release checklist for {{ args.change | quote }}.
+{% xml "checks" %}
+- typecheck
+- lint
+- tests
+- docs
+{% endxml %}
+EOF
+#   /ship --change "composed prompt discovery"
 ```
 
 ## How it works
@@ -47,13 +67,16 @@ Native Pi prompt roots (`~/.pi/agent/prompts/*.md`, `.pi/prompts/*.md`) stay nat
 
 | Feature | Behavior |
 |---------|----------|
+| **Flat composer commands** | `.pi/composed/review.md` → `/review` without creating a fake group |
+| **Grouped commands** | `.pi/composed/review/summary.md` → `/review summary` |
+| **Liquid templating** | `engine: liquid` unlocks `if`, `for`, `where`, `map`, `join`, structured XML blocks, JSON snippets, and command-batch rendering |
 | **Direct dispatch** | `/review fix "the bug"` → substitutes args, sends immediately |
 | **Bare-command selector** | `/review` → rich TUI selector with aligned descriptions and dynamic usage hints |
 | **Missing-arg collection** | Prompts with required `args` metadata pause and ask before sending |
 | **Autocomplete** | Tab after `/review ` shows subcommand names with descriptions |
-| **Unknown subcommand** | Typos show a warning with available alternatives |
-| **Escape syntax** | `\$ARGUMENTS` renders as literal `$ARGUMENTS` |
-| **Discovery warnings** | Malformed metadata surfaces as Pi notifications on session start |
+| **Safe helpers** | `present`, `quote`, `tokens`, `json`, `shell_quote`, and `{% xml "tag" %}` help build Claude Code skill-style prompts |
+| **Escape syntax** | `\$ARGUMENTS` renders as literal `$ARGUMENTS` in `engine: pi` prompts |
+| **Discovery warnings** | Malformed metadata and misplaced composer prompts surface as Pi notifications on session start |
 | **Bundled `/compose`** | Built-in helpers for creating, extending, and simplifying grouped prompts |
 | **Authoring skill** | Comprehensive `compose-grouped-prompts` skill loaded on demand for deep guidance |
 
@@ -104,6 +127,29 @@ No `type: group` marker is required. A subfolder under `composed/` with `_index.
 
 `order` is optional — controls subcommand display order in autocomplete and the selector. Listed names appear first in the given order; unlisted subcommands are appended alphabetically. Omit for default alphabetical ordering.
 
+### Flat composer prompt files
+
+```yaml
+---
+description: Review a change
+engine: liquid
+args:
+  - name: change
+    required: true
+    hint: Change, diff, file, or PR to review
+  - name: focus
+    required: false
+    hint: Optional focus
+---
+Review {{ args.change | quote }}.
+
+{% if args.focus | present %}
+Focus on: {{ args.focus }}
+{% endif %}
+```
+
+Save as `.pi/composed/review.md`, then run `/review --change "auth fix" --focus security`.
+
 ### Nested prompt files
 
 ```yaml
@@ -121,7 +167,7 @@ Summarize the following change:
 $ARGUMENTS
 ```
 
-**Argument syntax** is Pi-native: `$1`, `$2`, `$@`, `$ARGUMENTS`, `${@:N}`, `${@:N:L}`.
+**Argument syntax** defaults to Pi-native: `$1`, `$2`, `$@`, `$ARGUMENTS`, `${@:N}`, `${@:N:L}`. Add `engine: liquid` to use named args (`{{ args.change }}`), conditionals, loops, and filters.
 
 Use `\$` to escape a literal dollar sign (e.g., `\$ARGUMENTS` renders as `$ARGUMENTS`).
 
@@ -136,6 +182,31 @@ Each item needs:
 | `hint` | no | `""` | Shown in the input prompt and selector usage hint |
 
 Parsing is lenient — a missing `hint` or `required` won't break the prompt. Only a missing `name` drops that individual arg item.
+
+## Liquid helpers
+
+Liquid prompts get `{ args, prompt }` as their render context:
+
+```liquid
+{{ args.change | quote }}
+{{ args.items | where: "kind", "risk" | map: "name" | join: ", " }}
+{{ args.metadata | json: 2 }}
+{{ args.workdir | shell_quote }}
+{% xml "task" %}{{ args.goal }}{% endxml %}
+```
+
+Useful helpers:
+
+| Helper | Purpose |
+|--------|---------|
+| `present` | True for non-empty strings/arrays |
+| `quote` | Trim and double-quote text |
+| `tokens` | Rough chars/4 estimate |
+| `json` | JSON stringify values, optionally pretty-printed |
+| `shell_quote` | Single-quote shell arguments for command text |
+| `{% xml "tag" %}` | Emit XML-style blocks only when non-empty |
+
+Templates can render shell command batches for review, but do **not** execute shell commands. See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
 
 ## What this package owns vs Pi-native
 
@@ -153,7 +224,7 @@ See [`docs/ISSUES.md`](docs/ISSUES.md) for tracked defects and status.
 
 ## Non-goals (this version)
 
-- No shell substitution or preprocessing
+- No automatic shell command execution from templates
 - No nesting deeper than `/group subcommand`
 - No aliases or dynamic subcommands
 

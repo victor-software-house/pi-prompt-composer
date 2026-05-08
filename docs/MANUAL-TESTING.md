@@ -17,7 +17,33 @@ Run this checklist against a live Pi session before first publish and after sign
    ```bash
    ln -s ../../examples/prompts/review .pi/composed/review
    ```
-3. Reload Pi.
+3. Create a flat Liquid prompt:
+   ````bash
+   cat > .pi/composed/ship.md <<'EOF'
+   ---
+   description: Prepare a ship checklist
+   engine: liquid
+   args:
+     - name: change
+       required: true
+       hint: What changed?
+     - name: workdir
+       required: false
+       hint: Working directory
+   ---
+   {% xml "task" %}
+   Ship {{ args.change | quote }}
+   {% endxml %}
+
+   ```bash
+   cd {{ args.workdir | default: "." | shell_quote }}
+   pnpm run typecheck
+   pnpm run lint
+   pnpm test
+   ```
+   EOF
+   ````
+4. Reload Pi.
 
 ## Checklist
 
@@ -37,6 +63,10 @@ Run this checklist against a live Pi session before first publish and after sign
 | 12 | Type `/review nonexistent` | Warning notification listing available subcommands | |
 | 13 | Reload Pi (`/reload`) | Commands still register correctly, no duplicate registrations | |
 | 14 | Check for discovery warnings | If any prompt has malformed metadata, Pi notification appears on session start | |
+| 15 | Type `/ship --change "composed prompts" --workdir "packages/app with spaces"` | Rendered user message contains a `<task>` block, quoted change, and safely quoted `cd 'packages/app with spaces'` command | |
+| 16 | Create `.pi/prompts/misplaced.md` with `engine: liquid`, then `/reload` | Pi notification warns that composer-style prompt is under native Pi prompt root and should move to `.pi/composed/misplaced.md` | |
+| 17 | Move that file to `.pi/composed/misplaced.md`, then `/reload` | `/misplaced` appears once as a composer command and no misplaced warning appears | |
+| 18 | Put a legacy group under `.pi/prompts/legacy/`, then `/reload` | Directory migrates to `.pi/composed/legacy/` and a deprecation warning names source and target | |
 
 ## Recording results
 

@@ -394,20 +394,24 @@ Implementation notes:
 
 This should be implemented in the package-owned render pipeline, not as a global `input` hook, because prompt-body expansion must work even when the operator does not type the shell syntax directly into the editor.
 
-### 7. Future conditional rendering
+### 7. Liquid conditional rendering
 
-Conditional rendering is a package-native future feature.
+Conditional rendering now ships through `engine: liquid` for composer-owned prompts.
 
-It should not be implemented until the core grouped-routing and shell-substitution flow is stable.
+Supported rendering power includes:
 
-Requirements for any future conditional system:
+- `if`, `for`, and `assign` control flow
+- declarative data shaping with `where`, `map`, `join`, `size`, `first`, `last`, and `default`
+- named args via `{{ args.name }}`
+- safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
+- XML-style prompt blocks via `{% xml "tag" %}...{% endxml %}`
 
-- clearly separate it from Pi-native syntax
+Constraints:
+
 - keep the rendered result fully visible to the operator
-- avoid introducing a large, opaque template language too early
 - keep evaluation deterministic and local to the render pipeline
-
-Conditional rendering syntax is intentionally undecided in v1.
+- do not execute shell commands from Liquid templates
+- keep filesystem-backed includes, layouts, and partials disabled unless a future design adds an explicit safe supporting-file policy
 
 ### 8. Scope, source, and diagnostics
 
@@ -507,7 +511,7 @@ These are follow-on enhancements, not prerequisites for the first useful release
 1. Pi's public command API cannot assign per-command `sourceInfo` for extension commands.
 2. Grouped prompts can faithfully reuse Pi parsing and substitution helpers, but they do not run through Pi's native prompt-template dispatch path.
 3. Missing-argument inference is heuristic because native Pi templates do not declare required arguments.
-4. Shell substitution must be bounded with sensible timeouts and visible error handling.
+4. Liquid templates can render command batches as text, but shell execution from templates remains deferred and must be bounded with sensible timeouts and visible error handling if implemented later.
 
 ## Definition of done for the first useful release
 
@@ -517,7 +521,7 @@ A first useful release is done when:
 - bare `/group` opens a usable selector
 - rendered prompt content uses Pi-native argument semantics
 - missing required args are collected before dispatch
-- shell substitution works inside prompt bodies
+- Liquid templating works for structured prompt bodies
 - the operator can see the final rendered prompt in the conversation history
 - flat native Pi prompt templates continue to work unchanged
 - the known Pi API limitations are documented clearly rather than hidden

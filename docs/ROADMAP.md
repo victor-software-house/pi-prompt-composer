@@ -2,7 +2,7 @@
 
 This roadmap implements the product-level priorities defined in `FEATURE-SET.md` and the deeper design in `IMPLEMENTATION-PLAN.md`.
 
-## PPC-001: Directory scanner and grouped prompt registry
+## PPC-001: Directory scanner and grouped prompt registry (complete)
 
 Scan `~/.pi/agent/composed/` and `.pi/composed/` for composer-owned flat prompts and prompt subdirectories, migrating legacy grouped prompts from `prompts/<group>/` once.
 
@@ -63,7 +63,7 @@ Acceptance criteria:
 - `$@` and `$ARGUMENTS` alone do not force interactive collection
 - rendered output after argument substitution matches Pi-native semantics as closely as the public extension API allows
 
-## PPC-005: Render pipeline and visible user-message dispatch
+## PPC-005: Render pipeline and visible user-message dispatch (complete)
 
 Introduce a package-owned rendering pipeline that separates Pi-native substitution from extension-owned preprocessing, then dispatch the final result as a visible user message.
 
@@ -75,9 +75,31 @@ Acceptance criteria:
 - Markdown in the rendered prompt appears as normal user-message content
 - flat native Pi prompt templates continue to work unchanged outside grouped prompt directories
 
-## PPC-006: Prompt-body shell substitution
+## PPC-006: Liquid templating and safe prompt helpers (complete)
 
-Add shell command substitution inside grouped prompt bodies as a package-native preprocessing feature.
+Add `engine: liquid` for composer-owned prompts and expose safe helpers for powerful, Claude Code skill-style prompt rendering.
+
+Supported capabilities:
+
+- named args via `{{ args.name }}`
+- Liquid built-ins such as `if`, `for`, `assign`, `where`, `map`, `join`, `size`, and `default`
+- XML-style block helper: `{% xml "tag" %}...{% endxml %}`
+- safe filters: `present`, `quote`, `tokens`, `json`, and `shell_quote`
+- command-batch rendering as shell text for operator/model review
+
+Acceptance criteria:
+
+- ✅ `engine: liquid` renders flat and grouped composer prompts
+- ✅ Liquid prompts receive `{ args, prompt }`
+- ✅ XML blocks omit empty rendered bodies
+- ✅ command batches can be rendered safely with `shell_quote`
+- ✅ templates do not execute shell commands
+- ✅ `examples/templating/` verifies helper behavior with golden fixtures
+- ✅ Pi-engine prompts preserve `--flag` and `key=value` as positional input
+
+## PPC-006B: Prompt-body shell execution (deferred)
+
+Optional future feature: execute bounded shell substitutions inside prompt bodies.
 
 Planned syntax:
 
@@ -85,9 +107,11 @@ Planned syntax:
 !`command`
 ```
 
-Acceptance criteria:
+This is deferred because Liquid templates can already render command batches as visible text, while actual execution needs separate timeout, permission, visibility, and failure-policy design.
 
-- shell substitutions run after Pi-native argument rendering and before dispatch
+Acceptance criteria for future execution support:
+
+- shell substitutions run after template rendering and before dispatch
 - multiple substitutions in one prompt body are supported
 - substitutions execute with bounded timeouts through Pi's extension execution APIs
 - command output replaces the placeholder in the rendered prompt body
@@ -106,7 +130,7 @@ Acceptance criteria:
 - docs clearly state that grouped commands appear as extension commands in Pi's built-in command inventory due to public API limits
 - docs do not claim grouped commands are native Pi prompt commands internally
 
-## PPC-008: Documentation and example prompts
+## PPC-008: Documentation and example prompts (complete)
 
 Ship example prompt directories and document both Pi-native semantics and package-native preprocessing behavior.
 
@@ -114,9 +138,10 @@ Acceptance criteria:
 
 - `docs/IMPLEMENTATION-PLAN.md` records the design, constraints, render pipeline, and implementation slices
 - `docs/FEATURE-SET.md` distinguishes Pi-native semantics from package-native preprocessing
-- `README.md` covers install, usage, directory convention, menu behavior, argument rules, and rendered-output behavior
-- at least one realistic grouped prompt example is included
-- docs clearly mark future conditional rendering as out of scope for the first useful release
+- `README.md` covers install, usage, directory convention, menu behavior, argument rules, Liquid helpers, and rendered-output behavior
+- realistic grouped and flat composer examples are included
+- templating fixtures document and test the most powerful Liquid patterns
+- docs clearly mark shell execution from templates as out of scope
 
 ## PPC-009: Lenient args validation and operator-visible warnings (mostly complete)
 
@@ -133,7 +158,7 @@ Acceptance criteria:
 - ⏳ mandatory vs optional args have a compact, obvious visual distinction in the selector (exact treatment to be validated visually before committing) — tracked as ISS-003
 - ✅ tests cover: args with missing hint, args with missing required, mixed valid/invalid items in one array, empty hint rendering in selector and input, and warning surfacing
 
-## PPC-011: Module extraction and test infrastructure (next — high priority)
+## PPC-011: Module extraction and test infrastructure (updated — high priority)
 
 Restructure the single-file implementation and test suite to support reliable, low-maintenance expansion of the rendering pipeline.
 
@@ -178,6 +203,12 @@ Acceptance criteria:
 - existing 75 tests continue to pass with equivalent or stronger coverage
 - mock factory supports `exec`, `on` event capture, and dispatch-mode branching
 - `pnpm run typecheck && pnpm run lint && pnpm run test` passes cleanly
+- ✅ `test/template-fixtures.test.ts` exists with golden assertions for Liquid and Pi-engine examples
+- ✅ `examples/templating/` contains reusable `.md` prompt fixtures and expected output files
+- add `test/render.test.ts` for smaller isolated pipeline tests during module extraction
+- ✅ mock factory supports `on` event capture and session-start warning tests
+- pending: `exec` call capture (needed only if PPC-006B shell execution lands)
+- pending: dispatch-mode branching (needed for PPC-010 operator-only prompts)
 
 ## PPC-012: Bundled `/compose` helpers and authoring skill (complete)
 
