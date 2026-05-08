@@ -18,7 +18,7 @@ status: Draft
 
 Enhanced composer prompts should evolve the current single-file grouped-command implementation into a small pipeline: discover prompt resources, normalize metadata and args, collect or validate missing input, render through the selected engine, then dispatch the final visible user message. The first implementation constraint is compatibility: existing `_index.md` groups, bundled `/compose`, Pi-style `$1` rendering, selector behavior, and warning surfaces must remain unchanged while the internals move from `extensions/index.ts` into testable `src/` modules.
 
-Flat composer prompts are explicit opt-ins. A root-level `.md` file becomes composer-owned only when it declares `type: prompt`; `engine: liquid` chooses rendering but does not imply ownership. Grouped prompts keep `type: group` on `_index.md`, and individual subcommands may opt into enhanced rendering over time through the same normalized prompt model. This keeps native Pi flat prompts safe while making flat composer files first-class.
+Flat composer prompts are explicit opt-ins. A root-level `.md` file becomes composer-owned when it declares `engine: liquid`; native Pi has no Liquid renderer, so this is enough to identify composer ownership without adding `type: prompt`. Grouped prompts are identified by `_index.md`; existing `type: group` frontmatter remains compatible metadata but should not be required after this implementation. This keeps native Pi flat prompts safe while reducing authoring boilerplate.
 
 Liquid is added as one renderer behind a `TemplateEngine` boundary, not as a replacement for Pi-style substitution. `engine: pi` continues to use the local copy of Pi's argument parser/substitution semantics. `engine: liquid` receives named `args` plus prompt metadata, supports only a documented safe filter allowlist, and never sees process globals, environment variables, filesystem state, shell output, or network access unless later providers explicitly add them.
 
@@ -44,10 +44,11 @@ Liquid is added as one renderer behind a `TemplateEngine` boundary, not as a rep
 
 * Move `getPromptRoots()`, `loadSingleGroup()`, `discoverGroups()`, and metadata parsing from `extensions/index.ts` into `src/discovery.ts`.
 * Preserve bundled → user → project ordering, with project winning duplicates and warnings naming both origins/files.
-* Add flat file discovery only for root-level `.md` files with `type: prompt`.
-* Continue ignoring flat files without `type: prompt` so Pi-native prompt handling remains responsible for them.
+* Treat `_index.md` as the grouped prompt marker; keep accepting existing `type: group` frontmatter but do not require it.
+* Add flat file discovery only for root-level `.md` files with `engine: liquid`.
+* Continue ignoring flat files without `engine: liquid` so Pi-native prompt handling remains responsible for them.
 
-**ADR Reference**: Candidate — `type: prompt` ownership boundary is recorded in PRD D4; standalone ADR only if this becomes shared package policy.
+**ADR Reference**: None — redundant `type` markers are removed by PRD D4.
 
 ### Argument Parsing and Validation
 
@@ -118,24 +119,24 @@ Liquid is added as one renderer behind a `TemplateEngine` boundary, not as a rep
 
 ## Implementation Order
 
-| Phase | Component                                                                | Dependencies   | Estimated Scope |
-| ----- | ------------------------------------------------------------------------ | -------------- | --------------- |
-| 1     | Module extraction baseline                                               | None           | L               |
-| 2     | Unified prompt model and flat `type: prompt` discovery with `engine: pi` | Phase 1        | M               |
-| 3     | Named args parser and normalized arg schema                              | Phase 1        | M               |
-| 4     | Command orchestration update for flat and grouped prompt definitions     | Phases 2, 3    | M               |
-| 5     | Liquid renderer with safe filter allowlist                               | Phases 2, 3    | M               |
-| 6     | Typed interactive collection and validation UI                           | Phases 3, 4, 5 | M               |
-| 7     | Docs, examples, roadmap updates, and manual Pi checklist                 | Phases 2-6     | M               |
-| 8     | Full local verification and release readiness check                      | Phase 7        | S               |
+| Phase | Component                                                     | Dependencies   | Estimated Scope |
+| ----- | ------------------------------------------------------------- | -------------- | --------------- |
+| 1     | Module extraction baseline                                    | None           | L               |
+| 2     | Group gate cleanup and unified prompt model                   | Phase 1        | M               |
+| 3     | Named args parser and normalized arg schema                   | Phase 1        | M               |
+| 4     | Command orchestration update for flat and grouped definitions | Phases 2, 3    | M               |
+| 5     | Liquid renderer and flat `engine: liquid` discovery           | Phases 2, 3    | M               |
+| 6     | Typed interactive collection and validation UI                | Phases 3, 4, 5 | M               |
+| 7     | Docs, examples, roadmap updates, and manual Pi checklist      | Phases 2-6     | M               |
+| 8     | Full local verification and release readiness check           | Phase 7        | S               |
 
 ### Phase 1: Module extraction baseline
 
 Move current behavior out of `extensions/index.ts` without product changes. Keep tests green at each extraction step, especially helper parsing, discovery, order, bundled `/compose`, and extension-flow tests. This phase should not add Liquid, flat prompts, or new arg semantics.
 
-### Phase 2: Unified model and flat discovery
+### Phase 2: Group gate cleanup and unified model
 
-Introduce `PromptDefinition` and root-level flat discovery gated by `type: prompt`. Start with `engine: pi` support so flat composer prompt registration can be verified before Liquid adds complexity. Native flat prompts without `type: prompt` remain untouched.
+Introduce `PromptDefinition` and make `_index.md` sufficient for grouped prompt discovery. Keep existing `type: group` metadata accepted but inert. Native flat prompts remain untouched until Liquid discovery lands.
 
 ### Phase 3: Named args and schema normalization
 
@@ -147,7 +148,7 @@ Make command handlers consume `PromptDefinition` instances regardless of whether
 
 ### Phase 5: Liquid renderer
 
-Add `liquidjs` only after a small ESM/Node spike confirms the API shape. Configure a safe allowlist, render with `{ args, prompt }`, and snapshot documented syntax. Do not expose process/env/filesystem/shell providers.
+Add `liquidjs` only after a small ESM/Node spike confirms the API shape. Configure a safe allowlist, render with `{ args, prompt }`, and snapshot documented syntax. Add flat prompt registration for root-level `.md` files with `engine: liquid`. Do not expose process/env/filesystem/shell providers.
 
 ### Phase 6: Typed collection and validation UI
 
@@ -176,7 +177,8 @@ Run required repo gates: `mise run hooks:typecheck`, `mise run hooks:lint`, `mis
 
 Resolved by the PRD and treated as implementation constraints:
 
-* `type: prompt` is required for flat composer ownership; `engine: liquid` alone does not claim a command.
+* Do not add `type: prompt`; `engine: liquid` is the flat composer prompt opt-in.
+* Do not require `type: group`; `_index.md` is the group marker, with existing `type: group` accepted for compatibility.
 * Named Liquid args support `--name value` and `name=value`; `--name value` is canonical.
 * Enum args use selector UI when interactive and reject invalid CLI values before render.
 * Object args apply to both flat and grouped enhanced prompts.
@@ -191,7 +193,7 @@ Implementation detail still to decide during Phase 6:
 
 Decisions made during this plan:
 
-| ADR       | Title                                           | Status                                                                    |
-| --------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
-| Candidate | Composer prompt ownership and renderer boundary | Captured in PRD D4; create ADR only if policy becomes cross-package       |
-| Candidate | Liquid safe filter allowlist                    | Captured in PRD D6; create ADR if future providers broaden security scope |
+| ADR       | Title                                    | Status                                                                    |
+| --------- | ---------------------------------------- | ------------------------------------------------------------------------- |
+| Candidate | Composer ownership without type taxonomy | Captured in PRD D4; create ADR only if policy becomes cross-package       |
+| Candidate | Liquid safe filter allowlist             | Captured in PRD D6; create ADR if future providers broaden security scope |

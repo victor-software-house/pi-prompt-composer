@@ -73,7 +73,7 @@ The next product step should be first-class **composer-owned prompt files** with
 
 > As an existing grouped-prompt user, I want my current prompt groups to keep working so that adopting enhanced templates does not break my current workflows.
 
-**Preconditions:** Existing prompts use `_index.md` with `type: group` and current `args` array syntax.
+**Preconditions:** Existing prompts use `_index.md` group metadata and current `args` array syntax.
 
 ### Future: Package maintainer
 
@@ -129,26 +129,25 @@ Eligibility must be explicit to avoid hijacking all Pi-native flat prompts. Init
 
 ---
 
-type: prompt
 engine: liquid
 
 ---
 
 ```
 
-`type: prompt` marks the file as composer-owned. `engine` chooses the renderer. Files without `type: prompt` remain native Pi prompts.
+`engine: liquid` marks a flat file as composer-owned because native Pi does not own Liquid rendering. Flat files without `engine: liquid` remain native Pi prompts.
 
 **Acceptance criteria:**
 
 ```gherkin
-Given .pi/prompts/review.md contains frontmatter type: prompt and engine: liquid
+Given .pi/prompts/review.md contains frontmatter engine: liquid
 When Pi reloads with pi-prompt-composer enabled
 Then composer registers /review as an extension command
 And invoking /review renders review.md through composer
 ```
 
 ```gherkin
-Given .pi/prompts/native.md has no type: prompt frontmatter
+Given .pi/prompts/native.md has no engine: liquid frontmatter
 When Pi reloads with pi-prompt-composer enabled
 Then composer does not register /native
 And Pi native prompt handling remains responsible for /native
@@ -170,7 +169,7 @@ Existing grouped prompt behavior must continue unchanged unless a prompt opts in
 **Acceptance criteria:**
 
 ```gherkin
-Given .pi/prompts/review/_index.md contains type: group
+Given .pi/prompts/review/_index.md exists
 And .pi/prompts/review/summary.md is an existing current-style prompt
 When the user runs /review summary "my change"
 Then composer dispatches the same rendered content as before this PRD
@@ -452,18 +451,20 @@ Then they understand they do not need to migrate unless they want Liquid or type
 
 ### Risks
 
-| Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                         |
-| --------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
-| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Require explicit `type: prompt` plus `engine: liquid`; document `engine: pi` compatibility and migration examples. |
-| Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Require `type: prompt` opt-in; warn on duplicate composer commands; document extension-command precedence.         |
-| Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                        |
-| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs.         |
-| Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                                     |
-| Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                                    |
+| Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                   |
+| --------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Use `engine: liquid` as the explicit flat-file opt-in; document `engine: pi` compatibility for groups.       |
+| Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Require `engine: liquid` opt-in; warn on duplicate composer commands; document extension-command precedence. |
+| Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                  |
+| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs.   |
+| Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                               |
+| Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                              |
 
 ### Assumptions
 
-* Explicit opt-in through `type: prompt` is required; `engine: liquid` alone is not enough to claim flat prompt ownership.
+* Flat composer prompt ownership is implied by `engine: liquid`; no separate `type: prompt` marker is needed.
+* Group ownership is implied by `_index.md`; existing `type: group` metadata remains accepted for compatibility but should not be required after this implementation.
+* No other prompt `type` values are planned.
 * Liquid is preferred over Handlebars unless a spike finds a blocking API, security, size, or ESM issue.
 * Liquid filters start as a documented safe allowlist. Filesystem, environment, network, shell, or process-state access is excluded unless added later as explicit package-owned providers.
 * Current user/project/bundled origin model remains sufficient for flat prompts.
@@ -517,18 +518,18 @@ Then they understand they do not need to migrate unless they want Liquid or type
 
 **Future path:** Add richer sources and validation only after baseline types ship.
 
-### D4: Require explicit composer ownership for flat files
+### D4: Strip redundant `type` ownership markers
 
 **Options considered:**
 
-1. Composer scans all flat `.md` files — easiest discovery but hijacks Pi native prompts.
-2. Composer scans any flat `.md` file with `engine: liquid` — convenient but makes renderer choice double as ownership semantics.
-3. Composer scans only `type: prompt` flat files — explicit and safe.
-4. Composer uses file extension variants like `.composer.md` — explicit but uglier and less Pi-like.
+1. Keep `type: group` and add `type: prompt` — explicit but redundant because file layout and engine already identify intent.
+2. Keep only `type: group` — matches current behavior, but still requires boilerplate where `_index.md` is already the group marker.
+3. Use `_index.md` for groups and `engine: liquid` for flat enhanced prompts — explicit enough with no extra type taxonomy.
+4. Use file extension variants like `.composer.md` — explicit but uglier and less Pi-like.
 
-**Decision:** Use frontmatter `type: prompt` as the opt-in gate. `engine: liquid` without `type: prompt` is not composer-owned in the first implementation.
+**Decision:** Do not introduce `type: prompt`, and remove `type: group` as a required gate. A folder is composer-owned when it has `_index.md`. A flat file is composer-owned when it declares `engine: liquid`. Existing `type: group` frontmatter remains harmless compatibility metadata.
 
-**Rationale:** Ownership and rendering are separate concerns. Requiring `type: prompt` keeps native prompts unchanged, avoids accidental hijacks during experimentation, and makes command ownership visible in the file.
+**Rationale:** There are no planned alternate `type` values. Requiring `type` would create a second ownership marker with no job: `_index.md` already marks grouped prompts, and `engine: liquid` already marks flat prompts that Pi cannot natively render. Less metadata means fewer authoring mistakes.
 
 ### D5: Support named CLI args without positional binding for Liquid
 
@@ -627,9 +628,9 @@ Then they understand they do not need to migrate unless they want Liquid or type
 ## 11. Rollout Plan
 
 1. **Architecture prep** — extract `extensions/index.ts` into `src/` modules without behavior changes.
-2. **Flat prompt discovery** — add `type: prompt` flat-file discovery and command registration with `engine: pi` only.
+2. **Group gate cleanup** — make `_index.md` sufficient for grouped prompt discovery while still accepting existing `type: group` metadata.
 3. **Arg schema foundation** — implement normalized arg definitions supporting both legacy arrays and object schemas.
-4. **Liquid rendering** — add `engine: liquid`, named render context, snapshots, and docs.
+4. **Liquid rendering and flat discovery** — add `engine: liquid`, named render context, safe filter allowlist, snapshots, and flat prompt registration.
 5. **Typed interactive collection** — add enum selector UI plus boolean/number/string/string\[] collection and validation.
 6. **Docs and examples** — update README, feature set, implementation plan, roadmap, and examples.
 7. **Manual validation** — update and run manual testing checklist in live Pi.
@@ -639,14 +640,14 @@ Then they understand they do not need to migrate unless they want Liquid or type
 
 ## 12. Open Questions
 
-| #  | Question                                                                                                                        | Owner                 | Due        | Decision                                                                                            | Status   |
-| -- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | --------------------------------------------------------------------------------------------------- | -------- |
-| Q1 | Should `type: prompt` be required for all composer-owned flat files, or should `engine: liquid` alone imply composer ownership? | Victor Software House | 2026-05-08 | Require `type: prompt`; `engine: liquid` alone does not imply composer ownership.                   | Resolved |
-| Q2 | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?               | Victor Software House | 2026-05-08 | Support `--name value` and `name=value`; document `--name value`; keep positional for `engine: pi`. | Resolved |
-| Q3 | Should enum args use a selector UI instead of free-text input?                                                                  | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                          | Resolved |
-| Q4 | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts?         | Victor Software House | 2026-05-08 | Support object args for flat and grouped prompts that opt into enhanced rendering.                  | Resolved |
-| Q5 | Should Liquid filters be limited to a documented allowlist?                                                                     | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                    | Resolved |
-| Q6 | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                         | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                | Resolved |
+| #  | Question                                                                                                                | Owner                 | Due        | Decision                                                                                            | Status   |
+| -- | ----------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | --------------------------------------------------------------------------------------------------- | -------- |
+| Q1 | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Do not add `type: prompt`; `engine: liquid` is the flat prompt opt-in.                              | Resolved |
+| Q2 | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value` and `name=value`; document `--name value`; keep positional for `engine: pi`. | Resolved |
+| Q3 | Should enum args use a selector UI instead of free-text input?                                                          | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                          | Resolved |
+| Q4 | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts? | Victor Software House | 2026-05-08 | Support object args for flat and grouped prompts that opt into enhanced rendering.                  | Resolved |
+| Q5 | Should Liquid filters be limited to a documented allowlist?                                                             | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                    | Resolved |
+| Q6 | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                 | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                | Resolved |
 
 ---
 
@@ -663,10 +664,11 @@ Then they understand they do not need to migrate unless they want Liquid or type
 
 ## 14. Changelog
 
-| Date       | Change                         | Author                |
-| ---------- | ------------------------------ | --------------------- |
-| 2026-05-08 | Resolved design open questions | Victor Software House |
-| 2026-05-07 | Initial draft                  | Victor Software House |
+| Date       | Change                                  | Author                |
+| ---------- | --------------------------------------- | --------------------- |
+| 2026-05-08 | Removed redundant type marker decisions | Victor Software House |
+| 2026-05-08 | Resolved design open questions          | Victor Software House |
+| 2026-05-07 | Initial draft                           | Victor Software House |
 
 ---
 
@@ -674,11 +676,11 @@ Then they understand they do not need to migrate unless they want Liquid or type
 
 Post-implementation checklist:
 
-1. Create `.pi/prompts/review.md` with `type: prompt`, `engine: liquid`, typed args, an `if` block, and a `for` loop.
+1. Create `.pi/prompts/review.md` with `engine: liquid`, typed args, an `if` block, and a `for` loop.
 2. Run `/reload` in Pi and verify `/review` appears as a composer command.
 3. Invoke `/review` with no args and verify required args are collected interactively.
 4. Invoke `/review --mode invalid` and verify validation blocks dispatch with a visible warning.
 5. Invoke `/review --change "fix auth" --mode deep` and verify rendered Liquid output appears as the sent user message.
-6. Create `.pi/prompts/native.md` without `type: prompt` and verify composer does not register it.
+6. Create `.pi/prompts/native.md` without `engine: liquid` and verify composer does not register it.
 7. Re-run existing grouped `/compose`, `/review summary`, and `/review fix` examples.
 8. Run `mise run hooks:typecheck`, `mise run hooks:lint`, `mise run hooks:test`, and `mise run skills:validate`.
