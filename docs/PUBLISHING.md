@@ -43,7 +43,7 @@ After bootstrap, every push to `main` with releasable commits triggers:
 
 1. CI runs typecheck, lint, test, commitlint, and `npm pack --dry-run`
 2. `semantic-release` evaluates unreleased commits since the last tag
-3. If releasable: bumps version, publishes to npm, creates GitHub release, commits `package.json` + `bun.lock` + `CHANGELOG.md` back to `main`
+3. If releasable: bumps version, publishes to npm, creates GitHub release, commits `package.json` + `pnpm-lock.yaml` + `CHANGELOG.md` back to `main`
 
 Non-releasable commits (`docs:`, `chore:`, `test:`, `refactor:`) produce no release.
 

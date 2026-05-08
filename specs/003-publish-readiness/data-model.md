@@ -151,8 +151,8 @@ The GitHub Actions release pipeline contract.
 | `workflowPath` | string | `.github/workflows/publish.yml` |
 | `triggers` | string[] | `push` to `main`, `workflow_dispatch` |
 | `permissions` | map | Must include `id-token: write` and `contents: write` |
-| `checks` | string[] | `bun install`, `bun run typecheck`, `bun run lint`, `bun run test`, `npm pack --dry-run` |
-| `releaseCommand` | string | `bunx semantic-release` |
+| `checks` | string[] | `pnpm install`, `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, `npm pack --dry-run` |
+| `releaseCommand` | string | `pnpm exec semantic-release` |
 | `releaseEnv` | string[] | `GITHUB_TOKEN` only in steady state |
 
 ## Relationships

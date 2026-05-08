@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-bun scripts/validate-skills.ts
+node scripts/validate-skills.mjs

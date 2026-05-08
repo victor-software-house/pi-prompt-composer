@@ -160,11 +160,11 @@ See [`docs/ISSUES.md`](docs/ISSUES.md) for tracked defects and status.
 ## Development
 
 ```bash
-bun install
-bun run typecheck && bun run lint && bun run test
+pnpm install
+pnpm run typecheck && pnpm run lint && pnpm run test
 ```
 
-Autofix: `bun run fix` · Watch: `bun run test:watch`
+Autofix: `pnpm run fix` · Watch: `pnpm run test:watch`
 
 ## Related packages
 

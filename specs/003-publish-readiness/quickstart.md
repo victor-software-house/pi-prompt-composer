@@ -9,19 +9,19 @@ This quickstart describes how to validate the publish-readiness slice once it is
 
 ## Prerequisites
 
-- Bun installed
+- pnpm installed
 - Pi installed locally
 - Repository checked out on `003-publish-readiness` (or a later merged branch)
-- Dependencies installed with `bun install`
+- Dependencies installed with `pnpm install`
 
 ## 1. Run the repository verification workflow
 
 ```bash
-bun install
-bun run fix
-bun run typecheck
-bun run lint
-bun run test
+pnpm install
+pnpm run fix
+pnpm run typecheck
+pnpm run lint
+pnpm run test
 npm pack --dry-run
 ```
 
@@ -32,7 +32,7 @@ Expected results:
 ## 2. Regenerate the package preview asset
 
 ```bash
-bun run preview:package
+pnpm run preview:package
 ```
 
 Expected results:
@@ -129,7 +129,7 @@ After bootstrap and trust configuration:
 1. Merge a releasable Conventional Commit (`feat:` or `fix:`) to `main`
 2. Wait for `.github/workflows/publish.yml` to complete
 3. Confirm:
-   - `bun run test` ran before release
+   - `pnpm run test` ran before release
    - semantic-release created the new tag and GitHub release
    - the new package version appears on npm
    - `package.json` in git reflects the released version

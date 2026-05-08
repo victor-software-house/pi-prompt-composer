@@ -5,7 +5,7 @@ Last updated: 2026-04-01
 ## Active Technologies
 
 - TypeScript 5.9 with strict compiler settings
-- Bun for package management and repo commands
+- pnpm for package management and repo commands
 - Pi extension APIs from `@mariozechner/pi-coding-agent` and `@mariozechner/pi-tui`
 - Biome 2.x and oxlint for formatting and linting
 - Lefthook for commit and push validation
@@ -36,10 +36,10 @@ package.json
 ## Commands
 
 ```bash
-bun install
-bun run fix
-bun run typecheck
-bun run lint
+pnpm install
+pnpm run fix
+pnpm run typecheck
+pnpm run lint
 ```
 
 ## Code Style
@@ -86,8 +86,8 @@ bun run lint
 
 ## Testing Infrastructure
 
-- Test framework: vitest (via `bun run test` = `vitest --run`,
-  `bun run test:watch` = `vitest`)
+- Test framework: vitest (via `pnpm run test` = `vitest --run`,
+  `pnpm run test:watch` = `vitest`)
 - Integration testing: Layer 3 uses direct mock-API approach (harness mock UI
   does not reach extension command handler ctx parameters)
 - Three test layers:
@@ -104,9 +104,9 @@ bun run lint
   alongside the default extension export
 - Production `tsconfig.json` unchanged — only includes `extensions/**/*.ts`
 - oxlint type-aware checks exclude `test/` (uses separate tsconfig)
-- lefthook pre-push runs `bun run test` (not pre-commit)
-- Full verification workflow: `bun install`, `bun run fix`,
-  `bun run typecheck`, `bun run lint`, `bun run test`
+- lefthook pre-push runs `pnpm run test` (not pre-commit)
+- Full verification workflow: `pnpm install`, `pnpm run fix`,
+  `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`
 
 ## Recent Changes
 

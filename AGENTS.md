@@ -71,15 +71,15 @@ These `mise` tasks are the canonical local workflow entrypoints. `lefthook` shou
 Useful helper before manual cleanup:
 
 ```bash
-bun run fix
+pnpm run fix
 ```
 
 Additional checks:
 
-- Run `bun install` when dependencies, hooks, or release tooling change.
+- Run `pnpm install` when dependencies, hooks, or release tooling change.
 - Validate skills with Pi's own parser via `mise run skills:validate` (this uses Pi's `loadSkillsFromDir()` directly and must stay warning-free).
-- The test suite uses vitest with four layers: helpers (`test/helpers.test.ts`), discovery (`test/discovery.test.ts`), extension-flow (`test/extension-flow.test.ts`), and bundled-compose end-to-end (`test/bundled-compose.test.ts`). Run `mise run hooks:test` to execute all layers, or `bun run test:watch` during development.
-- When touching packaging or release flow, verify `package.json`, `bun.lock`, `CHANGELOG.md`, and `release.config.mjs` stay aligned.
+- The test suite uses vitest with four layers: helpers (`test/helpers.test.ts`), discovery (`test/discovery.test.ts`), extension-flow (`test/extension-flow.test.ts`), and bundled-compose end-to-end (`test/bundled-compose.test.ts`). Run `mise run hooks:test` to execute all layers, or `pnpm run test:watch` during development.
+- When touching packaging or release flow, verify `package.json`, `pnpm-lock.yaml`, `CHANGELOG.md`, and `release.config.mjs` stay aligned.
 
 ## Style and typing
 

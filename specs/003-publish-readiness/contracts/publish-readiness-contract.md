@@ -66,7 +66,7 @@ examples/prompts/review/
 `package.json` MUST expose a preview generator command:
 
 ```bash
-bun run preview:package
+pnpm run preview:package
 ```
 
 ### Script behavior
@@ -136,11 +136,11 @@ Must include:
 - grant `id-token: write` on the release job
 - install dependencies from the lockfile
 - run, in order:
-  1. `bun run typecheck`
-  2. `bun run lint`
-  3. `bun run test`
+  1. `pnpm run typecheck`
+  2. `pnpm run lint`
+  3. `pnpm run test`
   4. `npm pack --dry-run`
-  5. `bunx semantic-release`
+  5. `pnpm exec semantic-release`
 - set only `GITHUB_TOKEN` in the release step environment after trusted publishing is configured
 
 ## 7. Non-Contract Items

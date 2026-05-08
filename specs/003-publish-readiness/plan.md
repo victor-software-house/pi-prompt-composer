@@ -9,11 +9,11 @@ Make `pi-prompt-composer` a real publishable Pi package while also closing a key
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.9, strict ESM; Bun scripts; GitHub Actions YAML  
+**Language/Version**: TypeScript 5.9, strict ESM; pnpm scripts; GitHub Actions YAML  
 **Primary Dependencies**: existing Pi extension peers (`@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`), semantic-release 25 stack already present, GitHub Actions release workflow, and a lightweight ANSI-to-SVG conversion library for the preview generator (`ansi-to-svg` selected in research)  
 **Storage**: Repository-tracked markdown/docs/examples/assets, GitHub Actions workflow config, npm package metadata, and temporary local directories used by the preview generator  
-**Testing**: Existing vitest suite (`bun run test`) plus package smoke checks (`npm pack --dry-run`) and documented live Pi manual validation via `pi install ./`  
-**Target Platform**: Pi package consumers installing from npm or local path; maintainers running Bun locally; GitHub Actions publishing from `main`  
+**Testing**: Existing vitest suite (`pnpm run test`) plus package smoke checks (`npm pack --dry-run`) and documented live Pi manual validation via `pi install ./`  
+**Target Platform**: Pi package consumers installing from npm or local path; maintainers running pnpm locally; GitHub Actions publishing from `main`  
 **Project Type**: Single-package Pi extension library  
 **Performance Goals**: README quick-start should get a user to a working grouped command in under 2 minutes; preview generation should be fast enough for routine regeneration (<30s advisory, not a hard gate)  
 **Constraints**: Keep flat Pi prompt templates unaffected; preserve grouped command discovery, autocomplete, and precedence; guided collection should use Pi's built-in UI primitives (`input`, `editor`) rather than a custom form system; first npm publish must be bootstrapped manually before trusted publishing can work; steady-state publish workflow should be tokenless (OIDC + `GITHUB_TOKEN` only); committed preview asset must be stable enough for both README embedding and Pi package gallery metadata  
@@ -27,7 +27,7 @@ Make `pi-prompt-composer` a real publishable Pi package while also closing a key
 - [x] The design preserves Pi-native prompt behavior unless the spec explicitly changes that contract.
 - [x] Planned file paths match the real repo layout, or this plan explicitly creates any new paths it depends on.
 - [x] Documentation updates are identified for every operator-facing, packaging, or workflow change.
-- [x] Validation steps include `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, and any new test command added by this feature.
+- [x] Validation steps include `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`, and any new test command added by this feature.
 
 **Specific grounding notes**:
 - `extensions/index.ts` remains the only runtime entrypoint and is intentionally the only runtime file changed by this feature.
@@ -84,7 +84,7 @@ docs/
 
 README.md
 package.json
-bun.lock
+pnpm-lock.yaml
 release.config.mjs
 .specify/
 └── ...
@@ -101,8 +101,8 @@ release.config.mjs
 | `extensions/index.ts` | Add interactive missing-required-arg collection and editor confirmation for selector / missing-arg flows | Updated UX requirements |
 | `README.md` | Rewrite for user-friendly onboarding; add hero description, preview image, quick-start, example copy instructions, and honest editor/missing-arg behavior notes | FR-001 to FR-005 |
 | `package.json` | Add `homepage`, `bugs`, `engines`, `pi.image`, updated `files`, preview script entry, and any new preview-generator dependency | FR-011 to FR-016 |
-| `.github/workflows/publish.yml` | Add `bun run test` before `npm pack --dry-run`; keep trusted-publishing-compatible env (`GITHUB_TOKEN` only) | FR-009, FR-010 |
-| `bun.lock` | Sync lockfile for any dependency/script additions | Required by repo workflow |
+| `.github/workflows/publish.yml` | Add `pnpm run test` before `npm pack --dry-run`; keep trusted-publishing-compatible env (`GITHUB_TOKEN` only) | FR-009, FR-010 |
+| `pnpm-lock.yaml` | Sync lockfile for any dependency/script additions | Required by repo workflow |
 | `docs/ROADMAP.md` | Update documentation/adoption status once examples, README polish, and publish readiness land | Documentation sync |
 | `.specify/memory/pi-agent.md` | Record durable planning context for package polish, preview generation, and npm bootstrap workflow | Required by `/spec plan` |
 
@@ -126,7 +126,7 @@ release.config.mjs
 All planning unknowns are resolved in [research.md](./research.md):
 - Release model: semantic-release + npm trusted publishing through GitHub Actions OIDC after one manual bootstrap publish/tag/trust sequence
 - Preview format: single committed SVG asset reused by README and Pi package gallery metadata
-- Preview architecture: Bun/TypeScript script that composes Pi TUI output programmatically and converts ANSI frames to SVG without a live Pi session
+- Preview architecture: Node/TypeScript script that composes Pi TUI output programmatically and converts ANSI frames to SVG without a live Pi session
 - Documentation split: onboarding in `README.md`, maintainer validation in `docs/MANUAL-TESTING.md`, bootstrap/release guidance in `docs/PUBLISHING.md`
 - Example prompt packaging: ship a realistic `examples/prompts/review/` group in the published tarball
 
@@ -147,7 +147,7 @@ All planning unknowns are resolved in [research.md](./research.md):
 2. **Package metadata and workflow slice**
    - Update `package.json` with `homepage`, `bugs`, `engines`, `pi.image`, and `files` entries for `examples/` and `assets/`.
    - Add a preview-generation script entry and the selected preview dependency.
-   - Update `.github/workflows/publish.yml` so `bun run test` gates the release step.
+   - Update `.github/workflows/publish.yml` so `pnpm run test` gates the release step.
 
 3. **Examples and onboarding docs slice**
    - Add `examples/prompts/review/` with `_index.md`, `summary.md`, and `fix.md`.
@@ -165,14 +165,14 @@ All planning unknowns are resolved in [research.md](./research.md):
    - Update `docs/ROADMAP.md` to reflect the publish-readiness slice and any remaining deferred work.
 
 6. **Validation slice**
-   - Run `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test`, and `npm pack --dry-run`.
+   - Run `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, and `npm pack --dry-run`.
    - Execute the documented live Pi manual test checklist via `pi install ./`.
    - If the package is still unpublished, hand off the one-time manual npm publish / trust setup to the operator after the repo changes are merged.
 
 ## Validation Strategy
 
-- **Static validation**: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`
-- **Automated regression validation**: `bun run test`
+- **Static validation**: `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`
+- **Automated regression validation**: `pnpm run test`
 - **Package validation**: `npm pack --dry-run` must show `extensions/`, `README.md`, `LICENSE`, `examples/`, and `assets/` in the tarball
 - **Preview validation**: Regenerate `assets/package-preview.svg` and visually confirm it matches the example grouped-command selector state used in the README
 - **Operator validation**: Follow `docs/MANUAL-TESTING.md` in a real Pi session using `pi install ./`

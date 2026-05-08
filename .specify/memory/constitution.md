@@ -46,11 +46,11 @@ should remain explicit and easy to extract later into shared utilities such as
 
 ### III. Verification Before Claims
 Before a change is presented as complete, agents MUST run the repository's
-verification workflow from the repo root: `bun install`, `bun run fix`,
-`bun run typecheck`, and `bun run lint`. If a change adds tests, the test
+verification workflow from the repo root: `pnpm install`, `pnpm run fix`,
+`pnpm run typecheck`, and `pnpm run lint`. If a change adds tests, the test
 command MUST be added to `package.json` and then included in both the runtime
 workflow and the documentation. When packaging or release files change,
-`package.json`, `bun.lock`, `CHANGELOG.md`, and `release.config.mjs` MUST stay
+`package.json`, `pnpm-lock.yaml`, `CHANGELOG.md`, and `release.config.mjs` MUST stay
 aligned.
 
 Rationale: this repo relies on strict TypeScript, automated linting, and release
@@ -82,7 +82,7 @@ needs a single clear role to stay trustworthy.
 
 - The repository is a single-package Pi extension today.
 - `extensions/index.ts` is the only code entrypoint today.
-- TypeScript is strict and runs with Bun-based tooling.
+- TypeScript is strict and runs with pnpm-managed tooling.
 - There is no test suite yet; adding one requires adding the command to
   `package.json` and documenting it.
 - New directories such as `src/`, `examples/`, or nested package folders MUST

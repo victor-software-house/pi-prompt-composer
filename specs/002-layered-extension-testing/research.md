@@ -6,9 +6,9 @@
 ## R-001: Test framework choice
 
 **Decision**: vitest  
-**Rationale**: The `pi-extension-testing` skill recommends vitest for all three test layers. Vitest is the de facto standard in the Pi extension ecosystem, works natively with TypeScript and ESM, and supports the node environment needed for filesystem tests. Bun can run vitest via `bunx vitest` or through the `vitest` CLI directly.  
+**Rationale**: The `pi-extension-testing` skill recommends vitest for all three test layers. Vitest is the de facto standard in the Pi extension ecosystem, works natively with TypeScript and ESM, and supports the node environment needed for filesystem tests. pnpm can run vitest through `pnpm exec vitest` or package scripts.  
 **Alternatives considered**:
-- `bun:test` — built into Bun but lacks the ecosystem integration with pi-test-harness and has fewer assertion utilities; would require a separate integration framework for Layer 3
+- Node built-in test runner — lacks the existing Vitest integration and would require a separate integration framework for Layer 3
 - `jest` — heavier configuration overhead for ESM/TypeScript projects; no advantage over vitest for this use case
 
 ## R-002: Integration test framework for Layer 3
@@ -75,7 +75,7 @@ test/
 **Rationale**: The existing `tsconfig.json` is strict and only includes `extensions/`. Tests need vitest globals, test-harness types, and access to `test/` files. A separate test config keeps production builds clean. Vitest reads `tsconfig.test.json` via its config.
 
 **Alternatives considered**:
-- Add `test/` to the base `tsconfig.json` include — would include test files in production type-checking (`bun run typecheck`), potentially changing error surface and slowing down the production gate
+- Add `test/` to the base `tsconfig.json` include — would include test files in production type-checking (`pnpm run typecheck`), potentially changing error surface and slowing down the production gate
 - Use only vitest's built-in TypeScript support without a tsconfig — loses strict checking in test files
 
 ## R-007: vitest configuration
@@ -111,7 +111,7 @@ export default defineConfig({
 }
 ```
 
-Update `AGENTS.md` and `README.md` verification guidance to include `bun run test` alongside existing `bun run typecheck` and `bun run lint`.
+Update `AGENTS.md` and `README.md` verification guidance to include `pnpm run test` alongside existing `pnpm run typecheck` and `pnpm run lint`.
 
 **Rationale**: FR-007 and FR-008 require adding the test command to the standard verification workflow and documenting it. CC-003 requires updating the verification workflow. `vitest --run` runs once and exits (CI-friendly). `vitest` alone enters watch mode for development.
 

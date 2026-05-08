@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-#MISE description="Ensure bun.lock is in sync before push"
+#MISE description="Ensure pnpm-lock.yaml is in sync before push"
 
 set -euo pipefail
 
-bun install
+pnpm install
 
-if ! git diff --quiet -- bun.lock; then
+if ! git diff --quiet -- pnpm-lock.yaml; then
   echo ""
   echo "Lockfile is out of sync. Commit the updated lockfile before pushing:"
   echo ""
-  git diff --stat -- bun.lock
+  git diff --stat -- pnpm-lock.yaml
   echo ""
-  echo "  git add bun.lock && git commit -m 'chore: sync lockfile'"
+  echo "  git add pnpm-lock.yaml && git commit -m 'chore: sync lockfile'"
   echo ""
   exit 1
 fi

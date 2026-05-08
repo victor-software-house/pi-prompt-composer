@@ -175,7 +175,7 @@ Acceptance criteria:
 - `test/fixtures/` contains reusable `.md` prompt files used by discovery and extension-flow tests
 - existing 75 tests continue to pass with equivalent or stronger coverage
 - mock factory supports `exec`, `on` event capture, and dispatch-mode branching
-- `bun run typecheck && bun run lint && bun run test` passes cleanly
+- `pnpm run typecheck && pnpm run lint && pnpm run test` passes cleanly
 
 ## PPC-012: Bundled `/compose` helpers and authoring skill (complete)
 

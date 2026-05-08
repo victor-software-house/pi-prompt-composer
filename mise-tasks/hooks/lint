@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-bun run lint
+pnpm run lint

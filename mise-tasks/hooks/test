@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-bun run test
+pnpm run test

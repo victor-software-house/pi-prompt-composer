@@ -16,7 +16,7 @@ Implement the first useful grouped-routing slice in `extensions/index.ts`: scan 
 **Non-exported Pi internals reimplemented locally**: `parseCommandArgs`, `substituteArgs` (near-verbatim copies with source-reference comments pointing to `@mariozechner/pi-coding-agent@0.64.0` — `packages/coding-agent/src/core/prompt-templates.ts` in [badlogic/pi-mono](https://github.com/badlogic/pi-mono)); prompt root paths derived from `getAgentDir() + '/prompts'` and `process.cwd() + '/.pi/prompts'` since `getPromptsDir()` and `CONFIG_DIR_NAME` are not publicly exported  
 **Future extraction target**: These local helpers are candidates for a shared `pi-provider-utils` npm package to avoid duplication across Pi extension repos  
 **Storage**: In-memory grouped-prompt registry rebuilt from local filesystem prompt roots on extension load/reload; `_index.md` with `type: group` frontmatter is the hard gate for group recognition  
-**Testing**: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint` (no test suite yet)  
+**Testing**: `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint` (no test suite yet)  
 **Target Platform**: Pi interactive extension runtime on the operator machine, reading `~/.pi/agent/prompts` and `<cwd>/.pi/prompts`  
 **Project Type**: Single-package Pi extension library  
 **Performance Guidance**: Limit discovery to two prompt roots and one directory level; use prebuilt in-memory maps for autocomplete and dispatch; avoid per-keystroke rescans. This is implementation guidance only — the spec explicitly excludes numeric latency thresholds for this slice.  
@@ -31,7 +31,7 @@ Status: PASS before Phase 0 research and after Phase 1 design.
 - [x] The design preserves Pi-native prompt behavior unless the spec explicitly changes that contract.
 - [x] Planned file paths match the real repo layout, or this plan explicitly creates any new paths it depends on.
 - [x] Documentation updates are identified for every operator-facing, packaging, or workflow change.
-- [x] Validation steps include `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, and any new test command added by this feature.
+- [x] Validation steps include `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`, and any new test command added by this feature.
 
 ## Project Structure
 
@@ -102,12 +102,12 @@ specs/
 7. Route `/group subcommand ...` through local `parseCommandArgs()` + `substituteArgs()`, and use optional nested prompt `args` metadata to surface operator-visible argument hints without adding guided collection.
 8. Route bare `/group` through `ctx.ui.select()` and show the normalized subcommand name plus required description for each selector item before dispatch.
 9. Return clear unknown-subcommand feedback listing available nested prompts.
-10. Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint`.
+10. Run `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, and `pnpm run lint`.
 11. Update `README.md` if the implementation changes operator-visible behavior from current docs.
 
 ## Validation Strategy
 
-- Static validation: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`
+- Static validation: `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`
 - Operator validation:
   - Direct `/group subcommand arg1 arg2` dispatch sends rendered content as a visible user message.
   - Bare `/group` opens a selector that shows normalized subcommand names plus required descriptions, then dispatches the chosen prompt.

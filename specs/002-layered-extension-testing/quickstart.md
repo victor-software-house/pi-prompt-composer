@@ -5,16 +5,16 @@
 
 ## Prerequisites
 
-- Bun installed (project already uses Bun for package management)
+- pnpm installed (project uses pnpm for package management)
 - Repository cloned and on the `002-layered-extension-testing` branch (or later, after merge)
-- Dependencies installed: `bun install`
+- Dependencies installed: `pnpm install`
 
 ## Running Tests
 
 ### Full test suite (CI mode)
 
 ```bash
-bun run test
+pnpm run test
 ```
 
 Runs all three test layers once and exits. Exit code 0 means all tests pass.
@@ -22,7 +22,7 @@ Runs all three test layers once and exits. Exit code 0 means all tests pass.
 ### Watch mode (development)
 
 ```bash
-bun run test:watch
+pnpm run test:watch
 ```
 
 Runs tests and re-runs on file changes. Useful when writing or debugging tests.
@@ -30,11 +30,11 @@ Runs tests and re-runs on file changes. Useful when writing or debugging tests.
 ### Full verification workflow
 
 ```bash
-bun install
-bun run fix
-bun run typecheck
-bun run lint
-bun run test
+pnpm install
+pnpm run fix
+pnpm run typecheck
+pnpm run lint
+pnpm run test
 ```
 
 This is the complete verification sequence. All five commands must pass before committing.
@@ -47,10 +47,10 @@ After the feature is implemented, verify each item:
 
 ```bash
 # Install should succeed with new dev deps
-bun install
+pnpm install
 
 # Test command should exist and run
-bun run test
+pnpm run test
 ```
 
 Expected: vitest runs, discovers test files in `test/`, reports results.
@@ -58,21 +58,21 @@ Expected: vitest runs, discovers test files in `test/`, reports results.
 ### 2. Layer 1 — Helper tests pass
 
 ```bash
-bun run test -- test/helpers.test.ts
+pnpm run test -- test/helpers.test.ts
 ```
 
 Expected: All pure function tests pass. Each of the 8 exported helpers has at least one test scenario.
 
 Spot check — intentionally break a helper and verify targeted failure:
 1. Temporarily change `toKebabCase` to return input unchanged
-2. Run `bun run test -- test/helpers.test.ts`
+2. Run `pnpm run test -- test/helpers.test.ts`
 3. Verify that only `toKebabCase` tests fail, with clear messages
 4. Revert the change
 
 ### 3. Layer 2 — Discovery tests pass
 
 ```bash
-bun run test -- test/discovery.test.ts
+pnpm run test -- test/discovery.test.ts
 ```
 
 Expected: All discovery tests pass. Scenarios cover:
@@ -85,7 +85,7 @@ Expected: All discovery tests pass. Scenarios cover:
 ### 4. Layer 3 — Extension-flow tests pass
 
 ```bash
-bun run test -- test/extension-flow.test.ts
+pnpm run test -- test/extension-flow.test.ts
 ```
 
 Expected: All extension-flow tests pass. Scenarios cover:
@@ -97,8 +97,8 @@ Expected: All extension-flow tests pass. Scenarios cover:
 ### 5. Existing gates still pass
 
 ```bash
-bun run typecheck
-bun run lint
+pnpm run typecheck
+pnpm run lint
 ```
 
 Expected: No regressions. The test infrastructure does not affect production type-checking or linting.
@@ -119,7 +119,7 @@ This manual step is optional if Layer 3 integration tests pass, but provides ful
 ### vitest not found
 
 ```bash
-bun install  # Ensure dev deps are installed
+pnpm install  # Ensure dev deps are installed
 ```
 
 ### Layer 3 tests fail with import errors
@@ -127,14 +127,14 @@ bun install  # Ensure dev deps are installed
 Check that all pi-test-harness peer deps are installed:
 
 ```bash
-bun pm ls | grep -E "pi-test-harness|pi-ai|pi-agent-core"
+pnpm list | grep -E "pi-test-harness|pi-ai|pi-agent-core"
 ```
 
 All three should appear in the output.
 
 ### Tests pass but typecheck fails
 
-Ensure `tsconfig.test.json` exists and only `tsconfig.json` (not the test config) is used by `bun run typecheck`.
+Ensure `tsconfig.test.json` exists and only `tsconfig.json` (not the test config) is used by `pnpm run typecheck`.
 
 ### Tests timeout
 

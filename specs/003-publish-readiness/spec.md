@@ -51,7 +51,7 @@ A maintainer merges a `feat:` or `fix:` commit to `main`. The CI workflow runs t
 
 **Acceptance Scenarios**:
 
-1. **Given** a `feat:` commit is pushed to `main`, **When** the CI workflow runs, **Then** `bun run typecheck`, `bun run lint`, and `bun run test` all pass before the release step.
+1. **Given** a `feat:` commit is pushed to `main`, **When** the CI workflow runs, **Then** `pnpm run typecheck`, `pnpm run lint`, and `pnpm run test` all pass before the release step.
 2. **Given** CI checks pass, **When** semantic-release runs, **Then** a new version is published to npm with provenance and the correct `pi` extension metadata.
 3. **Given** the package is published, **When** a user visits the npm page, **Then** they see the description, homepage link, repository link, keywords, and license.
 
@@ -132,7 +132,7 @@ Before publishing, a maintainer installs the package locally from the repo (`pi 
 
 #### CI & Publishing
 
-- **FR-009**: The CI workflow MUST run `bun run test` before the release step.
+- **FR-009**: The CI workflow MUST run `pnpm run test` before the release step.
 - **FR-010**: The CI workflow MUST authenticate to npm via OIDC trusted publishing (provenance-based, no stored secrets) or via an explicit `NPM_TOKEN` / `NODE_AUTH_TOKEN` secret.
 - **FR-011**: `package.json` MUST include `homepage`, `bugs`, and `engines` fields with correct values.
 - **FR-012**: The published tarball MUST include `extensions/`, `README.md`, `LICENSE`, and `examples/` (if examples are meant for user consumption from the installed package).

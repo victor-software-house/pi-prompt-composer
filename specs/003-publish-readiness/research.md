@@ -11,7 +11,7 @@
 - The repo already has the correct release stack shape: `semantic-release@25`, `@semantic-release/npm@13`, `@semantic-release/github@12`, `@semantic-release/git@10`, `release.config.mjs`, and a GitHub Actions workflow with `id-token: write`.
 - The `npm-trusted-publishing` skill recommends this exact model as the preferred default for new single-package Pi repos.
 - Trusted publishing removes the need for a long-lived npm token and matches the existing `publishConfig.provenance: true` manifest setting.
-- The only missing repo-side release gate is `bun run test` before the release step.
+- The only missing repo-side release gate is `pnpm run test` before the release step.
 
 **Alternatives considered**:
 - **Classic `NPM_TOKEN` / `NODE_AUTH_TOKEN`** — works, but leaves long-lived credentials in GitHub and is explicitly not the preferred model for new Pi packages.
@@ -47,7 +47,7 @@
 
 ## R-004: Preview generator architecture
 
-**Decision**: Add a Bun/TypeScript maintainer script at `scripts/generate-package-preview.ts` that renders a deterministic Pi-style terminal frame and converts it to SVG using `ansi-to-svg`.
+**Decision**: Add a Node/TypeScript maintainer script at `scripts/generate-package-preview.ts` that renders a deterministic Pi-style terminal frame and converts it to SVG using `ansi-to-svg`.
 
 **Rationale**:
 - The nearby reference repos establish two viable precedents:
@@ -90,7 +90,7 @@
 
 ## R-007: CI release gate scope
 
-**Decision**: Add `bun run test` to the publish workflow before `npm pack --dry-run` and keep the release step environment to `GITHUB_TOKEN` only.
+**Decision**: Add `pnpm run test` to the publish workflow before `npm pack --dry-run` and keep the release step environment to `GITHUB_TOKEN` only.
 
 **Rationale**:
 - The repo already has 65 passing tests, but the publish workflow does not run them today.

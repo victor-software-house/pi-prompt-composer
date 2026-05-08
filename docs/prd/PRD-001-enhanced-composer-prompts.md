@@ -1,0 +1,625 @@
+---
+title: "Enhanced Composer Prompts"
+prd: PRD-001
+status: Draft
+owner: "Victor Software House"
+issue: "#6"
+date: 2026-05-07
+version: "1.0"
+---
+
+# PRD: Enhanced Composer Prompts
+
+---
+
+## 1. Problem & Context
+
+`pi-prompt-composer` currently adds grouped slash-command routing on top of Pi's native prompt-template system. A prompt directory with `_index.md` and nested `.md` files becomes `/group subcommand`; flat `.md` files remain Pi-native and are ignored by this package.
+
+That model solves prompt organization, but it creates two product gaps:
+
+1. **Single enhanced prompts are impossible without an artificial folder.** GitHub issue [#6](https://github.com/victor-software-house/pi-prompt-composer/issues/6) reports this directly: users want plain prompt files, not forced directories.
+2. **Current rendering is not powerful enough for serious prompt workflows.** The package mostly mirrors Pi-native `$1`, `$@`, `$ARGUMENTS`, and `${@:N}` substitution. Planned shell substitution helps, but it still leaves composer below the customization bar expected from modern coding-agent prompt systems.
+
+Current code reality:
+
+* `extensions/index.ts` owns discovery, registry, command registration, selector UI, arg parsing, arg collection, rendering, and dispatch in one file.
+* `discoverGroups()` only discovers directories; flat files are left to Pi.
+* `parseArgsMetadata()` accepts a lenient positional args array, but cannot express named args, enums, booleans, arrays, defaults, validation, or data sources.
+* `substituteArgs()` implements Pi-like positional replacement plus escaped dollar support.
+* `resolvePromptArgs()` collects args by position through `ctx.ui.input()`.
+* `pi.sendUserMessage(rendered, { deliverAs: 'followUp' })` dispatches visible rendered content.
+
+The next product step should be first-class **composer-owned prompt files** with a real template engine, typed argument schema, and a unified rendering pipeline for both flat and grouped prompts.
+
+---
+
+## 2. Goals & Success Metrics
+
+| Goal                                   | Metric                                                                                 | Target                                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **First-class flat composer prompts**  | A `.md` file can be registered and dispatched by composer without a folder             | 100% support for opted-in flat files in user, project, and bundled roots                 |
+| **Powerful semantic rendering**        | Prompt authors can use conditionals, loops, filters, and named variables               | Liquid-powered prompts cover core template use cases without custom ad hoc syntax        |
+| **Robust typed arg collection**        | Args can declare type, required/default behavior, prompts, enum values, and validation | Invalid metadata yields visible diagnostics; valid metadata drives correct UI collection |
+| **Compatibility-preserving migration** | Existing grouped prompts keep working unchanged                                        | Existing test suite stays green; current `engine: pi` behavior remains supported         |
+| **Issue #6 resolution**                | User can author a single plain file instead of a folder                                | `/review` from `review.md` works when file opts into composer handling                   |
+
+**Guardrails (must not regress):**
+
+* Existing grouped prompt routing: `/group`, `/group subcommand`, selector, autocomplete.
+* Existing bundled `/compose` group and authoring skill.
+* Existing Pi-like substitution for current prompts.
+* Visible rendered output in conversation history for model-dispatched prompts.
+* Discovery warnings through Pi UI, not only console output.
+* Flat Pi-native prompts that do not opt into composer behavior should continue to work through Pi.
+
+---
+
+## 3. Users & Use Cases
+
+### Primary: Prompt author
+
+> As a prompt author, I want to create a single enhanced prompt file so that I do not need a folder and fake subcommand for one workflow.
+
+**Preconditions:** The author has a user or project prompt root such as `~/.pi/agent/prompts/` or `.pi/prompts/`.
+
+### Primary: Power prompt author
+
+> As a power prompt author, I want named variables, conditionals, loops, and typed inputs so that prompts can adapt to context without becoming brittle prose instructions.
+
+**Preconditions:** The prompt file opts into the enhanced rendering engine.
+
+### Secondary: Existing composer user
+
+> As an existing grouped-prompt user, I want my current prompt groups to keep working so that adopting enhanced templates does not break my current workflows.
+
+**Preconditions:** Existing prompts use `_index.md` with `type: group` and current `args` array syntax.
+
+### Future: Package maintainer
+
+> As a package maintainer, I want rendering, discovery, args, and UI split into modules so that shell substitution, operator-only dispatch, and future context providers can be added without making `extensions/index.ts` harder to change.
+
+---
+
+## 4. Scope
+
+### In scope
+
+1. **Composer-owned flat prompt files** — discover eligible `.md` files directly under prompt roots and register them as slash commands.
+2. **Prompt kind detection** — distinguish native Pi prompts, composer flat prompts, and composer grouped prompts through explicit frontmatter.
+3. **Template engine selection** — support `engine: pi` for current behavior and `engine: liquid` for enhanced rendering.
+4. **Liquid rendering pipeline** — render named data, conditionals, loops, filters, and safe local context through a deterministic pipeline.
+5. **Typed argument schema** — add expressive named args while preserving legacy positional args.
+6. **Interactive collection and validation** — collect missing required args based on schema, validate inputs, and show actionable UI errors.
+7. **Unified prompt model** — represent flat and grouped prompts through one internal `PromptDefinition` model.
+8. **Docs and examples** — document flat enhanced prompts, grouped prompts, engine choices, arg schemas, and migration guidance.
+9. **Tests** — cover discovery, rendering, args, command dispatch, diagnostics, and compatibility.
+
+### Out of scope / later
+
+| What                                             | Why                                                              | Tracked in             |
+| ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------- |
+| `default.md` for grouped folders                 | Useful sugar, but flat prompt files solve issue #6 more directly | Future issue           |
+| Deep nested commands such as `/a b c`            | Routing complexity unrelated to enhanced single prompts          | Existing non-goal      |
+| Full Claude Code prompt compatibility            | Target parity in capability, not byte-for-byte syntax            | Future research        |
+| Remote/network context providers                 | Security and latency need separate design                        | Future issue           |
+| Arbitrary unbounded shell execution in templates | Requires permission, timeout, and visibility policy              | PPC-006 / future issue |
+| Prompt inheritance across directories            | Adds mental model cost before core flat-file support is proven   | Future issue           |
+
+### Design for future (build with awareness)
+
+The implementation should make later features cheaper without shipping them now:
+
+* Model prompt rendering as a pipeline with explicit stages: load → normalize args → collect/validate → render → preprocess → dispatch.
+* Keep `TemplateEngine` as an interface so `engine: liquid` does not hardcode all future rendering behavior.
+* Keep context providers behind explicit allowlisted sources (`args`, `prompt`, `git`, later `shell`) rather than exposing broad process state by default.
+* Make dispatch mode a first-class prompt property so `dispatch: model` and future `dispatch: operator` can share rendering.
+
+---
+
+## 5. Functional Requirements
+
+### FR-1: Discover composer-owned flat prompt files
+
+Composer must discover eligible flat `.md` files directly under each prompt root and register each as a slash command.
+
+Eligibility must be explicit to avoid hijacking all Pi-native flat prompts. Initial frontmatter gate:
+
+```yaml
+
+---
+
+type: prompt
+engine: liquid
+
+---
+
+```
+
+`type: prompt` marks the file as composer-owned. `engine` chooses the renderer. Files without `type: prompt` remain native Pi prompts.
+
+**Acceptance criteria:**
+
+```gherkin
+Given .pi/prompts/review.md contains frontmatter type: prompt and engine: liquid
+When Pi reloads with pi-prompt-composer enabled
+Then composer registers /review as an extension command
+And invoking /review renders review.md through composer
+```
+
+```gherkin
+Given .pi/prompts/native.md has no type: prompt frontmatter
+When Pi reloads with pi-prompt-composer enabled
+Then composer does not register /native
+And Pi native prompt handling remains responsible for /native
+```
+
+**Files:**
+
+* `extensions/index.ts` — current discovery entrypoint until module extraction.
+* `src/discovery.ts` — target home for flat and grouped discovery.
+* `src/types.ts` — prompt definition types.
+* `test/discovery.test.ts` — flat prompt discovery coverage.
+
+---
+
+### FR-2: Preserve grouped prompt behavior
+
+Existing grouped prompt behavior must continue unchanged unless a prompt opts into new rendering features.
+
+**Acceptance criteria:**
+
+```gherkin
+Given .pi/prompts/review/_index.md contains type: group
+And .pi/prompts/review/summary.md is an existing current-style prompt
+When the user runs /review summary "my change"
+Then composer dispatches the same rendered content as before this PRD
+```
+
+**Files:**
+
+* `extensions/index.ts` / `src/discovery.ts` — keep group detection and ordering.
+* `src/render.ts` — preserve `engine: pi` rendering.
+* `test/extension-flow.test.ts` — existing direct dispatch and selector tests.
+* `test/order.test.ts` — group order compatibility.
+
+---
+
+### FR-3: Support Liquid as enhanced template engine
+
+Composer must support `engine: liquid` for flat and grouped prompts that opt in. Liquid templates must receive a named render context rather than positional-only strings.
+
+Minimum context shape:
+
+```ts
+{
+  args: Record<string, unknown>;
+  prompt: {
+    name: string;
+    groupName?: string;
+    origin: 'bundled' | 'user' | 'project';
+    filePath: string;
+  };
+}
+```
+
+**Acceptance criteria:**
+
+```gherkin
+Given .pi/prompts/review.md declares engine: liquid
+And its body contains "Review {{ args.change }} in {{ args.mode }} mode"
+When the user runs /review "fix auth" --mode deep
+Then the visible dispatched message contains "Review fix auth in deep mode"
+```
+
+```gherkin
+Given a Liquid prompt body contains a loop over args.files
+When args.files contains ["a.ts", "b.ts"]
+Then the rendered output contains one line for a.ts and one line for b.ts
+```
+
+**Files:**
+
+* `package.json` / `pnpm-lock.yaml` — add renderer dependency after implementation spike. `liquidjs` latest checked on 2026-05-07: `10.25.7`; `handlebars` latest checked: `4.7.9`.
+* `src/render.ts` — engine dispatch and Liquid renderer.
+* `test/render.test.ts` — inline snapshots for Liquid rendering.
+* `docs/FEATURE-SET.md` — update product model.
+* `README.md` — document `engine: liquid`.
+
+---
+
+### FR-4: Support typed named argument schemas
+
+Composer must support an object-based args schema for enhanced prompts.
+
+Initial schema:
+
+```yaml
+args:
+  change:
+    type: string
+    required: true
+    prompt: What changed?
+  mode:
+    type: enum
+    values: [quick, normal, deep]
+    default: normal
+  include_tests:
+    type: boolean
+    default: true
+  files:
+    type: string[]
+    required: false
+```
+
+Supported initial types:
+
+* `string`
+* `boolean`
+* `number`
+* `enum`
+* `string[]`
+
+**Acceptance criteria:**
+
+```gherkin
+Given a prompt declares args.change as a required string
+When the user invokes the command without change
+Then composer asks for change using the configured prompt text
+And empty input is rejected with a warning
+```
+
+```gherkin
+Given a prompt declares args.mode as enum values [quick, normal, deep]
+When the user provides mode=invalid
+Then composer does not render the prompt
+And the UI warns that mode must be one of quick, normal, deep
+```
+
+```gherkin
+Given a prompt declares args.mode with default normal
+When the user omits mode
+Then args.mode equals normal during template rendering
+```
+
+**Files:**
+
+* `src/args.ts` — new arg schema parser, coercion, validation, defaults.
+* `src/ui.ts` — input/select collection for typed args.
+* `src/render.ts` — pass typed args to engine.
+* `test/helpers.test.ts` or `test/args.test.ts` — schema parser tests.
+* `test/extension-flow.test.ts` — interactive collection tests.
+
+---
+
+### FR-5: Keep legacy args array and Pi-style engine compatible
+
+Current `args` array syntax and Pi-like substitution must remain valid for existing prompts.
+
+**Acceptance criteria:**
+
+```gherkin
+Given a grouped prompt uses args as an array with name, required, and hint
+And its body contains "Hello $1"
+When the user invokes the prompt with "world"
+Then the rendered output remains "Hello world"
+```
+
+**Files:**
+
+* `src/args.ts` — normalize legacy and enhanced arg metadata into internal structures.
+* `src/render.ts` — keep `engine: pi` renderer.
+* `test/helpers.test.ts` — current `substituteArgs()` tests.
+* `test/extension-flow.test.ts` — current command behavior tests.
+
+---
+
+### FR-6: Provide deterministic command precedence
+
+Composer must define how flat composer prompts, grouped composer prompts, bundled prompts, and native Pi prompts interact.
+
+Required precedence:
+
+1. Project composer prompts
+2. User composer prompts
+3. Bundled composer prompts
+4. Native Pi prompts only when composer did not register same command
+
+Within composer, explicit duplicate detection must warn when two composer resources claim the same command.
+
+**Acceptance criteria:**
+
+```gherkin
+Given user prompts and project prompts both define type: prompt command review
+When Pi reloads
+Then project review wins
+And composer shows a duplicate command warning naming both origins
+```
+
+```gherkin
+Given native Pi has review.md without type: prompt
+And composer has review.md with type: prompt in project prompts
+When Pi reloads
+Then composer /review wins by extension command precedence
+And docs explain this is intentional
+```
+
+**Files:**
+
+* `src/discovery.ts` — duplicate detection.
+* `src/commands.ts` or `extensions/index.ts` — registration ordering.
+* `test/discovery.test.ts` — origin precedence tests.
+* `README.md` — precedence docs.
+
+---
+
+### FR-7: Rendered output remains visible before model dispatch
+
+Enhanced rendering must preserve the existing product promise that the operator sees the final expanded prompt as conversation content.
+
+**Acceptance criteria:**
+
+```gherkin
+Given a Liquid prompt renders variables and conditionals
+When composer dispatches it to the model
+Then the user message bubble contains the final rendered text
+And hidden intermediate template syntax is not sent
+```
+
+**Files:**
+
+* `src/render.ts` — final rendered content contract.
+* `src/dispatch.ts` or `extensions/index.ts` — dispatch mode handling.
+* `test/extension-flow.test.ts` — `sendUserMessage()` content assertions.
+
+---
+
+### FR-8: Surface useful metadata diagnostics
+
+Malformed prompt frontmatter, invalid arg schemas, unknown engines, and render failures must be visible through Pi UI notifications.
+
+**Acceptance criteria:**
+
+```gherkin
+Given a prompt declares engine: liquid but has malformed Liquid syntax
+When the user invokes the prompt
+Then composer does not send a user message
+And the UI notification names the prompt file and render error
+```
+
+```gherkin
+Given a prompt declares args.mode as enum but omits values
+When Pi reloads
+Then composer warns that args.mode has invalid enum metadata
+And the prompt is skipped or degraded according to documented rules
+```
+
+**Files:**
+
+* `src/diagnostics.ts` — structured warnings/errors.
+* `src/discovery.ts` — metadata diagnostics.
+* `src/render.ts` — render diagnostics.
+* `test/tool-guard.test.ts` / `test/discovery.test.ts` — notification behavior.
+
+---
+
+### FR-9: Document and ship examples for the new model
+
+Docs must make the authoring model clear enough for cold readers.
+
+**Acceptance criteria:**
+
+```gherkin
+Given a new user reads README.md
+When they want one enhanced prompt
+Then they can copy a flat .md example and invoke it successfully
+```
+
+```gherkin
+Given an existing user reads the migration docs
+When they have current grouped prompts
+Then they understand they do not need to migrate unless they want Liquid or typed args
+```
+
+**Files:**
+
+* `README.md` — quick start and authoring reference.
+* `docs/FEATURE-SET.md` — revised product model.
+* `docs/IMPLEMENTATION-PLAN.md` — architecture and slices.
+* `docs/ROADMAP.md` — work items.
+* `examples/prompts/` — flat enhanced prompt examples.
+* `skills/compose-grouped-prompts/` — update if authoring workflows expand beyond groups.
+
+---
+
+## 6. Non-Functional Requirements
+
+| Category              | Requirement                                                                                                                                                                |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Compatibility**     | Existing grouped prompts and bundled `/compose` must work without modification.                                                                                            |
+| **Security**          | Template rendering must not expose arbitrary process globals, filesystem access, network access, or shell execution unless explicitly added through allowlisted providers. |
+| **Determinism**       | Rendering with the same prompt file, args, and context must produce the same output.                                                                                       |
+| **Diagnostics**       | Discovery and render errors must name the prompt command and file path.                                                                                                    |
+| **Performance**       | Discovery should stay bounded to one prompt-root level for flat files and one group level for grouped prompts.                                                             |
+| **Testability**       | Rendering, arg parsing, discovery, and UI collection must be independently testable after module extraction.                                                               |
+| **Headless behavior** | Noninteractive contexts must fail clearly when required args are missing rather than hanging on UI input.                                                                  |
+
+---
+
+## 7. Risks & Assumptions
+
+### Risks
+
+| Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                 |
+| --------------------------------------------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
+| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Require explicit `engine: liquid`; document `engine: pi` compatibility and migration examples.             |
+| Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Require `type: prompt` opt-in; warn on duplicate composer commands; document extension-command precedence. |
+| Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                |
+| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs. |
+| Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                             |
+| Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                            |
+
+### Assumptions
+
+* Explicit opt-in through `type: prompt` is acceptable; composer should not hijack all native flat prompts.
+* Liquid is preferred over Handlebars unless a spike finds a blocking API, security, size, or ESM issue.
+* Current user/project/bundled origin model remains sufficient for flat prompts.
+* Pi extension command precedence continues to put composer commands before native prompt templates.
+* `pi.sendUserMessage()` remains the correct dispatch path for visible model-facing prompts.
+
+---
+
+## 8. Design Decisions
+
+### D1: Flat enhanced prompts are first-class; `default.md` is deferred
+
+**Options considered:**
+
+1. Add `default.md` inside grouped folders — supports `/group` dispatch, but still forces a folder for one prompt.
+2. Register composer-owned flat files — directly solves issue #6 and gives single prompts access to enhanced rendering.
+3. Keep current folder-only design — simplest, but rejects direct user feedback.
+
+**Decision:** Implement composer-owned flat prompt files first. Defer `default.md`.
+
+**Rationale:** Issue #6 is about being forced into folders. A `default.md` convention still requires folders and makes the common single-prompt case awkward.
+
+**Future path:** Add `default.md` later only if grouped folders need a default action in addition to selector behavior.
+
+### D2: Use Liquid as enhanced engine, keep Pi engine for compatibility
+
+**Options considered:**
+
+1. Liquid — conditionals, loops, filters, sandbox-friendly model, readable syntax.
+2. Handlebars — common ecosystem, but helpers add ceremony and logic is less natural for prompt authors.
+3. Custom syntax — maximum control, but high design and maintenance cost.
+4. Pi-native only — compatible, but not powerful enough for target workflows.
+
+**Decision:** Add `engine: liquid` for enhanced prompts and keep `engine: pi` for existing behavior.
+
+**Rationale:** Liquid provides the right balance of power, safety, readability, and authoring ergonomics. It is closer to “semantic prompt rendering” than positional substitution.
+
+**Future path:** Keep engine dispatch pluggable, but do not add more engines until Liquid usage proves gaps.
+
+### D3: Use object-based args schema for enhanced prompts
+
+**Options considered:**
+
+1. Preserve only positional args array — compatible but weak.
+2. Add object-based named args schema — expressive, validates well, maps naturally to `args.name` in Liquid.
+3. Infer args from template variables — magical and brittle.
+
+**Decision:** Add object-based named args schema while accepting legacy arrays for `engine: pi` compatibility.
+
+**Rationale:** Liquid templates should use named values. Explicit schemas make UI collection and validation predictable.
+
+**Future path:** Add richer sources and validation only after baseline types ship.
+
+### D4: Require explicit composer ownership for flat files
+
+**Options considered:**
+
+1. Composer scans all flat `.md` files — easiest discovery but hijacks Pi native prompts.
+2. Composer scans only `type: prompt` flat files — explicit and safe.
+3. Composer uses file extension variants like `.composer.md` — explicit but uglier and less Pi-like.
+
+**Decision:** Use frontmatter `type: prompt` as the opt-in gate.
+
+**Rationale:** It keeps native prompts unchanged and makes command ownership visible in the file.
+
+---
+
+## 9. File Breakdown
+
+| File                          | Change type  | FR                           | Description                                                                         |
+| ----------------------------- | ------------ | ---------------------------- | ----------------------------------------------------------------------------------- |
+| `extensions/index.ts`         | Modify       | FR-1, FR-2, FR-6, FR-7       | Thin entrypoint after module extraction; registers commands and lifecycle hooks.    |
+| `src/types.ts`                | New          | FR-1, FR-2, FR-3, FR-4       | Shared prompt, engine, args, origin, diagnostics, and dispatch types.               |
+| `src/discovery.ts`            | New          | FR-1, FR-2, FR-6, FR-8       | Discover flat composer prompts and grouped prompts; handle precedence and warnings. |
+| `src/args.ts`                 | New          | FR-4, FR-5                   | Parse legacy and enhanced arg schemas; apply defaults, coercion, validation.        |
+| `src/render.ts`               | New          | FR-3, FR-5, FR-7, FR-8       | Engine selection, Pi renderer, Liquid renderer, render diagnostics.                 |
+| `src/ui.ts`                   | New / Modify | FR-4, FR-8                   | Typed arg collection UI and existing selector UI extraction.                        |
+| `src/commands.ts`             | New          | FR-1, FR-2, FR-6, FR-7       | Command registration and handler orchestration for flat and grouped prompts.        |
+| `test/discovery.test.ts`      | Modify       | FR-1, FR-2, FR-6, FR-8       | Add flat prompt, duplicate, and invalid metadata discovery cases.                   |
+| `test/render.test.ts`         | New          | FR-3, FR-5, FR-7             | Snapshot tests for Pi and Liquid rendering.                                         |
+| `test/args.test.ts`           | New          | FR-4, FR-5                   | Typed schema parser, validation, defaults, and coercion tests.                      |
+| `test/extension-flow.test.ts` | Modify       | FR-1, FR-2, FR-4, FR-7       | End-to-end command dispatch tests for flat and grouped prompts.                     |
+| `test/helpers/mock-pi.ts`     | Modify       | FR-4, FR-7, FR-8             | Extend mock UI and command capture for typed arg collection and diagnostics.        |
+| `package.json`                | Modify       | FR-3                         | Add selected Liquid renderer dependency and scripts if needed.                      |
+| `pnpm-lock.yaml`                    | Modify       | FR-3                         | Lock dependency graph.                                                              |
+| `README.md`                   | Modify       | FR-1, FR-3, FR-4, FR-6, FR-9 | Document flat prompts, Liquid examples, args schema, and precedence.                |
+| `docs/FEATURE-SET.md`         | Modify       | FR-1, FR-3, FR-4, FR-9       | Update product scope from grouped routing to composer prompt rendering.             |
+| `docs/IMPLEMENTATION-PLAN.md` | Modify       | FR-1, FR-3, FR-4, FR-9       | Add architecture and implementation slices.                                         |
+| `docs/ROADMAP.md`             | Modify       | FR-1, FR-3, FR-4, FR-9       | Add ordered work items for PRD implementation.                                      |
+| `examples/prompts/review.md`  | New          | FR-1, FR-3, FR-4, FR-9       | Flat enhanced prompt example.                                                       |
+
+---
+
+## 10. Dependencies & Constraints
+
+* Pi prompt discovery is non-recursive; composer still needs extension commands for grouped prompts.
+* Extension commands take precedence over native prompt templates.
+* `registerCommand()` cannot make composer commands appear as native Pi prompt commands in Pi's internal command inventory.
+* `@mariozechner/pi-coding-agent` public exports currently include `parseFrontmatter()` and `stripFrontmatter()`, but not Pi's internal `parseCommandArgs()` and `substituteArgs()` helpers used by native prompts.
+* `liquidjs` latest checked on 2026-05-07 is `10.25.7`; implementation must verify ESM/Node behavior before committing dependency choice.
+* Existing repo has no `src/` directory yet; module extraction is part of this work or an immediate prerequisite.
+* Required local verification remains the repo gate from `AGENTS.md`: `mise run hooks:typecheck`, `mise run hooks:lint`, `mise run hooks:test`, and `mise run skills:validate` before committing implementation.
+
+---
+
+## 11. Rollout Plan
+
+1. **Architecture prep** — extract `extensions/index.ts` into `src/` modules without behavior changes.
+2. **Flat prompt discovery** — add `type: prompt` flat-file discovery and command registration with `engine: pi` only.
+3. **Arg schema foundation** — implement normalized arg definitions supporting both legacy arrays and object schemas.
+4. **Liquid rendering** — add `engine: liquid`, named render context, snapshots, and docs.
+5. **Typed interactive collection** — add enum/boolean/number/string/string\[] UI collection and validation.
+6. **Docs and examples** — update README, feature set, implementation plan, roadmap, and examples.
+7. **Manual validation** — update and run manual testing checklist in live Pi.
+8. **Close issue #6** — link release notes or PR to GitHub issue #6 once flat prompt files work.
+
+---
+
+## 12. Open Questions
+
+| #  | Question                                                                                                                        | Owner                 | Due        | Status |
+| -- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | ------ |
+| Q1 | Should `type: prompt` be required for all composer-owned flat files, or should `engine: liquid` alone imply composer ownership? | Victor Software House | 2026-05-14 | Open   |
+| Q2 | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?               | Victor Software House | 2026-05-14 | Open   |
+| Q3 | Should enum args use a selector UI instead of free-text input?                                                                  | Victor Software House | 2026-05-14 | Open   |
+| Q4 | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts?         | Victor Software House | 2026-05-14 | Open   |
+| Q5 | Should Liquid filters be limited to a documented allowlist?                                                                     | Victor Software House | 2026-05-14 | Open   |
+| Q6 | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                         | Victor Software House | 2026-05-14 | Open   |
+
+---
+
+## 13. Related
+
+| Issue                                                                                                  | Relationship                                                                                          |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| [#6 — Allow simple Prompt files](https://github.com/victor-software-house/pi-prompt-composer/issues/6) | Source issue; flat composer prompts complete the requested capability.                                |
+| `docs/ROADMAP.md` PPC-006                                                                              | Related; shell substitution is a future preprocessing stage and should share the new render pipeline. |
+| `docs/ROADMAP.md` PPC-010                                                                              | Related; operator-only prompts should share dispatch-mode plumbing after this work.                   |
+| `docs/ROADMAP.md` PPC-011                                                                              | Enables; module extraction is prerequisite or first rollout step for this PRD.                        |
+
+---
+
+## 14. Changelog
+
+| Date       | Change        | Author                |
+| ---------- | ------------- | --------------------- |
+| 2026-05-07 | Initial draft | Victor Software House |
+
+---
+
+## 15. Verification (Appendix)
+
+Post-implementation checklist:
+
+1. Create `.pi/prompts/review.md` with `type: prompt`, `engine: liquid`, typed args, an `if` block, and a `for` loop.
+2. Run `/reload` in Pi and verify `/review` appears as a composer command.
+3. Invoke `/review` with no args and verify required args are collected interactively.
+4. Invoke `/review --mode invalid` and verify validation blocks dispatch with a visible warning.
+5. Invoke `/review --mode deep "fix auth"` and verify rendered Liquid output appears as the sent user message.
+6. Create `.pi/prompts/native.md` without `type: prompt` and verify composer does not register it.
+7. Re-run existing grouped `/compose`, `/review summary`, and `/review fix` examples.
+8. Run `mise run hooks:typecheck`, `mise run hooks:lint`, `mise run hooks:test`, and `mise run skills:validate`.

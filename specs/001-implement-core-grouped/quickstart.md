@@ -241,9 +241,9 @@ Reload and verify:
 From the repository root:
 
 ```bash
-bun install
-bun run fix
-bun run typecheck
-bun run lint
+pnpm install
+pnpm run fix
+pnpm run typecheck
+pnpm run lint
 ```
 

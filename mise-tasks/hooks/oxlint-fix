@@ -8,4 +8,4 @@ if [ "$#" -eq 0 ]; then
   exit 0
 fi
 
-bunx oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ "$@"
+pnpm exec oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ "$@"

@@ -29,9 +29,9 @@
 
 - [x] T001 [P] Create `vitest.config.ts` at repository root with `globals: true`, `environment: 'node'`, `testTimeout: 30_000`, `include: ['test/**/*.test.ts']`, and `typecheck.tsconfig` pointing to `./tsconfig.test.json` per research decision R-007
 - [x] T002 [P] Create `tsconfig.test.json` at repository root that extends `./tsconfig.json` and adds `test/**/*.ts` to `include`, adds `vitest/globals` to `types`, and keeps all strict settings from the base config per research decision R-006
-- [x] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json`, run `bun install`, and inspect the installed `@marcfargas/pi-test-harness` type exports to confirm `createTestSession`, mock UI, and event APIs match `contracts/test-suite-contract.md`; if they differ, update the contract and Phase 5 tasks before writing Layer 3 tests
+- [x] T003 Add `vitest`, `@marcfargas/pi-test-harness`, `@mariozechner/pi-ai`, and `@mariozechner/pi-agent-core` as dev dependencies in `package.json`, run `pnpm install`, and inspect the installed `@marcfargas/pi-test-harness` type exports to confirm `createTestSession`, mock UI, and event APIs match `contracts/test-suite-contract.md`; if they differ, update the contract and Phase 5 tasks before writing Layer 3 tests
 - [x] T004 Add `"test": "vitest --run"` and `"test:watch": "vitest"` scripts to `package.json` per research decision R-008
-- [x] T005 Verify `bun run test` executes vitest and exits cleanly with zero tests found (no failures, no config errors)
+- [x] T005 Verify `pnpm run test` executes vitest and exits cleanly with zero tests found (no failures, no config errors)
 
 ---
 
@@ -44,7 +44,7 @@
 - [x] T006 Add `export` keyword to these 8 helper functions in `extensions/index.ts`: `parseCommandArgs`, `substituteArgs`, `toKebabCase`, `isValidArgsItem`, `parseArgsMetadata`, `fmString`, `formatArgsHint`, `formatSelectorLabel` per research decision R-004 and the import contract in `contracts/test-suite-contract.md`
 - [x] T007 Add `export` keyword to the `discoverGroups` function in `extensions/index.ts` per research decision R-004
 - [x] T008 Add `export type` statements for `PromptScope`, `PromptRoot`, `ArgsItem`, `NestedPrompt`, and `EffectivePromptGroup` in `extensions/index.ts` per research decision R-004
-- [x] T009 Run `bun run typecheck` and `bun run lint` to confirm named exports do not break the existing strict TypeScript or lint gates in `extensions/index.ts`
+- [x] T009 Run `pnpm run typecheck` and `pnpm run lint` to confirm named exports do not break the existing strict TypeScript or lint gates in `extensions/index.ts`
 
 **Checkpoint**: `extensions/index.ts` now has named exports alongside the unchanged default export. All existing lint and typecheck gates still pass.
 
@@ -54,7 +54,7 @@
 
 **Goal**: Automated helper tests catch regressions in the 8 pure functions that power argument parsing, placeholder substitution, name normalization, metadata validation, and formatting.
 
-**Independent Test**: Run `bun run test -- test/helpers.test.ts` — all tests pass. Intentionally break one helper and confirm only its tests fail with a clear signal identifying the function and scenario.
+**Independent Test**: Run `pnpm run test -- test/helpers.test.ts` — all tests pass. Intentionally break one helper and confirm only its tests fail with a clear signal identifying the function and scenario.
 
 ### Implementation for User Story 1
 
@@ -66,7 +66,7 @@
 - [x] T015 [P] [US1] Add an `fmString` describe block in `test/helpers.test.ts` with scenarios: string value → returned, number value → empty string, boolean value → empty string, missing key → empty string
 - [x] T016 [P] [US1] Add a `formatArgsHint` describe block in `test/helpers.test.ts` with scenarios: `undefined` args → empty string, empty array → empty string, required-only args, optional-only args (appends `?`), mixed required and optional
 - [x] T017 [P] [US1] Add a `formatSelectorLabel` describe block in `test/helpers.test.ts` with scenarios: prompt with args → `name [args] description`, prompt without args → `name description`; construct `NestedPrompt` objects using the exported type
-- [x] T018 [US1] Run `bun run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass; optionally perform the quickstart intentional-breakage spot check (temporarily break one helper, verify only its tests fail, then revert) to validate FR-006 regression isolation
+- [x] T018 [US1] Run `pnpm run test -- test/helpers.test.ts` and confirm all Layer 1 tests pass; optionally perform the quickstart intentional-breakage spot check (temporarily break one helper, verify only its tests fail, then revert) to validate FR-006 regression isolation
 
 **Checkpoint**: Layer 1 tests cover all 8 pure helpers with representative and boundary inputs. Regressions in any single helper produce a targeted, identifiable failure.
 
@@ -76,7 +76,7 @@
 
 **Goal**: Automated discovery tests verify grouped-prompt scanning against temporary filesystem fixtures covering both scopes, all metadata edge cases, and warning behavior.
 
-**Independent Test**: Run `bun run test -- test/discovery.test.ts` — all tests pass. Each scenario creates its own temp directory tree, exercises `discoverGroups()`, and asserts on the resulting groups and warnings.
+**Independent Test**: Run `pnpm run test -- test/discovery.test.ts` — all tests pass. Each scenario creates its own temp directory tree, exercises `discoverGroups()`, and asserts on the resulting groups and warnings.
 
 ### Implementation for User Story 2
 
@@ -89,7 +89,7 @@
 - [x] T025 [US2] Add an args-metadata describe block in `test/discovery.test.ts` with scenarios: valid `args` array → parsed on prompt, absent `args` → `undefined` (no warning), malformed `args` (not array) → `undefined` + warning, invalid items in `args` array → `undefined` + warning
 - [x] T026 [US2] Add a duplicate-group-names describe block in `test/discovery.test.ts` with scenario: same directory name in two roots → both groups registered + a warning mentioning both scopes
 - [x] T027 [P] [US2] Add a nonexistent-root describe block in `test/discovery.test.ts` with scenario: `PromptRoot` pointing to a path that does not exist → skipped silently with no warnings and no errors
-- [x] T028 [US2] Run `bun run test -- test/discovery.test.ts` and confirm all Layer 2 tests pass
+- [x] T028 [US2] Run `pnpm run test -- test/discovery.test.ts` and confirm all Layer 2 tests pass
 
 **Checkpoint**: Layer 2 tests cover all discovery rules from the contract, including recognition, rejection, scope, metadata fallbacks, warnings, and edge cases. Changes to discovery logic produce targeted failures.
 
@@ -99,7 +99,7 @@
 
 **Goal**: Automated extension-flow tests verify that command registration, direct dispatch, selector flow, and unknown-subcommand feedback work as real Pi extension behavior.
 
-**Independent Test**: Run `bun run test -- test/extension-flow.test.ts` — all tests pass. Each scenario creates prompt fixtures, loads the extension in a `createTestSession()`, and asserts on dispatched messages or UI calls.
+**Independent Test**: Run `pnpm run test -- test/extension-flow.test.ts` — all tests pass. Each scenario creates prompt fixtures, loads the extension in a `createTestSession()`, and asserts on dispatched messages or UI calls.
 
 ### Implementation for User Story 3
 
@@ -108,7 +108,7 @@
 - [x] T031 [US3] Add a selector-flow test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning the first option, invoke bare `/group` via playbook, and assert `sendUserMessage` is called with the selected prompt's **unsubstituted** body content and the `{ deliverAs: 'followUp' }` option (FR-005b)
 - [x] T032 [US3] Add a selector-cancellation test in `test/extension-flow.test.ts`: create a session with `mockUI.select` returning `undefined`, invoke bare `/group` via playbook, and assert no `sendUserMessage` call is made
 - [x] T033 [US3] Add an unknown-subcommand test in `test/extension-flow.test.ts`: create a session, invoke `/group nonexistent` via playbook, and assert `ctx.ui.notify` is called with a message containing the unknown name and a list of available alternatives, using the `'warning'` severity level (FR-005b)
-- [x] T034 [US3] Run `bun run test -- test/extension-flow.test.ts` and confirm all Layer 3 tests pass
+- [x] T034 [US3] Run `pnpm run test -- test/extension-flow.test.ts` and confirm all Layer 3 tests pass
 
 **Checkpoint**: Layer 3 tests prove the four operator-visible command flows work through the real Pi extension runtime. Extension behavior changes produce targeted failures.
 
@@ -118,10 +118,10 @@
 
 **Purpose**: Documentation sync, hook integration, and final end-to-end validation.
 
-- [x] T035 [P] Add `bun run test` to the verification section of `README.md` alongside existing `bun run typecheck` and `bun run lint` commands per CC-003 and FR-007
-- [x] T036 [P] Add `bun run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007, and remove or rewrite the existing "There is no test suite yet" sentence so the file stays internally consistent
-- [x] T037 [P] Update `lefthook.yml` to run `bun run test` in the pre-push hook while leaving pre-commit unchanged, per CC-003 and FR-007
-- [x] T038 Run the full verification workflow from the repository root: `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, `bun run test`, and confirm the existing typecheck/lint gates still pass without regressions after all test infrastructure changes per FR-008 and `specs/002-layered-extension-testing/quickstart.md`
+- [x] T035 [P] Add `pnpm run test` to the verification section of `README.md` alongside existing `pnpm run typecheck` and `pnpm run lint` commands per CC-003 and FR-007
+- [x] T036 [P] Add `pnpm run test` to the verification workflow in `AGENTS.md` under the "Required gate before committing" and "Verification" sections per CC-003 and FR-007, and remove or rewrite the existing "There is no test suite yet" sentence so the file stays internally consistent
+- [x] T037 [P] Update `lefthook.yml` to run `pnpm run test` in the pre-push hook while leaving pre-commit unchanged, per CC-003 and FR-007
+- [x] T038 Run the full verification workflow from the repository root: `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, and confirm the existing typecheck/lint gates still pass without regressions after all test infrastructure changes per FR-008 and `specs/002-layered-extension-testing/quickstart.md`
 
 ---
 
@@ -196,7 +196,7 @@ T035 (README.md), T036 (AGENTS.md), and T037 (lefthook.yml) can run in parallel
 1. Complete Phase 1: Setup (T001–T005)
 2. Complete Phase 2: Foundational (T006–T009)
 3. Complete Phase 3: User Story 1 (T010–T018)
-4. **STOP and VALIDATE**: `bun run test -- test/helpers.test.ts` passes
+4. **STOP and VALIDATE**: `pnpm run test -- test/helpers.test.ts` passes
 5. The repository now has its first automated test safety net
 
 ### Incremental Delivery
@@ -235,7 +235,7 @@ Sequential (single-agent):
 - **Tasks per user story**: US1: 9, US2: 10, US3: 6
 - **Cross-cutting tasks**: Setup: 5, Foundational: 4, Polish: 4
 - **Parallel opportunities**: 3 stories can proceed in parallel after Phase 2; multiple describe blocks within stories are parallel-safe; README/AGENTS/lefthook updates are parallel-safe in Phase 6
-- **Independent test criteria**: Each story has a layer-specific `bun run test` invocation that validates only that story's test file
+- **Independent test criteria**: Each story has a layer-specific `pnpm run test` invocation that validates only that story's test file
 - **Suggested MVP scope**: Phase 1 + Phase 2 + User Story 1 (T001–T018) delivers the first regression safety net with Layer 1 helper tests
 
 ## Notes

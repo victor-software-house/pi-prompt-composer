@@ -13,8 +13,8 @@ This contract defines the interface between the test suite and the repository's 
 
 | Command | Behavior | Exit Code |
 |---------|----------|-----------|
-| `bun run test` | Run all tests once, exit | 0 on pass, 1 on failure |
-| `bun run test:watch` | Run tests in watch mode, re-run on file changes | Interactive |
+| `pnpm run test` | Run all tests once, exit | 0 on pass, 1 on failure |
+| `pnpm run test:watch` | Run tests in watch mode, re-run on file changes | Interactive |
 
 ### Implementation
 
@@ -32,14 +32,14 @@ This contract defines the interface between the test suite and the repository's 
 The complete repository verification workflow after this feature:
 
 ```bash
-bun install
-bun run fix
-bun run typecheck
-bun run lint
-bun run test
+pnpm install
+pnpm run fix
+pnpm run typecheck
+pnpm run lint
+pnpm run test
 ```
 
-`bun run test` is added at the end. It must pass independently and must not interfere with the existing lint and type-check gates.
+`pnpm run test` is added at the end. It must pass independently and must not interfere with the existing lint and type-check gates.
 
 ## Test File Discovery
 

@@ -35,7 +35,7 @@
 - [ ] The design preserves Pi-native prompt behavior unless the spec explicitly changes that contract.
 - [ ] Planned file paths match the real repo layout, or this plan explicitly creates any new paths it depends on.
 - [ ] Documentation updates are identified for every operator-facing, packaging, or workflow change.
-- [ ] Validation steps include `bun install`, `bun run fix`, `bun run typecheck`, `bun run lint`, and any new test command added by this feature.
+- [ ] Validation steps include `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, `pnpm run lint`, and any new test command added by this feature.
 
 ## Project Structure
 

@@ -104,7 +104,7 @@
 **Purpose**: Final documentation and required repo-wide validation.
 
 - [x] T020 Update grouped prompt usage, frontmatter schema (`type: group` gate, recommended `description`, optional `args`/`name`), argument hints, duplicate-warning behavior, selector behavior, and visible user-message dispatch guidance in `README.md`.
-- [x] T021 Run `bun install`, `bun run fix`, `bun run typecheck`, and `bun run lint` from `package.json` before completion.
+- [x] T021 Run `pnpm install`, `pnpm run fix`, `pnpm run typecheck`, and `pnpm run lint` from `package.json` before completion.
 - [x] T022 Run the full operator validation flow documented in `specs/001-implement-core-grouped/quickstart.md` after all implementation tasks are complete.
 
 ---

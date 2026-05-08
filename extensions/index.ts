@@ -296,7 +296,7 @@ export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArg
 
 /**
  * Resolve a path relative to this source file.
- * Portable across Node, Bun, and packaged npm installs.
+ * Portable across Node and packaged npm installs.
  */
 export function resolveRelativePath(relativePath: string): string {
 	return fileURLToPath(new URL(relativePath, import.meta.url));

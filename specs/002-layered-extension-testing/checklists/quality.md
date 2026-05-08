@@ -16,7 +16,7 @@
 ## Requirement Clarity
 
 - [x] CHK005 Is “meaningful coverage across all three categories” translated into concrete scope statements that a reviewer can assess without inferring missing layers? [Clarity, Spec §Feature Summary; Spec §SC-003]
-- [x] CHK006 Are the repo-specific workflow obligations around `bun run test` and pre-push enforcement stated clearly enough to avoid confusion with pre-commit behavior? [Clarity, Spec §Clarifications; Spec §CC-003; Spec §FR-007]
+- [x] CHK006 Are the repo-specific workflow obligations around `pnpm run test` and pre-push enforcement stated clearly enough to avoid confusion with pre-commit behavior? [Clarity, Spec §Clarifications; Spec §CC-003; Spec §FR-007]
 - [ ] CHK007 Are optional validations clearly marked as optional rather than baseline gates, especially manual autocomplete verification and the intentional-breakage spot check? [Clarity, Spec §NG-004; Spec §SC-004]
 - [x] CHK008 Are exception words such as “highest-value regression paths” and “meaningful coverage” sufficiently clarified by surrounding acceptance scenarios and success criteria? [Ambiguity, Spec §Feature Summary; Spec §NG-002; Spec §Success Criteria]
 
