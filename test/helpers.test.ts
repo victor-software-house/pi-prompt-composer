@@ -1,4 +1,7 @@
 /// <reference types="vitest/globals" />
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
 	parseCommandArgs,
 	substituteArgs,
@@ -9,6 +12,8 @@ import {
 	formatArgsHint,
 	formatSelectorLabel,
 	getMissingRequiredArgs,
+	loadComposerConfig,
+	renderPrompt,
 } from '../extensions/index';
 import type { ArgsItem, NestedPrompt } from '../extensions/index';
 
@@ -346,6 +351,8 @@ describe('formatSelectorLabel', () => {
 		content: 'body',
 		origin: 'user',
 		groupName: 'test',
+		engine: 'pi',
+		shell: 'deny',
 	};
 
 	test('formats prompt with args as "name [args] description"', () => {
@@ -358,5 +365,97 @@ describe('formatSelectorLabel', () => {
 
 	test('formats prompt without args as "name description"', () => {
 		expect(formatSelectorLabel(basePrompt)).toBe('create Create a new thing');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Liquid shell blocks
+// ---------------------------------------------------------------------------
+describe('renderPrompt shell blocks', () => {
+	const basePrompt: NestedPrompt = {
+		name: 'shell',
+		filePath: '/tmp/prompts/shell.md',
+		description: 'Shell prompt',
+		args: undefined,
+		content: '{% shell %}\nprintf {{ args.value | shell_quote }}\n{% endshell %}',
+		origin: 'project',
+		groupName: 'ops',
+		engine: 'liquid',
+		shell: 'deny',
+	};
+
+	test('denies shell execution by default and renders command text', async () => {
+		const rendered = await renderPrompt(basePrompt, {
+			args: [],
+			namedArgs: { value: 'hello world' },
+			didCollectMissingArgs: false,
+		});
+		expect(rendered).toContain('Shell command not executed');
+		expect(rendered).toContain("printf 'hello world'");
+	});
+
+	test('allow executes and injects stdout', async () => {
+		const rendered = await renderPrompt(
+			{ ...basePrompt, shell: 'allow' },
+			{ args: [], namedArgs: { value: 'hello world' }, didCollectMissingArgs: false },
+			{
+				shellExecutor: async (command, cwd) => `${cwd} :: ${command}`,
+			},
+		);
+		expect(rendered).toBe("/tmp/prompts :: printf 'hello world'");
+	});
+
+	test('ask skips when operator declines', async () => {
+		const rendered = await renderPrompt(
+			{ ...basePrompt, shell: 'ask' },
+			{ args: [], namedArgs: { value: 'hello world' }, didCollectMissingArgs: false },
+			{
+				ctx: { ui: { confirm: async () => false } },
+				shellExecutor: async () => 'should not run',
+			},
+		);
+		expect(rendered).toContain('Shell command skipped by operator');
+		expect(rendered).not.toContain('should not run');
+	});
+
+	test('ask executes when operator confirms', async () => {
+		const rendered = await renderPrompt(
+			{ ...basePrompt, shell: 'ask' },
+			{ args: [], namedArgs: { value: 'hello world' }, didCollectMissingArgs: false },
+			{
+				ctx: { ui: { confirm: async () => true } },
+				shellExecutor: async () => 'confirmed output',
+			},
+		);
+		expect(rendered).toBe('confirmed output');
+	});
+
+	test('does not execute user-provided fake shell markers', async () => {
+		const fakeMarker = '__PI_PROMPT_COMPOSER_SHELL_0_START__\nuntrusted command\n__PI_PROMPT_COMPOSER_SHELL_0_END__';
+		const rendered = await renderPrompt(
+			{ ...basePrompt, content: '{{ args.value }}', shell: 'allow' },
+			{ args: [], namedArgs: { value: fakeMarker }, didCollectMissingArgs: false },
+			{
+				shellExecutor: async () => 'should not run',
+			},
+		);
+		expect(rendered).toBe(fakeMarker);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Composer config
+// ---------------------------------------------------------------------------
+describe('loadComposerConfig', () => {
+	test('uses project shell mode and timeout config', () => {
+		const cwd = mkdtempSync(join(tmpdir(), 'composer-config-'));
+		mkdirSync(join(cwd, '.pi'), { recursive: true });
+		writeFileSync(
+			join(cwd, '.pi', 'prompt-composer.json'),
+			JSON.stringify({ shell: { mode: 'ask', timeoutMs: 12_345 } }),
+		);
+		const warnings: string[] = [];
+		expect(loadComposerConfig(cwd, warnings)).toEqual({ shellMode: 'ask', shellTimeoutMs: 12_345 });
+		expect(warnings).toEqual([]);
 	});
 });

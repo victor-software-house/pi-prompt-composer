@@ -1,7 +1,16 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { parseArgsItem, renderPrompt, type ArgsItem, type FlatPrompt, type PromptOrigin, type TemplateEngine } from '../extensions/index';
+import { parseFrontmatter, stripFrontmatter } from '@earendil-works/pi-coding-agent';
+import {
+	parseArgsItem,
+	renderPrompt,
+	type ArgsItem,
+	type FlatPrompt,
+	type PromptOrigin,
+	type ShellMode,
+	type TemplateEngine,
+} from '../extensions/index';
 
 export interface TemplateExampleCase {
 	description: string;
@@ -9,6 +18,7 @@ export interface TemplateExampleCase {
 	file_path?: string;
 	name?: string;
 	engine?: TemplateEngine;
+	shell?: ShellMode;
 	args?: unknown[];
 	cli?: string[];
 	named?: Record<string, unknown>;
@@ -53,23 +63,36 @@ export async function loadTemplateCase(casePath: string): Promise<TemplateExampl
 
 export async function renderTemplateExample(example: TemplateExampleDir): Promise<string> {
 	const exampleCase = await loadTemplateCase(example.casePath);
-	const args = normalizeArgs(exampleCase.args ?? [], example.promptPath);
-	const content = await readFile(example.promptPath, 'utf8');
+	const rawContent = await readFile(example.promptPath, 'utf8');
+	const frontmatter = parseFrontmatter(rawContent).frontmatter;
+	const args = normalizeArgs(exampleCase.args ?? readFrontmatterArray(frontmatter, 'args'), example.promptPath);
+	const content = stripFrontmatter(rawContent);
 	const prompt: FlatPrompt = {
-		name: exampleCase.name ?? example.name.replace(/^\d+-/, ''),
+		name: exampleCase.name ?? readFrontmatterString(frontmatter, 'name') ?? example.name.replace(/^\d+-/, ''),
 		filePath: exampleCase.file_path ?? example.promptPath,
 		description: exampleCase.description,
 		args,
 		content,
 		origin: exampleCase.origin ?? 'project',
-		engine: exampleCase.engine ?? 'liquid',
+		engine: exampleCase.engine ?? readTemplateEngine(frontmatter),
+		shell: exampleCase.shell ?? readShellMode(frontmatter),
 	};
 
-	return renderPrompt(prompt, {
-		args: exampleCase.cli ?? [],
-		namedArgs: exampleCase.named ?? {},
-		didCollectMissingArgs: false,
-	});
+	return renderPrompt(
+		prompt,
+		{
+			args: exampleCase.cli ?? [],
+			namedArgs: exampleCase.named ?? {},
+			didCollectMissingArgs: false,
+		},
+		{
+			shellExecutor: async (command) => {
+				if (command === 'date +%Y-%m-%d') return '2026-05-08';
+				if (command === "python3 scripts/summarize.py --topic 'composer'") return 'python helper output: composer';
+				return `mock shell output: ${command}`;
+			},
+		},
+	);
 }
 
 export async function readTemplateExpected(example: TemplateExampleDir): Promise<string | null> {
@@ -86,6 +109,28 @@ export async function writeTemplateExpected(example: TemplateExampleDir, rendere
 
 export function shouldUpdateTemplateExamples(): boolean {
 	return process.env.UPDATE_TEMPLATE_EXAMPLES === '1';
+}
+
+function readFrontmatterString(fm: Record<string, unknown>, key: string): string | undefined {
+	const value = fm[key];
+	return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+function readTemplateEngine(fm: Record<string, unknown>): TemplateEngine {
+	const value = fm['engine'];
+	return value === 'pi' || value === 'liquid' ? value : 'liquid';
+}
+
+function readShellMode(fm: Record<string, unknown>): ShellMode {
+	const value = fm['shell'];
+	if (value === 'allow' || value === 'ask' || value === 'deny') return value;
+	if (value === true) return 'ask';
+	return 'deny';
+}
+
+function readFrontmatterArray(fm: Record<string, unknown>, key: string): unknown[] {
+	const value = fm[key];
+	return Array.isArray(value) ? value : [];
 }
 
 function normalizeArgs(rawArgs: unknown[], filePath: string): ArgsItem[] | undefined {

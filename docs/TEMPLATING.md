@@ -9,7 +9,7 @@
 | `pi` (default) | Native-compatible positional prompts | `$1`, `$2`, `$ARGUMENTS`, `$@`, `${@:N}` |
 | `liquid` | Rich structured prompts | `{{ args.name }}`, `{% if %}`, `{% for %}`, filters, XML blocks |
 
-Use `engine: liquid` when prompt output needs conditional sections, repeated lists, data shaping, JSON snippets, safe shell command blocks, or Claude Code skill-style XML structure.
+Use `engine: liquid` when prompt output needs conditional sections, repeated lists, data shaping, JSON snippets, safe shell command blocks, optional stdout injection from trusted local helpers, or Claude Code skill-style XML structure.
 
 ## Minimal Liquid prompt
 
@@ -62,6 +62,7 @@ Composer registers these safe helpers on top of Liquid built-ins:
 | `json` | JSON stringify a value; optional indentation: `{{ x | json: 2 }}` |
 | `shell_quote` | Single-quote a value for shell command text |
 | `{% xml "tag" %}...{% endxml %}` | Emit `<tag>...</tag>` only when rendered body is non-empty |
+| `{% shell %}...{% endshell %}` | Render a command, optionally execute it when `shell` frontmatter opts in |
 
 Liquid built-ins such as `where`, `map`, `join`, `size`, `first`, `last`, `default`, `if`, `for`, and `assign` also work.
 
@@ -94,7 +95,73 @@ cd {{ args.workdir | shell_quote }}
 ```
 ````
 
-Templates do **not** execute shell commands. They render command text into the final visible user message. Actual command execution remains a separate operator/model action with normal Pi tool visibility and permissions.
+Without shell opt-in, templates render command text instead of executing it. This is the safe default.
+
+## Shell execution opt-in
+
+Liquid supports `{% shell %}...{% endshell %}` blocks for trusted local helper commands.
+
+```markdown
+---
+description: Render timestamp and helper output
+engine: liquid
+shell: ask
+args:
+  - name: topic
+    required: true
+    hint: Topic for the helper script
+---
+Generated on:
+{% shell %}
+date +%Y-%m-%d
+{% endshell %}
+
+Helper output:
+{% shell %}
+python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
+{% endshell %}
+```
+
+Shell policy:
+
+| Frontmatter | Behavior |
+|-------------|----------|
+| omitted / `shell: deny` | Do not execute. Render a visible "not executed" block with the command text. |
+| `shell: ask` | Ask the operator before each render. If approved, stdout replaces the block. |
+| `shell: allow` | Execute without prompting. Use only for trusted local/project prompts. |
+
+You can also set the default shell mode in config. Project config overrides user config:
+
+- user: `~/.pi/agent/prompt-composer.json`
+- project: `.pi/prompt-composer.json`
+
+```json
+{
+  "shell": {
+    "mode": "ask",
+    "timeoutMs": 30000
+  }
+}
+```
+
+Top-level aliases also work: `shellMode`, `defaultShellMode`, and `shellTimeoutMs`. Prompt frontmatter wins over config.
+
+Execution details:
+
+- commands run through `bash -lc`
+- working directory is the prompt file's directory, so relative scripts like `scripts/summarize.py` resolve beside the prompt
+- timeout is 30 seconds
+- successful commands inject `stdout` into the rendered prompt
+- failed commands inject exit code plus stdout/stderr
+
+Why opt-in exists:
+
+- shell can read files, call networks, mutate repos, or expose secrets
+- prompt args can become command input, so use `shell_quote` for any user-provided values
+- `shell: ask` keeps default behavior visible and consent-based
+- `shell: allow` is a trusted-prompt bypass for workflows you own
+
+Composer intentionally does not claim portable sandboxing. Cross-platform sandboxing differs across macOS, Linux, Windows, containers, and corporate hosts; a fake sandbox would create false confidence. Treat shell-enabled prompts as trusted code, same as Pi's normal shell execution model.
 
 ## Fixture examples
 
@@ -102,6 +169,8 @@ See [examples/templating/README.md](../examples/templating/README.md) for ground
 
 - Claude Code skill-style XML blocks
 - command-batch rendering with shell quoting
+- opt-in shell execution with deterministic mocked stdout
+- denied shell execution showing command text instead of running
 - data shaping with `where`, `map`, `join`, and `json`
 - Pi engine compatibility for `--flag` and `key=value`
 

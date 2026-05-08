@@ -74,8 +74,9 @@ This layer adds rendering features Pi does not provide natively, such as:
 - XML-style prompt blocks with `{% xml "tag" %}` that omit empty sections
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - command-batch rendering as text for operator/model review
+- opt-in shell execution with `shell: ask` or `shell: allow`, plus configurable default shell mode
 
-These features belong to the package, not to Pi's native prompt-template contract. Templates do **not** execute shell commands; they only render command text into the visible prompt.
+These features belong to the package, not to Pi's native prompt-template contract. Shell execution is deny-by-default and treated as trusted code, not sandboxed code.
 
 ## Priorities
 
@@ -119,9 +120,11 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 3.4 **Safe formatting helpers** — Ship `present`, `quote`, `tokens`, `json`, and `shell_quote` filters.
 
-3.5 **Command-batch rendering** — Prompt authors can render shell command blocks with safe quoting; templates do not execute commands.
+3.5 **Command-batch rendering** — Prompt authors can render shell command blocks with safe quoting; shell blocks render command text unless prompt frontmatter or config opts into execution.
 
-3.6 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
+3.6 **Configurable shell mode** — `shell: deny|ask|allow` frontmatter controls each prompt; `prompt-composer.json` can set a user or project default.
+
+3.7 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
 
 ### Priority 4: Reliability and runtime behavior
 

@@ -1,3 +1,25 @@
+---
+description: Build a Claude Code skill-style ship-readiness prompt
+engine: liquid
+args:
+  - name: ticket
+    required: true
+    hint: Ticket or issue ID
+  - name: goal
+    required: true
+    hint: Delivery goal
+  - name: risks
+    required: false
+    type: string[]
+    hint: Known risk list
+  - name: checks
+    required: false
+    type: string[]
+    hint: Verification checks
+  - name: metadata
+    required: false
+    hint: Extra metadata object
+---
 {% xml "task" %}
 Ticket: {{ args.ticket }}
 Goal: {{ args.goal }}

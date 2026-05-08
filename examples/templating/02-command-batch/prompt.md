@@ -1,3 +1,18 @@
+---
+description: Render a safe shell command batch for operator review
+engine: liquid
+args:
+  - name: workdir
+    required: true
+    hint: Working directory
+  - name: commands
+    required: true
+    type: string[]
+    hint: Commands to render
+  - name: dangerous
+    required: false
+    hint: Value that needs shell quoting
+---
 Prepare command batch for operator review.
 
 ```bash

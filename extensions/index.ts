@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,14 +11,14 @@ import {
 	parseFrontmatter,
 	stripFrontmatter,
 	type Theme,
-} from '@mariozechner/pi-coding-agent';
-import type { AutocompleteItem } from '@mariozechner/pi-tui';
-import { Container, type SelectItem, SelectList, type SelectListTheme, Spacer, Text } from '@mariozechner/pi-tui';
+} from '@earendil-works/pi-coding-agent';
+import type { AutocompleteItem } from '@earendil-works/pi-tui';
+import { Container, type SelectItem, SelectList, type SelectListTheme, Spacer, Text } from '@earendil-works/pi-tui';
 import { Liquid } from 'liquidjs';
 
 // ---------------------------------------------------------------------------
 // Pi-internal helper reimplementations
-// Source: @mariozechner/pi-coding-agent@0.64.0
+// Source reference: @earendil-works/pi-coding-agent prompt-template internals
 //         packages/coding-agent/src/core/prompt-templates.ts
 //         https://github.com/badlogic/pi-mono
 // Candidates for future extraction to a shared `pi-provider-utils` package.
@@ -107,6 +108,19 @@ export interface PromptRoot {
 }
 
 export type TemplateEngine = 'pi' | 'liquid';
+export type ShellMode = 'deny' | 'ask' | 'allow';
+
+export interface ComposerConfig {
+	shellMode: ShellMode;
+	shellTimeoutMs: number;
+}
+
+const DEFAULT_COMPOSER_CONFIG: ComposerConfig = {
+	shellMode: 'deny',
+	shellTimeoutMs: 30_000,
+};
+
+let activeComposerConfig: ComposerConfig = DEFAULT_COMPOSER_CONFIG;
 
 export interface ArgsItem {
 	name: string;
@@ -126,6 +140,7 @@ export interface NestedPrompt {
 	origin: PromptOrigin;
 	groupName: string;
 	engine: TemplateEngine;
+	shell: ShellMode;
 }
 
 export interface FlatPrompt {
@@ -136,6 +151,7 @@ export interface FlatPrompt {
 	content: string;
 	origin: PromptOrigin;
 	engine: TemplateEngine;
+	shell: ShellMode;
 }
 
 export interface EffectivePromptGroup {
@@ -151,6 +167,13 @@ export interface ResolvedPromptArgs {
 	args: string[];
 	namedArgs: Record<string, unknown>;
 	didCollectMissingArgs: boolean;
+}
+
+export interface RenderPromptOptions {
+	pi?: Pick<ExtensionAPI, 'exec'>;
+	ctx?: Pick<ExtensionCommandContext, 'ui'>;
+	shellExecutor?: (command: string, cwd: string) => Promise<string>;
+	shellTimeoutMs?: number;
 }
 
 interface ParsedPromptArgs {
@@ -538,9 +561,88 @@ function parseTemplateEngine(fm: Record<string, unknown>, filePath: string, warn
 	return 'pi';
 }
 
+function parseShellModeValue(raw: unknown): ShellMode | undefined {
+	if (raw === undefined || raw === null || raw === '') return undefined;
+	if (raw === false || raw === 'deny') return 'deny';
+	if (raw === true || raw === 'ask') return 'ask';
+	if (raw === 'allow') return 'allow';
+	return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeComposerConfig(raw: unknown, warnings: string[], sourceLabel: string): ComposerConfig {
+	if (raw === undefined) return DEFAULT_COMPOSER_CONFIG;
+	if (!isRecord(raw)) {
+		warnings.push(`${sourceLabel}: config must be a JSON object, using defaults`);
+		return DEFAULT_COMPOSER_CONFIG;
+	}
+	const shellRecord = isRecord(raw['shell']) ? raw['shell'] : undefined;
+	const shellMode = parseShellModeValue(raw['shellMode'] ?? raw['defaultShellMode'] ?? shellRecord?.['mode']);
+	if (
+		shellMode === undefined &&
+		(raw['shellMode'] !== undefined || raw['defaultShellMode'] !== undefined || shellRecord?.['mode'] !== undefined)
+	) {
+		warnings.push(`${sourceLabel}: unknown shell mode, using ${DEFAULT_COMPOSER_CONFIG.shellMode}`);
+	}
+	const rawTimeout = raw['shellTimeoutMs'] ?? shellRecord?.['timeoutMs'];
+	const shellTimeoutMs =
+		typeof rawTimeout === 'number' && Number.isFinite(rawTimeout) && rawTimeout > 0
+			? rawTimeout
+			: DEFAULT_COMPOSER_CONFIG.shellTimeoutMs;
+	if (
+		rawTimeout !== undefined &&
+		shellTimeoutMs === DEFAULT_COMPOSER_CONFIG.shellTimeoutMs &&
+		rawTimeout !== DEFAULT_COMPOSER_CONFIG.shellTimeoutMs
+	) {
+		warnings.push(
+			`${sourceLabel}: shell timeout must be a positive number, using ${DEFAULT_COMPOSER_CONFIG.shellTimeoutMs}`,
+		);
+	}
+	return {
+		shellMode: shellMode ?? DEFAULT_COMPOSER_CONFIG.shellMode,
+		shellTimeoutMs,
+	};
+}
+
+function readComposerConfigFile(filePath: string, warnings: string[]): ComposerConfig | undefined {
+	if (!existsSync(filePath)) return undefined;
+	try {
+		return normalizeComposerConfig(JSON.parse(readFileSync(filePath, 'utf8')), warnings, filePath);
+	} catch (error) {
+		warnings.push(
+			`${filePath}: failed to read config (${error instanceof Error ? error.message : String(error)}), using defaults`,
+		);
+		return undefined;
+	}
+}
+
+export function loadComposerConfig(cwd: string, warnings: string[] = []): ComposerConfig {
+	const userConfig = readComposerConfigFile(join(getAgentDir(), 'prompt-composer.json'), warnings);
+	const projectConfig = readComposerConfigFile(join(cwd, '.pi', 'prompt-composer.json'), warnings);
+	return projectConfig ?? userConfig ?? DEFAULT_COMPOSER_CONFIG;
+}
+
+function parseShellMode(fm: Record<string, unknown>, filePath: string, warnings: string[]): ShellMode {
+	const raw = fm['shell'];
+	const parsed = parseShellModeValue(raw);
+	if (parsed !== undefined) return parsed;
+	if (raw !== undefined)
+		warnings.push(
+			`${basename(filePath)}: unknown shell mode "${stringifyScalar(raw)}", using configured default ${activeComposerConfig.shellMode}`,
+		);
+	return activeComposerConfig.shellMode;
+}
+
 function isComposerStyleFrontmatter(fm: Record<string, unknown>): boolean {
 	return (
-		fm['engine'] !== undefined || fm['enabled'] !== undefined || fm['dispatch'] !== undefined || fm['type'] === 'prompt'
+		fm['engine'] !== undefined ||
+		fm['shell'] !== undefined ||
+		fm['enabled'] !== undefined ||
+		fm['dispatch'] !== undefined ||
+		fm['type'] === 'prompt'
 	);
 }
 
@@ -639,6 +741,7 @@ export function loadSingleGroup(
 		// Args (optional)
 		const args = parseArgsMetadata(fm['args'], filePath, warnings);
 		const engine = parseTemplateEngine(fm, filePath, warnings);
+		const shell = parseShellMode(fm, filePath, warnings);
 
 		const prompt: NestedPrompt = {
 			name: effectiveName,
@@ -649,6 +752,7 @@ export function loadSingleGroup(
 			origin,
 			groupName,
 			engine,
+			shell,
 		};
 
 		promptsByName.set(effectiveName, prompt);
@@ -766,6 +870,7 @@ export function loadFlatPrompt(filePath: string, origin: PromptOrigin, warnings:
 	}
 	const args = parseArgsMetadata(fm['args'], filePath, warnings);
 	const engine = parseTemplateEngine(fm, filePath, warnings);
+	const shell = parseShellMode(fm, filePath, warnings);
 
 	return {
 		name,
@@ -775,6 +880,7 @@ export function loadFlatPrompt(filePath: string, origin: PromptOrigin, warnings:
 		content: body,
 		origin,
 		engine,
+		shell,
 	};
 }
 
@@ -1034,7 +1140,85 @@ function expandXmlBlocks(content: string): string {
 	);
 }
 
-export function renderPrompt(prompt: NestedPrompt | FlatPrompt, resolved: ResolvedPromptArgs): string {
+function expandShellBlocks(content: string, markerId: string): string {
+	let index = 0;
+	return content.replace(/{%\s*shell\s*%}([\s\S]*?){%\s*endshell\s*%}/g, (_match: string, body: string) => {
+		const shellIndex = index++;
+		const captureName = `__composer_shell_${shellIndex}`;
+		const marker = `__PI_PROMPT_COMPOSER_SHELL_${markerId}_${shellIndex}`;
+		return `{% capture ${captureName} %}${body}{% endcapture %}${marker}_START__\n{{ ${captureName} | strip }}\n${marker}_END__`;
+	});
+}
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function resolveShellBlocks(
+	rendered: string,
+	prompt: NestedPrompt | FlatPrompt,
+	options: RenderPromptOptions | undefined,
+	markerId: string,
+): Promise<string> {
+	const escapedMarkerId = escapeRegExp(markerId);
+	const pattern = new RegExp(
+		`__PI_PROMPT_COMPOSER_SHELL_${escapedMarkerId}_(\\d+)_START__\\n([\\s\\S]*?)\\n__PI_PROMPT_COMPOSER_SHELL_${escapedMarkerId}_\\1_END__`,
+		'g',
+	);
+	let result = '';
+	let lastIndex = 0;
+	for (const match of rendered.matchAll(pattern)) {
+		const fullMatch = match[0];
+		const command = match[2]?.trim() ?? '';
+		result += rendered.slice(lastIndex, match.index);
+		result += await resolveShellCommand(command, prompt, options);
+		lastIndex = (match.index ?? 0) + fullMatch.length;
+	}
+	result += rendered.slice(lastIndex);
+	return result;
+}
+
+async function resolveShellCommand(
+	command: string,
+	prompt: NestedPrompt | FlatPrompt,
+	options: RenderPromptOptions | undefined,
+): Promise<string> {
+	if (command === '') return '';
+	const commandBlock = `\`\`\`bash\n${command}\n\`\`\``;
+	if (prompt.shell === 'deny') {
+		return `Shell command not executed because shell mode is deny. Add \`shell: ask\` or \`shell: allow\` to ${basename(prompt.filePath)}, or set prompt-composer config.\n\n${commandBlock}`;
+	}
+
+	if (prompt.shell === 'ask') {
+		const confirmed = await options?.ctx?.ui.confirm(
+			'Run prompt shell command?',
+			`${command}\n\nWorking directory: ${dirname(prompt.filePath)}`,
+		);
+		if (confirmed !== true) return `Shell command skipped by operator.\n\n\`\`\`bash\n${command}\n\`\`\``;
+	}
+
+	if (options?.shellExecutor) {
+		return options.shellExecutor(command, dirname(prompt.filePath));
+	}
+	if (!options?.pi) return `Shell command not executed because no shell executor is available.\n\n${commandBlock}`;
+
+	const output = await options.pi.exec('bash', ['-lc', command], {
+		cwd: dirname(prompt.filePath),
+		timeout: options.shellTimeoutMs ?? activeComposerConfig.shellTimeoutMs,
+	});
+	if (output.code === 0) return output.stdout.trimEnd();
+	const stderr = output.stderr.trimEnd();
+	const stdout = output.stdout.trimEnd();
+	return [`Shell command failed with exit code ${output.code}.`, stdout, stderr]
+		.filter((line) => line !== '')
+		.join('\n');
+}
+
+export async function renderPrompt(
+	prompt: NestedPrompt | FlatPrompt,
+	resolved: ResolvedPromptArgs,
+	options?: RenderPromptOptions,
+): Promise<string> {
 	if (prompt.engine === 'pi') return substituteArgs(prompt.content, resolved.args);
 
 	const promptMeta =
@@ -1042,12 +1226,16 @@ export function renderPrompt(prompt: NestedPrompt | FlatPrompt, resolved: Resolv
 			? { name: prompt.name, groupName: prompt.groupName, origin: prompt.origin, filePath: prompt.filePath }
 			: { name: prompt.name, origin: prompt.origin, filePath: prompt.filePath };
 
-	return String(
-		liquidEngine.renderSync(liquidEngine.parse(expandXmlBlocks(prompt.content), prompt.filePath), {
+	const markerId = randomUUID();
+	const expandedContent = expandShellBlocks(expandXmlBlocks(prompt.content), markerId);
+	const rendered = String(
+		liquidEngine.renderSync(liquidEngine.parse(expandedContent, prompt.filePath), {
 			args: resolved.namedArgs,
 			prompt: promptMeta,
+			now: new Date().toISOString(),
 		}),
 	);
+	return resolveShellBlocks(rendered, prompt, options, markerId);
 }
 
 function commandPath(prompt: NestedPrompt | FlatPrompt): string {
@@ -1193,6 +1381,7 @@ export default function (pi: ExtensionAPI) {
 
 	function registerGroupedCommands() {
 		const warnings: string[] = [];
+		activeComposerConfig = loadComposerConfig(process.cwd(), warnings);
 		const roots = getPromptRoots(warnings);
 		const groups = discoverGroups(roots, warnings);
 		const flatPrompts = discoverFlatPrompts(roots, warnings);
@@ -1236,7 +1425,11 @@ export default function (pi: ExtensionAPI) {
 						const resolved = await resolvePromptArgs(prompt, { positionals: [], named: {} }, ctx);
 						if (resolved === undefined) return;
 
-						const rendered = renderPrompt(prompt, resolved);
+						const rendered = await renderPrompt(prompt, resolved, {
+							pi,
+							ctx,
+							shellTimeoutMs: activeComposerConfig.shellTimeoutMs,
+						});
 						pi.sendUserMessage(rendered, {
 							deliverAs: 'followUp',
 						});
@@ -1263,7 +1456,11 @@ export default function (pi: ExtensionAPI) {
 					const resolved = await resolvePromptArgs(prompt, promptArgs, ctx);
 					if (resolved === undefined) return;
 
-					const rendered = renderPrompt(prompt, resolved);
+					const rendered = await renderPrompt(prompt, resolved, {
+						pi,
+						ctx,
+						shellTimeoutMs: activeComposerConfig.shellTimeoutMs,
+					});
 					pi.sendUserMessage(rendered, {
 						deliverAs: 'followUp',
 					});
@@ -1279,7 +1476,11 @@ export default function (pi: ExtensionAPI) {
 					const parsed = parseArgsForPrompt(prompt, parseCommandArgs(argsString.trim()));
 					const resolved = await resolvePromptArgs(prompt, parsed, ctx);
 					if (resolved === undefined) return;
-					const rendered = renderPrompt(prompt, resolved);
+					const rendered = await renderPrompt(prompt, resolved, {
+						pi,
+						ctx,
+						shellTimeoutMs: activeComposerConfig.shellTimeoutMs,
+					});
 					pi.sendUserMessage(rendered, {
 						deliverAs: 'followUp',
 					});

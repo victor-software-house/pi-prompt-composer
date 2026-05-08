@@ -204,9 +204,38 @@ Useful helpers:
 | `tokens` | Rough chars/4 estimate |
 | `json` | JSON stringify values, optionally pretty-printed |
 | `shell_quote` | Single-quote shell arguments for command text |
-| `{% xml "tag" %}` | Emit XML-style blocks only when non-empty |
+| `{% xml "tag" %}` | Emit XML-style blocks only when rendered body is non-empty |
+| `{% shell %}...{% endshell %}` | Render a command and optionally execute it when `shell` frontmatter opts in |
 
-Templates can render shell command batches for review, but do **not** execute shell commands. See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
+Shell execution is deny-by-default:
+
+| Frontmatter | Behavior |
+|-------------|----------|
+| omitted / `shell: deny` | Show command text; do not execute |
+| `shell: ask` | Confirm before execution; stdout replaces the block |
+| `shell: allow` | Execute without asking; trusted prompts only |
+
+Configure the default in `~/.pi/agent/prompt-composer.json` or project-local `.pi/prompt-composer.json`:
+
+```json
+{
+  "shell": { "mode": "ask", "timeoutMs": 30000 }
+}
+```
+
+Prompt frontmatter wins over config.
+
+Shell blocks run with `bash -lc` from the prompt file directory, so relative scripts work:
+
+```liquid
+{% shell %}
+python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
+{% endshell %}
+```
+
+This is opt-in because shell can read files, call networks, mutate repos, or expose secrets. Quote user-controlled args with `shell_quote`. See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
+
+Composer does not pretend to sandbox commands. Portable sandboxing is platform-specific; shell-enabled prompts are trusted code, matching Pi's normal shell trust model.
 
 ## What this package owns vs Pi-native
 
@@ -224,7 +253,7 @@ See [`docs/ISSUES.md`](docs/ISSUES.md) for tracked defects and status.
 
 ## Non-goals (this version)
 
-- No automatic shell command execution from templates
+- No default shell execution from templates; shell remains explicit opt-in
 - No nesting deeper than `/group subcommand`
 - No aliases or dynamic subcommands
 

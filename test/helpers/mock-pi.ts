@@ -5,7 +5,7 @@
  * used across all test layers.
  */
 
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +20,7 @@ export interface RegisteredCommand {
 export interface MockCommandContext {
 	ui: {
 		select: (title: string, options: string[]) => Promise<string | undefined>;
+		confirm: (title: string, message: string) => Promise<boolean>;
 		input: (title: string, placeholder?: string) => Promise<string | undefined>;
 		editor: (title: string, prefill?: string) => Promise<string | undefined>;
 		notify: (message: string, severity: string) => void;
@@ -55,6 +56,7 @@ export interface MockPiOptions {
 	allTools?: Array<{ name: string }>;
 	/** Tool names returned by getActiveTools(). Defaults to ['ask_user']. */
 	activeTools?: string[];
+	exec?: (command: string, args: string[], options?: Record<string, unknown>) => Promise<{ stdout: string; stderr: string; code: number; killed: boolean }>;
 }
 
 export function createMockPi(opts: MockPiOptions = {}) {
@@ -81,6 +83,7 @@ export function createMockPi(opts: MockPiOptions = {}) {
 		on(event: string, handler: SessionHandler) {
 			eventHandlers.set(event, handler);
 		},
+		exec: opts.exec ?? (async () => ({ stdout: '', stderr: '', code: 0, killed: false })),
 		getAllTools: () => allTools,
 		getActiveTools: () => activeTools,
 	};
@@ -108,6 +111,7 @@ export async function loadExtension(mockPi: ExtensionAPI, cwd: string) {
 // ---------------------------------------------------------------------------
 
 export function createContext(overrides?: {
+	confirm?: MockCommandContext['ui']['confirm'];
 	input?: MockCommandContext['ui']['input'];
 	custom?: MockCommandContext['ui']['custom'];
 }) {
@@ -118,6 +122,7 @@ export function createContext(overrides?: {
 	const ctx: MockCommandContext = {
 		ui: {
 			select: async () => undefined,
+			confirm: overrides?.confirm ?? (async () => true),
 			input: overrides?.input ?? (async () => ''),
 			editor: async (_title, prefill) => prefill,
 			notify: (message, severity) => {

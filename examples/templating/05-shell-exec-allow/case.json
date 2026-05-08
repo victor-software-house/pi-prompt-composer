@@ -1,0 +1,8 @@
+{
+  "description": "Opt-in shell execution injects stdout into the rendered prompt",
+  "name": "shell-exec",
+  "engine": "liquid",
+  "named": {
+    "topic": "composer"
+  }
+}

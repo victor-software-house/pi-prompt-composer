@@ -10,7 +10,7 @@
 
 // Resolved via local node_modules — pi-coding-agent is a devDependency.
 // The dist/core/skills.js path is not a public export so we address it directly.
-import { loadSkillsFromDir } from '../node_modules/@mariozechner/pi-coding-agent/dist/core/skills.js';
+import { loadSkillsFromDir } from '../node_modules/@earendil-works/pi-coding-agent/dist/core/skills.js';
 
 function isRecord(value) {
 	return typeof value === 'object' && value !== null;

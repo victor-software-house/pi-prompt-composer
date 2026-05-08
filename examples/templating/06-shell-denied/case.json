@@ -1,0 +1,6 @@
+{
+  "description": "Shell blocks render command text instead of executing when shell frontmatter is absent",
+  "name": "shell-denied",
+  "engine": "liquid",
+  "named": {}
+}

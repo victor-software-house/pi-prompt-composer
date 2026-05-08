@@ -110,6 +110,8 @@ This includes:
 - later, additional package-native template features such as conditional rendering
 - rendering before dispatch, so the operator can see the expanded prompt text in the chat history
 
+Shell substitution is explicit trusted-code behavior, not portable sandboxing. The pipeline should default to no execution, support `ask` confirmation, and allow trusted bypass through prompt frontmatter or normalized user/project config.
+
 ## Non-goals
 
 These remain out of scope for the first implementation slice unless explicitly promoted later:
@@ -119,6 +121,7 @@ These remain out of scope for the first implementation slice unless explicitly p
 - pretending grouped commands are native Pi prompt commands in Pi internals
 - a fully programmable template language in v1
 - hidden preprocessing that the operator cannot inspect after dispatch
+- cross-platform shell sandboxing claims; prompts with shell execution are trusted code, matching Pi's normal shell trust model
 
 ## Code reuse policy
 
@@ -128,7 +131,7 @@ The implementation should reuse Pi code aggressively where the public API allows
 
 For every helper or behavior in this package, apply this order:
 
-1. use a stable public export from `@mariozechner/pi-coding-agent` when one exists
+1. use a stable public export from `@earendil-works/pi-coding-agent` when one exists
 2. copy a small Pi internal implementation locally when no public export exists and the logic is tightly coupled to this package
 3. extract that copied logic into a shared utility package only if a second package needs the same behavior
 

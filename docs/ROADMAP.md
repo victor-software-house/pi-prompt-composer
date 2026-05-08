@@ -86,6 +86,7 @@ Supported capabilities:
 - XML-style block helper: `{% xml "tag" %}...{% endxml %}`
 - safe filters: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - command-batch rendering as shell text for operator/model review
+- opt-in `{% shell %}...{% endshell %}` execution with configurable `deny|ask|allow` mode
 
 Acceptance criteria:
 
@@ -93,31 +94,32 @@ Acceptance criteria:
 - ✅ Liquid prompts receive `{ args, prompt }`
 - ✅ XML blocks omit empty rendered bodies
 - ✅ command batches can be rendered safely with `shell_quote`
-- ✅ templates do not execute shell commands
+- ✅ shell execution defaults to deny and can be enabled per prompt or via `prompt-composer.json`
 - ✅ `examples/templating/` verifies helper behavior with golden fixtures
 - ✅ Pi-engine prompts preserve `--flag` and `key=value` as positional input
 
-## PPC-006B: Prompt-body shell execution (deferred)
+## PPC-006B: Prompt-body shell execution (complete)
 
-Optional future feature: execute bounded shell substitutions inside prompt bodies.
+Liquid prompts support bounded shell blocks for trusted local helper workflows:
 
-Planned syntax:
-
-```text
-!`command`
+```liquid
+{% shell %}
+python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
+{% endshell %}
 ```
 
-This is deferred because Liquid templates can already render command batches as visible text, while actual execution needs separate timeout, permission, visibility, and failure-policy design.
+Execution is not sandboxed. Composer uses explicit trust controls instead: default `deny`, optional `ask`, and trusted `allow`. User and project config can set default mode and timeout, while prompt frontmatter wins.
 
-Acceptance criteria for future execution support:
+Acceptance criteria:
 
-- shell substitutions run after template rendering and before dispatch
-- multiple substitutions in one prompt body are supported
-- substitutions execute with bounded timeouts through Pi's extension execution APIs
-- command output replaces the placeholder in the rendered prompt body
-- failure handling is visible and understandable to the operator
-- rendered substitution output is present in the final user message bubble
-- any helper duplicated from Pi internals is small, testable, and documented as a local copy rather than a hidden runtime dependency on Pi internals
+- ✅ shell blocks run after Liquid rendering and before dispatch
+- ✅ multiple shell blocks in one prompt body are supported
+- ✅ substitutions execute through Pi's extension execution API with bounded timeout
+- ✅ command output replaces the block in the rendered prompt body
+- ✅ failure handling is visible and understandable to the operator
+- ✅ rendered stdout is present in the final user message bubble
+- ✅ command args can use `shell_quote` for user-controlled values
+- ✅ docs state that shell-enabled prompts are trusted code, not sandboxed code
 
 ## PPC-007: Scope-aware diagnostics and documented Pi API limits
 
