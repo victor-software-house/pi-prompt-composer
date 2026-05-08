@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.3.1...v1.4.0) (2026-05-08)
+
+
+### Features
+
+* add composed prompt discovery ([5de4212](https://github.com/victor-software-house/pi-prompt-composer/commit/5de42126e649f1eb68285adc5f51245d7494854d))
+
 ## [1.3.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.3.0...v1.3.1) (2026-04-03)
 
 
