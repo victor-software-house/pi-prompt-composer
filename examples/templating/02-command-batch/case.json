@@ -1,0 +1,10 @@
+{
+  "description": "Render a shell command batch with safe quoting, without executing commands",
+  "name": "batch-cleanup",
+  "engine": "liquid",
+  "named": {
+    "workdir": "packages/app with spaces",
+    "commands": ["pnpm install", "pnpm test -- --runInBand", "git status --short"],
+    "dangerous": "release candidate's notes"
+  }
+}

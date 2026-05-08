@@ -1007,7 +1007,34 @@ liquidEngine.registerFilter('quote', (value: unknown) => {
 	return `"${stringifyScalar(value).replace(/"/g, '\\"').trim()}"`;
 });
 
-function renderPrompt(prompt: NestedPrompt | FlatPrompt, resolved: ResolvedPromptArgs): string {
+liquidEngine.registerFilter('tokens', (value: unknown) => {
+	if (value === null || value === undefined) return 0;
+	return Math.ceil(stringifyScalar(value).length / 4);
+});
+
+liquidEngine.registerFilter('json', (value: unknown, spaces?: unknown) => {
+	const indentation = typeof spaces === 'number' && Number.isInteger(spaces) && spaces >= 0 ? Math.min(spaces, 8) : 0;
+	return JSON.stringify(value, null, indentation) ?? 'null';
+});
+
+liquidEngine.registerFilter('shell_quote', (value: unknown) => {
+	const raw = stringifyScalar(value);
+	if (raw === '') return "''";
+	return `'${raw.replace(/'/g, `'"'"'`)}'`;
+});
+
+function expandXmlBlocks(content: string): string {
+	let index = 0;
+	return content.replace(
+		/{%\s*xml\s+["']([^"']+)["']\s*%}([\s\S]*?){%\s*endxml\s*%}/g,
+		(_match: string, tag: string, body: string) => {
+			const captureName = `__composer_xml_${index++}`;
+			return `{% capture ${captureName} %}${body}{% endcapture %}{% assign ${captureName}_body = ${captureName} | strip %}{% if ${captureName}_body | present %}<${tag}>\n{{ ${captureName}_body }}\n</${tag}>{% endif %}`;
+		},
+	);
+}
+
+export function renderPrompt(prompt: NestedPrompt | FlatPrompt, resolved: ResolvedPromptArgs): string {
 	if (prompt.engine === 'pi') return substituteArgs(prompt.content, resolved.args);
 
 	const promptMeta =
@@ -1016,7 +1043,7 @@ function renderPrompt(prompt: NestedPrompt | FlatPrompt, resolved: ResolvedPromp
 			: { name: prompt.name, origin: prompt.origin, filePath: prompt.filePath };
 
 	return String(
-		liquidEngine.renderSync(liquidEngine.parse(prompt.content, prompt.filePath), {
+		liquidEngine.renderSync(liquidEngine.parse(expandXmlBlocks(prompt.content), prompt.filePath), {
 			args: resolved.namedArgs,
 			prompt: promptMeta,
 		}),

@@ -1,0 +1,6 @@
+{
+  "description": "Pi engine keeps positional placeholders and does not reinterpret --flags or key=value tokens",
+  "name": "native-compat",
+  "engine": "pi",
+  "cli": ["--force", "FOO=bar", "two words"]
+}

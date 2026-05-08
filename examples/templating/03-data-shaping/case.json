@@ -1,0 +1,13 @@
+{
+  "description": "Declarative data shaping with where/map/join/default",
+  "name": "review-queue",
+  "engine": "liquid",
+  "named": {
+    "items": [
+      { "name": "auth", "kind": "risk", "owner": "Ana" },
+      { "name": "docs", "kind": "task", "owner": "Bo" },
+      { "name": "migration", "kind": "risk", "owner": "Cy" }
+    ],
+    "focus": ""
+  }
+}

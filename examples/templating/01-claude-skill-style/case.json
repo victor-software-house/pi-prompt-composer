@@ -1,0 +1,15 @@
+{
+  "description": "Skill-style prompt with XML blocks, loops, conditionals, and JSON metadata",
+  "name": "ship-readiness",
+  "engine": "liquid",
+  "named": {
+    "ticket": "PPC-123",
+    "goal": "ship composed prompt discovery",
+    "risks": ["migration collision", "native prompt duplication", "unsafe template helpers"],
+    "checks": ["typecheck", "lint", "test", "skills:validate"],
+    "metadata": {
+      "owner": "Victor Software House",
+      "priority": "high"
+    }
+  }
+}
