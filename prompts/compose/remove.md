@@ -13,7 +13,7 @@ Remove or simplify subcommands in the `$1` grouped prompt set.
 ## Step 1 — Find and read the existing group
 
 ```bash
-for d in ~/.pi/agent/prompts/$1 .pi/prompts/$1; do
+for d in ~/.pi/agent/composed/$1 .pi/composed/$1; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```
@@ -70,7 +70,7 @@ Before removing, search for references to the target subcommand(s):
 TARGET="$2"  # or each selected subcommand
 
 # Check if other prompts reference this subcommand
-grep -r "/$1 $TARGET" ~/.pi/agent/prompts/ .pi/prompts/ 2>/dev/null
+grep -r "/$1 $TARGET" ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null
 
 # Check if docs or scripts reference it
 grep -r "/$1 $TARGET" docs/ README.md AGENTS.md .specify/ 2>/dev/null
@@ -214,7 +214,7 @@ if [ -d "$GROUP_DIR" ]; then
 fi
 
 # 3. No stale references remain
-grep -r "/$1 $TARGET" ~/.pi/agent/prompts/ .pi/prompts/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
+grep -r "/$1 $TARGET" ~/.pi/agent/composed/ .pi/composed/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
 
 # 4. Order array does not contain the removed name
 grep '^order:' "$GROUP_DIR/_index.md" 2>/dev/null | grep -q "$TARGET" && echo "FAIL: $TARGET still in order" || echo "PASS: order clean"

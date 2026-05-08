@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import {
 	createContext,
 	createMockPi,
+	createSessionContext,
 	loadExtension,
 	makeCancelCustomMock,
 	makeSelectorCustomMock,
@@ -183,5 +184,83 @@ describe('escape syntax', () => {
 
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toBe('Literal $ARGUMENTS here');
+	});
+});
+
+describe('composed flat prompts', () => {
+	test('/review dispatches a flat pi-engine prompt from .pi/composed', async () => {
+		const composedDir = join(cwd, '.pi', 'composed');
+		mkdirSync(composedDir, { recursive: true });
+		writeFileSync(join(composedDir, 'review.md'), '---\ndescription: Review change\n---\nReview: $ARGUMENTS');
+
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('review')!;
+
+		const { ctx } = createContext();
+		await cmd.handler('fix auth', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toBe('Review: fix auth');
+	});
+
+	test('pi-engine prompts preserve --flag and key=value as positional args', async () => {
+		const composedDir = join(cwd, '.pi', 'composed');
+		mkdirSync(composedDir, { recursive: true });
+		writeFileSync(join(composedDir, 'args.md'), '---\ndescription: Echo args\n---\nArgs: $ARGUMENTS');
+
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('args')!;
+
+		const { ctx } = createContext();
+		await cmd.handler('--force FOO=bar', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toBe('Args: --force FOO=bar');
+	});
+
+	test('/plan renders liquid with named args', async () => {
+		const composedDir = join(cwd, '.pi', 'composed');
+		mkdirSync(composedDir, { recursive: true });
+		writeFileSync(
+			join(composedDir, 'plan.md'),
+			[
+				'---',
+				'description: Plan change',
+				'engine: liquid',
+				'args:',
+				'  - name: change',
+				'    required: true',
+				'    hint: Change to plan',
+				'---',
+				'Plan {{ args.change | quote }} for {{ prompt.name }}',
+			].join('\n'),
+		);
+
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('plan')!;
+
+		const { ctx } = createContext();
+		await cmd.handler('--change "fix auth"', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toBe('Plan "fix auth" for plan');
+	});
+});
+
+describe('legacy migration', () => {
+	test('moves .pi/prompts/<group> to .pi/composed/<group> before registration', async () => {
+		const { mockPi, commands, eventHandlers } = createMockPi();
+		await loadExtension(mockPi, cwd);
+
+		expect(commands.has('testgrp')).toBe(true);
+		expect(existsSync(join(cwd, '.pi', 'composed', 'testgrp'))).toBe(true);
+		expect(existsSync(join(cwd, '.pi', 'prompts', 'testgrp'))).toBe(false);
+
+		const session = createSessionContext();
+		await eventHandlers.get('session_start')?.({}, session.ctx);
+		expect(session.notifyCalls.some((call) => call.message.includes('Migrated legacy grouped prompt'))).toBe(true);
 	});
 });

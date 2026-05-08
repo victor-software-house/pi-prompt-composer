@@ -8,7 +8,7 @@ Before creating files, establish:
 
 - **Who will use these prompts?** (you only, your team, all project contributors)
 - **What task domain do they serve?** (code review, deployment, testing, etc.)
-- **Where should they live?** User scope (`~/.pi/agent/prompts/`) or project scope (`.pi/prompts/`)
+- **Where should they live?** User scope (`~/.pi/agent/composed/`) or project scope (`.pi/composed/`)
 
 ## Step 2 — Choose group name
 
@@ -36,13 +36,12 @@ Every group directory needs `_index.md`:
 
 ```markdown
 ---
-type: group
 description: Short description of what this group does
 order: [subcommand-a, subcommand-b, subcommand-c]
 ---
 ```
 
-The `type: group` field is required. The `description` is strongly recommended — it appears in menus and autocomplete. The `order` array is optional — it controls display order in autocomplete and the selector. Unlisted subcommands are appended alphabetically.
+The `description` is strongly recommended — it appears in menus and autocomplete. The `order` array is optional — it controls display order in autocomplete and the selector. Unlisted subcommands are appended alphabetically. No `type` marker is required under `composed/`.
 
 ## Step 5 — Write subcommand files
 

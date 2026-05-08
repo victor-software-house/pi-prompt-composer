@@ -10,12 +10,12 @@ Run this checklist against a live Pi session before first publish and after sign
    ```
 2. Copy example prompts into your project prompt root:
    ```bash
-   mkdir -p .pi/prompts/review
-   cp -r node_modules/pi-prompt-composer/examples/prompts/review/* .pi/prompts/review/
+   mkdir -p .pi/composed/review
+   cp -r node_modules/pi-prompt-composer/examples/prompts/review/* .pi/composed/review/
    ```
    Or symlink for development:
    ```bash
-   ln -s ../../examples/prompts/review .pi/prompts/review
+   ln -s ../../examples/prompts/review .pi/composed/review
    ```
 3. Reload Pi.
 

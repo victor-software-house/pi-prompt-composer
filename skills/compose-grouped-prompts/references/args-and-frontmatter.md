@@ -2,13 +2,14 @@
 
 ## `_index.md` frontmatter
 
-Required fields:
+Recommended fields:
 
 ```yaml
-type: group           # must be exactly "group"
 description: ...      # recommended — shown in menus and autocomplete
 order: [new, add, remove]  # optional — custom subcommand display order
 ```
+
+No `type: group` marker is required. A subfolder under `composed/` with `_index.md` is composer-owned by location.
 
 `order` controls the display order in autocomplete and the TUI selector. Listed names appear first in the given order; unlisted subcommands are appended alphabetically. Omit for default alphabetical ordering.
 

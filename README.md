@@ -14,9 +14,9 @@ Turn a directory of `.md` prompt files into a single `/command` with Tab-complet
 # Install
 pi install pi-prompt-composer
 
-# Copy the bundled examples into your project prompt root
-mkdir -p .pi/prompts/review
-cp -r $(pi resolve pi-prompt-composer)/examples/prompts/review/* .pi/prompts/review/
+# Copy the bundled examples into your project composer root
+mkdir -p .pi/composed/review
+cp -r $(pi resolve pi-prompt-composer)/examples/prompts/review/* .pi/composed/review/
 
 # Reload Pi, then try:
 #   /review           → interactive selector
@@ -26,22 +26,22 @@ cp -r $(pi resolve pi-prompt-composer)/examples/prompts/review/* .pi/prompts/rev
 
 ## How it works
 
-A folder with an `_index.md` (containing `type: group`) becomes a grouped command. Every other `.md` file in that folder becomes a subcommand.
+Composer-owned prompts live under `composed/` roots so Pi does not also load them as native flat prompts.
 
 ```text
-.pi/prompts/
-├── workspace.md              ← flat Pi prompt, unchanged
-├── review/
-│   ├── _index.md             ← type: group  →  /review
-│   ├── summary.md            ←                  /review summary
-│   └── fix.md                ←                  /review fix
+.pi/composed/
+├── review.md                 ← /review
+└── review/
+    ├── _index.md             ← /review
+    ├── summary.md            ← /review summary
+    └── fix.md                ← /review fix
 ```
 
-Both prompt roots are scanned:
-- **User**: `~/.pi/agent/prompts/`
-- **Project**: `<project>/.pi/prompts/`
+Composer roots:
+- **User**: `~/.pi/agent/composed/`
+- **Project**: `<project>/.pi/composed/`
 
-Flat `.md` files outside group directories continue to work as native Pi prompts.
+Native Pi prompt roots (`~/.pi/agent/prompts/*.md`, `.pi/prompts/*.md`) stay native. Existing grouped prompts under `prompts/<group>/` are migrated once into `composed/<group>/` with a warning.
 
 ## Features
 
@@ -91,17 +91,16 @@ The skill is loaded on demand when the model needs deeper guidance beyond what t
 
 ## Writing prompts
 
-### `_index.md` (required)
+### `_index.md` (required for groups)
 
 ```yaml
 ---
-type: group
 description: Review workflows
 order: [summary, fix]
 ---
 ```
 
-`type: group` is the hard gate — directories without it are ignored.
+No `type: group` marker is required. A subfolder under `composed/` with `_index.md` is a group.
 
 `order` is optional — controls subcommand display order in autocomplete and the selector. Listed names appear first in the given order; unlisted subcommands are appended alphabetically. Omit for default alphabetical ordering.
 
@@ -144,7 +143,8 @@ Parsing is lenient — a missing `hint` or `required` won't break the prompt. On
 |---------|----------|
 | Frontmatter parsing, arg syntax, substitution | **Pi** (reused) |
 | Folder → command grouping, selector, arg collection | **pi-prompt-composer** |
-| Flat `.md` prompt behavior | **Pi** (unchanged) |
+| Native flat `.md` prompt behavior under `prompts/` | **Pi** (unchanged) |
+| Composer flat `.md` prompt behavior under `composed/` | **pi-prompt-composer** |
 | Command precedence (grouped wins over flat) | **Pi** (extension commands take precedence) |
 
 ## Known limitations

@@ -4,13 +4,14 @@ This roadmap implements the product-level priorities defined in `FEATURE-SET.md`
 
 ## PPC-001: Directory scanner and grouped prompt registry
 
-Scan `~/.pi/agent/prompts/` and `.pi/prompts/` for prompt subdirectories and build an in-memory grouped-prompt registry.
+Scan `~/.pi/agent/composed/` and `.pi/composed/` for composer-owned flat prompts and prompt subdirectories, migrating legacy grouped prompts from `prompts/<group>/` once.
 
 Scope of scanning:
 
 - only subdirectories participate in grouped routing
-- flat `.md` prompt files remain Pi-native and are ignored by this package
-- `_index.md` is optional group metadata
+- flat `.md` prompt files under `composed/` become composer-owned commands
+- flat `.md` prompt files under `prompts/` remain Pi-native and are ignored by this package
+- `_index.md` is required group metadata under `composed/`
 - other `.md` files become subcommands
 - v1 supports one group level: `/group subcommand`
 
@@ -20,7 +21,8 @@ Acceptance criteria:
 - loads `.md` files with Pi's `parseFrontmatter()` helper
 - derives descriptions from frontmatter or first non-empty body line, matching Pi behavior
 - records internal origin metadata (`bundled`, `user`, or `project`) for each group and subcommand
-- ignores flat `.md` files because Pi handles them natively
+- ignores flat `.md` files under `prompts/` because Pi handles them natively
+- discovers flat `.md` files under `composed/` because composer owns that location
 - rebuilds the registry on startup and reload without stale duplicate state
 
 ## PPC-002: Command registration and autocomplete

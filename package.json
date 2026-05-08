@@ -90,5 +90,8 @@
 		"semantic-release": "^25.0.3",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.0"
+	},
+	"dependencies": {
+		"liquidjs": "^10.25.7"
 	}
 }

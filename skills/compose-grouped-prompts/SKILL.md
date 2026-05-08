@@ -3,9 +3,9 @@ description: >
   Create, extend, and maintain grouped slash-command prompt sets for pi-prompt-composer.
   Use when creating a new grouped prompt group, adding subcommands to an existing group,
   removing or simplifying subcommands, understanding grouped-prompt layout and frontmatter
-  conventions, or deciding between grouped prompts, flat prompts, and skills.
+  conventions, or deciding between grouped prompts, flat composer prompts, native Pi prompts, and skills.
   Triggers on "compose grouped prompts", "create prompt group", "add subcommand",
-  "remove subcommand", "grouped prompt conventions", "_index.md", "type: group",
+  "remove subcommand", "grouped prompt conventions", "_index.md", ".pi/composed",
   "/compose new", "/compose add", "/compose remove".
 ---
 
@@ -23,7 +23,7 @@ Use when the operator asks to:
 - understand grouped-prompt conventions, layout, or frontmatter
 - decide between grouped prompts, flat prompts, or skills
 
-Do **not** use for flat Pi prompt templates — those are Pi-native and need no special tooling.
+Use `composed/` roots for composer-owned flat prompts and grouped prompts. Do **not** use this skill for native flat Pi prompt templates under `prompts/` unless moving them into composer ownership is explicitly desired.
 
 ## Workflow map
 
@@ -41,7 +41,7 @@ Operator request
 Before generating any files:
 
 1. **Check prerequisites.** Verify recommended packages (e.g., `pi-ask-user`) are installed. If the `ask_user` tool is missing, a persistent warning banner will appear with install instructions.
-2. **Identify the target prompt root.** User prompts live in `~/.pi/agent/prompts/`. Project prompts live in `.pi/prompts/`. Use `ask_user` if ambiguous.
+2. **Identify the target composer root.** User composer prompts live in `~/.pi/agent/composed/`. Project composer prompts live in `.pi/composed/`. Use `ask_user` if ambiguous.
 3. **Scan for existing groups.** Check whether the group name already exists. Report conflicts before proceeding.
 4. **Confirm scope.** A group name must not collide with a flat Pi prompt template the operator wants to keep.
 
@@ -143,8 +143,9 @@ Answer questions about:
 
 | Mechanism | Best for |
 |-----------|----------|
-| Flat prompt (`.md` in prompts root) | Single reusable prompt, no subcommands |
-| Grouped prompt (directory with `_index.md`) | Related prompts under one `/command` |
+| Native flat Pi prompt (`.md` in `prompts/` root) | Single native Pi prompt, no composer behavior |
+| Composer flat prompt (`.md` in `composed/` root) | Single reusable composer prompt, Liquid/named args support |
+| Grouped prompt (directory with `_index.md` under `composed/`) | Related prompts under one `/command` |
 | Skill (`SKILL.md` + references) | Deep workflow guidance loaded on demand |
 
 ## Reference map

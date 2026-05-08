@@ -14,7 +14,7 @@ Add subcommands to the `$1` grouped prompt set.
 
 ```bash
 # Check both prompt roots
-for d in ~/.pi/agent/prompts/$1 .pi/prompts/$1; do
+for d in ~/.pi/agent/composed/$1 .pi/composed/$1; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```

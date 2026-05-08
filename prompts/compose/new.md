@@ -17,10 +17,10 @@ Use `ask_user` to confirm where the group should live:
 ```json
 {
   "question": "Where should the /$1 group live?",
-  "context": "User prompts (~/.pi/agent/prompts/) are personal and available everywhere.\nProject prompts (.pi/prompts/) are shared via the repo.",
+  "context": "User composer prompts (~/.pi/agent/composed/) are personal and available everywhere.\nProject composer prompts (.pi/composed/) are shared via the repo.",
   "options": [
-    { "title": "Project (.pi/prompts/$1/)", "description": "Shared with the team via git" },
-    { "title": "User (~/.pi/agent/prompts/$1/)", "description": "Personal, available in all projects" }
+    { "title": "Project (.pi/composed/$1/)", "description": "Shared with the team via git" },
+    { "title": "User (~/.pi/agent/composed/$1/)", "description": "Personal, available in all projects" }
   ],
   "allowFreeform": false
 }
@@ -31,7 +31,7 @@ Record the chosen root as `$PROMPT_ROOT` for all subsequent steps.
 ## Step 2 — Check for conflicts
 
 ```bash
-ls -d ~/.pi/agent/prompts/$1/ .pi/prompts/$1/ 2>/dev/null
+ls -d ~/.pi/agent/composed/$1/ .pi/composed/$1/ 2>/dev/null
 ```
 
 If the directory exists in either root, **stop**. Tell the user and suggest `/compose add $1` instead. Do not proceed.
@@ -192,10 +192,9 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 ### File generation order
 
-1. `_index.md` — with `type: group`, the confirmed `description`, and an `order` array listing subcommand names in the display order confirmed by the user. Example:
+1. `_index.md` — with the confirmed `description` and an `order` array listing subcommand names in the display order confirmed by the user. Example:
    ```yaml
    ---
-   type: group
    description: Review workflows
    order: [summary, fix, lint]
    ---
@@ -213,8 +212,8 @@ After generating all files:
 # 1. Directory exists with correct structure
 ls "$PROMPT_ROOT/$1/"
 
-# 2. _index.md has type: group
-grep -q 'type: group' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: type: group" || echo "FAIL"
+# 2. _index.md has a description
+grep -q '^description:' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: description" || echo "FAIL: missing description"
 
 # 3. Every subcommand has a description
 for f in "$PROMPT_ROOT/$1/"*.md; do
@@ -226,7 +225,7 @@ done
 grep -q '^order:' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: order field" || echo "FAIL: missing order"
 
 # 5. No naming collisions with existing commands
-ls ~/.pi/agent/prompts/ .pi/prompts/ 2>/dev/null | grep -v "$1"
+ls ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null | grep -v "$1"
 ```
 
 **Done when:** all verification checks pass and the user sees the file list.

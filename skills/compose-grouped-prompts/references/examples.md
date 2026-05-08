@@ -7,7 +7,7 @@ A project-scoped group for code review workflows.
 ### Directory
 
 ```
-.pi/prompts/review/
+.pi/composed/review/
 ├── _index.md
 ├── summary.md
 ├── checklist.md
@@ -18,7 +18,6 @@ A project-scoped group for code review workflows.
 
 ```markdown
 ---
-type: group
 description: Code review workflows
 order: [summary, security, fix]
 ---
@@ -91,7 +90,7 @@ A user-scoped group for daily standup helpers.
 ### Directory
 
 ```
-~/.pi/agent/prompts/standup/
+~/.pi/agent/composed/standup/
 ├── _index.md
 ├── prep.md
 └── summary.md
@@ -101,7 +100,6 @@ A user-scoped group for daily standup helpers.
 
 ```markdown
 ---
-type: group
 description: Daily standup helpers
 order: [prep, summary]
 ---
@@ -145,7 +143,7 @@ A user-scoped group that manages a tracked list — demonstrates `ask_user` insi
 ### Directory
 
 ```
-~/.pi/agent/prompts/wip/
+~/.pi/agent/composed/wip/
 ├── _index.md
 ├── list.md
 ├── close.md
@@ -156,7 +154,6 @@ A user-scoped group that manages a tracked list — demonstrates `ask_user` insi
 
 ```markdown
 ---
-type: group
 description: Track active Pi sessions in the vault — list, update, and close session rows
 order: [list, update, close]
 ---

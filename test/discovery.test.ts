@@ -2,7 +2,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { discoverGroups, loadSingleGroup, resolveRelativePath } from '../extensions/index';
+import { discoverFlatPrompts, discoverGroups, loadSingleGroup, resolveRelativePath } from '../extensions/index';
 import type { PromptRoot } from '../extensions/index';
 
 // ---------------------------------------------------------------------------
@@ -74,12 +74,13 @@ describe('group rejection', () => {
 		expect(groups).toHaveLength(0);
 	});
 
-	test('skips _index.md with wrong type', () => {
-		createGroup(rootDir, 'wrongtype', { 'cmd.md': '---\ndescription: A cmd\n---\nBody' }, '---\ntype: prompt\ndescription: Not a group\n---\n');
+	test('accepts _index.md without type: group marker', () => {
+		createGroup(rootDir, 'markless', { 'cmd.md': '---\ndescription: A cmd\n---\nBody' }, '---\ndescription: Markless group\n---\n');
 
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots(), warnings);
-		expect(groups).toHaveLength(0);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].name).toBe('markless');
 	});
 
 	test('skips group with no nested .md files (empty group)', () => {
@@ -311,21 +312,17 @@ describe('exact group root (Case A)', () => {
 		rmSync(groupDir, { recursive: true, force: true });
 	});
 
-	test('root with _index.md but wrong type → treated as parent root (Case B)', () => {
-		const dir = mkdtempSync(join(tmpdir(), 'pi-notgroup-'));
-		writeFileSync(join(dir, '_index.md'), '---\ntype: prompt\ndescription: Not a group\n---\n');
-		// Add a child group inside
-		const childGroup = join(dir, 'child');
-		mkdirSync(childGroup, { recursive: true });
-		writeFileSync(join(childGroup, '_index.md'), '---\ntype: group\ndescription: Child group\n---\n');
-		writeFileSync(join(childGroup, 'cmd.md'), '---\ndescription: A cmd\n---\nBody');
+	test('root with _index.md is consumed as exact group by location', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'pi-exact-markless-'));
+		writeFileSync(join(dir, '_index.md'), '---\ndescription: Exact group\n---\n');
+		writeFileSync(join(dir, 'cmd.md'), '---\ndescription: A cmd\n---\nBody');
 
 		const roots: PromptRoot[] = [{ origin: 'user', rootPath: dir }];
 		const warnings: string[] = [];
 		const groups = discoverGroups(roots, warnings);
 
 		expect(groups).toHaveLength(1);
-		expect(groups[0].name).toBe('child');
+		expect(groups[0].name).toBe(dir.split('/').at(-1));
 
 		rmSync(dir, { recursive: true, force: true });
 	});
@@ -393,13 +390,14 @@ describe('loadSingleGroup', () => {
 		expect(group).toBeUndefined();
 	});
 
-	test('returns undefined for group with wrong type', () => {
-		createGroup(rootDir, 'wrongtype', {
+	test('loads group without type marker', () => {
+		createGroup(rootDir, 'markless', {
 			'cmd.md': '---\ndescription: A cmd\n---\nBody',
-		}, '---\ntype: prompt\n---\n');
+		}, '---\ndescription: Markless\n---\n');
 		const warnings: string[] = [];
-		const group = loadSingleGroup(join(rootDir, 'wrongtype'), 'wrongtype', 'user', warnings);
-		expect(group).toBeUndefined();
+		const group = loadSingleGroup(join(rootDir, 'markless'), 'markless', 'user', warnings);
+		expect(group).toBeDefined();
+		expect(group?.name).toBe('markless');
 	});
 
 	test('returns undefined for empty group', () => {
@@ -414,7 +412,46 @@ describe('loadSingleGroup', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T031 — resolveRelativePath
+// T031 — Flat composed prompt discovery
+// ---------------------------------------------------------------------------
+describe('flat composed prompt discovery', () => {
+	test('discovers root .md files without type marker', () => {
+		writeFileSync(join(rootDir, 'review.md'), '---\ndescription: Review change\n---\nReview $ARGUMENTS');
+		const warnings: string[] = [];
+		const prompts = discoverFlatPrompts(roots(), warnings);
+
+		expect(prompts).toHaveLength(1);
+		expect(prompts[0].name).toBe('review');
+		expect(prompts[0].description).toBe('Review change');
+		expect(prompts[0].engine).toBe('pi');
+	});
+
+	test('does not treat group subcommands or nested group files as flat prompts', () => {
+		createGroup(rootDir, 'review', {
+			'summary.md': '---\ndescription: Summary\n---\nBody',
+		});
+		mkdirSync(join(rootDir, 'review', 'notes'), { recursive: true });
+		writeFileSync(join(rootDir, 'review', 'notes', 'draft.md'), '---\ndescription: Draft\n---\nBody');
+		const warnings: string[] = [];
+		const prompts = discoverFlatPrompts(roots(), warnings);
+
+		expect(prompts).toHaveLength(0);
+	});
+
+	test('discovers nested flat prompt folders without _index.md', () => {
+		mkdirSync(join(rootDir, 'workflows'), { recursive: true });
+		writeFileSync(join(rootDir, 'workflows', 'review.md'), '---\ndescription: Nested review\nengine: liquid\n---\nReview {{ args.change }}');
+		const warnings: string[] = [];
+		const prompts = discoverFlatPrompts(roots(), warnings);
+
+		expect(prompts).toHaveLength(1);
+		expect(prompts[0].name).toBe('review');
+		expect(prompts[0].engine).toBe('liquid');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T032 — resolveRelativePath
 // ---------------------------------------------------------------------------
 describe('resolveRelativePath', () => {
 	test('resolves a relative path from extensions/index.ts location', () => {

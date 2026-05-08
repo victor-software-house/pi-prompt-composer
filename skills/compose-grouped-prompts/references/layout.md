@@ -3,10 +3,10 @@
 ## Standard structure
 
 ```
-prompts/
-├── flat-prompt.md              ← Pi-native flat prompt (ignored by composer)
+composed/
+├── flat-prompt.md              ← composer flat prompt: /flat-prompt
 ├── my-group/
-│   ├── _index.md               ← required: type: group + description + optional order
+│   ├── _index.md               ← required for groups: description + optional order
 │   ├── create.md               ← subcommand: /my-group create
 │   ├── list.md                 ← subcommand: /my-group list
 │   └── delete.md               ← subcommand: /my-group delete
@@ -21,22 +21,23 @@ prompts/
 ### What makes a valid group
 
 - A subdirectory of a prompt root
-- Contains `_index.md` with `type: group` in frontmatter
+- Lives under `~/.pi/agent/composed/` or `.pi/composed/`
+- Contains `_index.md`
 - Contains at least one `.md` file besides `_index.md`
 
 ### What is ignored
 
-- Flat `.md` files in the prompt root (Pi handles these natively)
+- Native flat `.md` files in `prompts/` roots (Pi handles these natively)
 - Non-`.md` files inside group directories
-- Subdirectories inside group directories (no deep nesting in v1)
-- Files named `_index.md` without `type: group`
+- Subdirectories inside group directories (no deep command nesting in v1)
+- Files named `_index.md` are metadata, never subcommands
 
 ### Prompt roots
 
 | Scope | Path | Purpose |
 |-------|------|---------|
-| User | `~/.pi/agent/prompts/` | Personal prompts, available everywhere |
-| Project | `.pi/prompts/` | Project-specific prompts, shared via repo |
+| User | `~/.pi/agent/composed/` | Personal composer prompts, available everywhere |
+| Project | `.pi/composed/` | Project-specific composer prompts, shared via repo |
 
 Both roots are scanned. Project scope overrides user scope when group names collide.
 

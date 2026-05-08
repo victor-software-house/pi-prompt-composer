@@ -213,24 +213,26 @@ This is a public API limitation, not a package bug.
 
 ### 1. Scanner and registry
 
-At startup and on reload, scan an ordered list of prompt roots:
+At startup and on reload, scan an ordered list of composer roots:
 
 1. **Bundled** — package-owned `prompts/compose/` (exact group root, lowest precedence)
-2. **User** — `~/.pi/agent/prompts/` (parent root)
-3. **Project** — `.pi/prompts/` (parent root, highest precedence)
+2. **User** — `~/.pi/agent/composed/` (parent root)
+3. **Project** — `.pi/composed/` (parent root, highest precedence)
+
+Before scanning, legacy user/project grouped prompts under `prompts/<group>/` are migrated once to `composed/<group>/` when no target collision exists.
 
 Roots are handled as one of two cases:
 
-- **Case A (exact group root):** The root directory itself contains `_index.md` with `type: group`. The directory name becomes the group name. Used by the bundled `/compose` root.
-- **Case B (parent root):** The root is scanned for child directories that are valid groups. Used by user and project roots.
+- **Case A (exact group root):** The root directory itself contains `_index.md`. The directory name becomes the group name. Used by the bundled `/compose` root.
+- **Case B (parent root):** The root is scanned for child directories that are valid groups and flat prompt files. Used by user and project roots.
 
 Rules:
 
-- only subdirectories participate in grouped routing
-- flat `.md` files remain Pi-native and are ignored by this package
-- `_index.md` is required group metadata (must contain `type: group`)
-- all other `.md` files in the directory are subcommands
-- scan is one level deep for v1
+- flat `.md` files under `composed/` become composer-owned commands
+- flat `.md` files under native `prompts/` roots remain Pi-native and are ignored by this package
+- `_index.md` is required group metadata under `composed/`; no `type: group` marker is required
+- all other `.md` files in a group directory are subcommands
+- grouped commands are one level deep for v1
 
 Origin precedence within the same extension relies on `Map.set()` semantics — later registrations of the same command name overwrite earlier ones. This means project overrides user, user overrides bundled.
 
@@ -412,8 +414,8 @@ Conditional rendering syntax is intentionally undecided in v1.
 The package should track prompt origin in its own registry:
 
 - `bundled` for package-owned `prompts/<group>/...`
-- `user` for `~/.pi/agent/prompts/<group>/...`
-- `project` for `.pi/prompts/<group>/...`
+- `user` for `~/.pi/agent/composed/<group>/...`
+- `project` for `.pi/composed/<group>/...`
 
 Use that internal origin for:
 
