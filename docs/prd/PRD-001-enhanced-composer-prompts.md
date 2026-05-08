@@ -36,13 +36,13 @@ The next product step should be first-class **composer-owned prompt files** with
 
 ## 2. Goals & Success Metrics
 
-| Goal                                   | Metric                                                                                 | Target                                                                                             |
-| -------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **First-class flat composer prompts**  | A `.md` file can be registered and dispatched by composer without a folder             | 100% support for opted-in flat files in user, project, and bundled composer roots                  |
-| **Powerful semantic rendering**        | Prompt authors can use conditionals, loops, filters, and named variables               | Liquid-powered prompts cover core template use cases without custom ad hoc syntax                  |
-| **Robust typed arg collection**        | Args can declare type, required/default behavior, prompts, enum values, and validation | Invalid metadata yields visible diagnostics; valid metadata drives correct UI collection           |
-| **Compatibility-preserving migration** | Existing grouped prompts keep working unchanged                                        | Existing test suite stays green; current `engine: pi` behavior remains supported                   |
-| **Issue #6 resolution**                | User can author a single plain file instead of a folder                                | `/review` from `.pi/prompt-composer/prompts/review.md` works when file opts into composer handling |
+| Goal                                   | Metric                                                                                 | Target                                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **First-class flat composer prompts**  | A `.md` file can be registered and dispatched by composer without a folder             | 100% support for opted-in flat files in user, project, and bundled composer roots        |
+| **Powerful semantic rendering**        | Prompt authors can use conditionals, loops, filters, and named variables               | Liquid-powered prompts cover core template use cases without custom ad hoc syntax        |
+| **Robust typed arg collection**        | Args can declare type, required/default behavior, prompts, enum values, and validation | Invalid metadata yields visible diagnostics; valid metadata drives correct UI collection |
+| **Compatibility-preserving migration** | Existing grouped prompts keep working unchanged                                        | Existing test suite stays green; current `engine: pi` behavior remains supported         |
+| **Issue #6 resolution**                | User can author a single plain file instead of a folder                                | `/review` from `.pi/composed/review.md` works when file opts into composer handling      |
 
 **Guardrails (must not regress):**
 
@@ -61,7 +61,7 @@ The next product step should be first-class **composer-owned prompt files** with
 
 > As a prompt author, I want to create a single enhanced prompt file so that I do not need a folder and fake subcommand for one workflow.
 
-**Preconditions:** The author has a composer prompt root such as `~/.pi/agent/prompt-composer/prompts/` or `.pi/prompt-composer/prompts/`. Root-level native Pi prompt files such as `.pi/prompts/review.md` stay native Pi resources and are not valid composer-owned flat prompt locations.
+**Preconditions:** The author has a composer prompt root such as `~/.pi/agent/composed/` or `.pi/composed/`. Root-level native Pi prompt files such as `.pi/prompts/review.md` stay native Pi resources and are not valid composer-owned flat prompt locations.
 
 ### Primary: Power prompt author
 
@@ -86,7 +86,7 @@ The next product step should be first-class **composer-owned prompt files** with
 ### In scope
 
 1. **Composer-owned flat prompt files** — discover eligible `.md` files directly under composer-owned prompt roots and register them as slash commands.
-2. **Prompt kind detection** — distinguish native Pi prompts, composer flat prompts, and composer grouped prompts through explicit frontmatter and native-hidden layout.
+2. **Prompt kind detection** — distinguish native Pi prompts, composer flat prompts, and composer grouped prompts through explicit frontmatter and a top-level `composed/` layout that is invisible to native Pi prompt discovery.
 3. **Template engine selection** — support `engine: pi` for current behavior and `engine: liquid` for enhanced rendering.
 4. **Liquid rendering pipeline** — render named data, conditionals, loops, filters, and safe local context through a deterministic pipeline.
 5. **Typed argument schema** — add expressive named args while preserving legacy positional args.
@@ -121,13 +121,13 @@ The implementation should make later features cheaper without shipping them now:
 
 ### FR-1: Discover composer-owned flat prompt files
 
-Composer must discover eligible flat `.md` files directly under composer-owned prompt roots and register each as a slash command. Valid roots are native-hidden paths that Pi does not load as native prompt templates:
+Composer must discover eligible flat `.md` files directly under composer-owned prompt roots and register each as a slash command. Valid roots are top-level paths Pi never reads as native prompt templates:
 
-* project: `.pi/prompt-composer/prompts/*.md`
-* user: `~/.pi/agent/prompt-composer/prompts/*.md`
+* project: `.pi/composed/**/*.md`
+* user: `~/.pi/agent/composed/**/*.md`
 * bundled/package-owned: package files scanned by the extension itself, not exposed through `pi.prompts`
 
-Composer must not use root-level native Pi prompt paths such as `.pi/prompts/*.md` or `~/.pi/agent/prompts/*.md` for flat composer prompt files. Pi auto-discovers those files as native prompt templates, which would create duplicate command visibility and a native execution path.
+Composer must not use root-level native Pi prompt paths such as `.pi/prompts/*.md` or `~/.pi/agent/prompts/*.md` for flat composer prompt files. Pi auto-discovers those files as native prompt templates, which would create duplicate command visibility and a native execution path. Pi reserves `extensions/`, `skills/`, `prompts/`, and `themes/` under `.pi/` and `~/.pi/agent/`; `composed/` is unclaimed by Pi.
 
 Eligibility must still be explicit:
 
@@ -147,7 +147,7 @@ engine: liquid
 **Acceptance criteria:**
 
 ```gherkin
-Given .pi/prompt-composer/prompts/review.md contains frontmatter type: prompt and engine: liquid
+Given .pi/composed/review.md contains frontmatter type: prompt and engine: liquid
 When Pi reloads with pi-prompt-composer enabled
 Then composer registers /review as an extension command
 And invoking /review renders review.md through composer
@@ -165,7 +165,7 @@ And Pi native prompt handling remains responsible for /native
 Given .pi/prompts/review.md declares type: prompt
 When Pi reloads with pi-prompt-composer enabled
 Then composer reports review.md as an invalid native-visible composer prompt location
-And the docs tell the author to move it to .pi/prompt-composer/prompts/review.md
+And the docs tell the author to move it to .pi/composed/review.md
 ```
 
 **Files:**
@@ -220,7 +220,7 @@ Minimum context shape:
 **Acceptance criteria:**
 
 ```gherkin
-Given .pi/prompt-composer/prompts/review.md declares engine: liquid
+Given .pi/composed/review.md declares engine: liquid
 And its body contains "Review {{ args.change }} in {{ args.mode }} mode"
 When the user runs /review --change "fix auth" --mode deep
 Then the visible dispatched message contains "Review fix auth in deep mode"
@@ -354,7 +354,7 @@ And composer shows a duplicate command warning naming both origins
 
 ```gherkin
 Given native Pi has .pi/prompts/review.md without type: prompt
-And composer has .pi/prompt-composer/prompts/review.md with type: prompt
+And composer has .pi/composed/review.md with type: prompt
 When Pi reloads
 Then invoking /review routes to the composer extension command
 And composer warns that the native /review prompt is shadowed by a composer-owned command
@@ -531,22 +531,23 @@ And other enabled /review subcommands still work
 
 ### Risks
 
-| Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                                                                                 |
-| --------------------------------------------------------------------- | -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Separate resource ownership (`type`) from rendering (`engine`) and document the model with examples.                                                                       |
-| Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Keep flat composer prompt files in native-hidden `.pi/prompt-composer/prompts/` roots; require `type: prompt`; warn on duplicate composer commands.                        |
-| Disabled prompts reappear from lower-precedence or native resources   | High     | Medium     | Treat higher-precedence disabled composer resources as tombstones; keep valid flat composer files out of native prompt roots; block only misplaced/legacy paths if needed. |
-| Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                                                                                |
-| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs.                                                                 |
-| Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                                                                                             |
-| Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                                                                                            |
+| Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                                                                                                                   |
+| --------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Separate resource ownership (`type`) from rendering (`engine`) and document the model with examples.                                                                                                         |
+| Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Keep flat composer prompt files under `.pi/composed/`; require `type: prompt`; warn on duplicate composer commands.                                                                                          |
+| Disabled prompts reappear from lower-precedence or native resources   | High     | Medium     | Treat higher-precedence disabled composer resources as tombstones; keep valid flat composer files under `composed/` so native prompt discovery never sees them; only block misplaced/legacy paths if needed. |
+| Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                                                                                                                  |
+| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs.                                                                                                   |
+| Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                                                                                                                               |
+| Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                                                                                                                              |
 
 ### Assumptions
 
 * `type` identifies composer resource ownership and kind; `engine` identifies rendering behavior.
 * `type: group` stays the hard gate for grouped folders, even when `_index.md` exists, because `_index.md` alone is too easy to create accidentally as folder documentation.
 * `type: prompt` is required for flat composer prompt ownership, including future composer-owned `engine: pi` prompts with non-native behavior such as enable/disable, typed args, dispatch modes, or preprocessing.
-* Valid flat composer prompt files live in native-hidden composer roots (`.pi/prompt-composer/prompts/` and `~/.pi/agent/prompt-composer/prompts/`) so the same file cannot also appear or execute as a native Pi prompt.
+* Valid flat composer prompt files live under top-level composer roots (`.pi/composed/` and `~/.pi/agent/composed/`) so the same file cannot also appear or execute as a native Pi prompt. Pi reserves `extensions/`, `skills/`, `prompts/`, and `themes/` under those bases; `composed/` is unclaimed by current Pi versions.
+* Existing grouped composer prompts under `.pi/prompts/<group>/_index.md type: group` keep working without migration; composer also accepts grouped prompts under `.pi/composed/<group>/` for authors who prefer consolidation.
 * Flat root files in native Pi prompt roots (`.pi/prompts/*.md` and `~/.pi/agent/prompts/*.md`) remain owned by native Pi prompt processing.
 * The default processing mode is hybrid: composer handles explicitly owned resources and Pi handles unowned native prompts.
 * Liquid is preferred over Handlebars unless a spike finds a blocking API, security, size, or ESM issue.
@@ -567,9 +568,9 @@ And other enabled /review subcommands still work
 2. Register composer-owned flat files — directly solves issue #6 and gives single prompts access to enhanced rendering.
 3. Keep current folder-only design — simplest, but rejects direct user feedback.
 
-**Decision:** Implement composer-owned flat prompt files first using native-hidden composer prompt roots. Defer `default.md`.
+**Decision:** Implement composer-owned flat prompt files first using top-level `composed/` composer prompt roots. Defer `default.md`.
 
-**Rationale:** Issue #6 is about being forced into grouped folders. A `default.md` convention still requires folders and makes the common single-prompt case awkward. Native Pi auto-discovers root-level `.md` files under `.pi/prompts/`, so composer-owned single files need a separate composer root to guarantee one slash command and no native prompt execution path.
+**Rationale:** Issue #6 is about being forced into grouped folders. A `default.md` convention still requires folders and makes the common single-prompt case awkward. Native Pi auto-discovers root-level `.md` files under `.pi/prompts/`, so composer-owned single files need a separate top-level composer root (`.pi/composed/`) to guarantee one slash command and no native prompt execution path.
 
 **Future path:** Add `default.md` later only if grouped folders need a default action in addition to selector behavior.
 
@@ -610,9 +611,9 @@ And other enabled /review subcommands still work
 2. Use file extension variants like `.composer.md` — explicit but uglier and less Pi-like.
 3. Keep typed composer resources: `type: group` for group ownership and `type: prompt` for flat prompt ownership.
 
-**Decision:** Keep author-facing `type` markers for composer-owned resources. A grouped folder is composer-owned only when `_index.md` declares `type: group`. A flat file in a native-hidden composer prompt root is composer-owned only when it declares `type: prompt`. `engine` remains a renderer selector, not an ownership marker.
+**Decision:** Keep author-facing `type` markers for composer-owned resources. A grouped folder is composer-owned only when `_index.md` declares `type: group`. A flat file under `.pi/composed/` (or `~/.pi/agent/composed/`) is composer-owned only when it declares `type: prompt`. `engine` remains a renderer selector, not an ownership marker.
 
-**Rationale:** The hard gate is valuable. It prevents accidental command registration from documentation-like folders, separates “composer owns this resource” from “render this with Liquid,” and gives enable/disable semantics a stable target. This also leaves room for composer-owned `engine: pi` prompts that need typed args, dispatch modes, shell preprocessing, or disabled-path behavior without pretending they are native Pi prompts. Native-hidden roots are required because Pi's native prompt inventory has no extension-level filter for removing already discovered `.pi/prompts/*.md` files.
+**Rationale:** The hard gate is valuable. It prevents accidental command registration from documentation-like folders, separates “composer owns this resource” from “render this with Liquid,” and gives enable/disable semantics a stable target. This also leaves room for composer-owned `engine: pi` prompts that need typed args, dispatch modes, shell preprocessing, or disabled-path behavior without pretending they are native Pi prompts. A separate top-level `composed/` directory is required because Pi's native prompt inventory has no extension-level filter for removing already discovered `.pi/prompts/*.md` files.
 
 **Future path:** If Pi later exposes native prompt enable/disable or typed prompt metadata, re-evaluate whether composer still needs to own `engine: pi` flat prompts.
 
@@ -688,27 +689,27 @@ And other enabled /review subcommands still work
 
 ## 9. File Breakdown
 
-| File                                         | Change type  | FR                           | Description                                                                                       |
-| -------------------------------------------- | ------------ | ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `extensions/index.ts`                        | Modify       | FR-1, FR-2, FR-6, FR-7       | Thin entrypoint after module extraction; registers commands and lifecycle hooks.                  |
-| `src/types.ts`                               | New          | FR-1, FR-2, FR-3, FR-4       | Shared prompt, engine, args, origin, diagnostics, and dispatch types.                             |
-| `src/discovery.ts`                           | New          | FR-1, FR-2, FR-6, FR-8       | Discover native-hidden flat composer prompts and grouped prompts; handle precedence and warnings. |
-| `src/args.ts`                                | New          | FR-4, FR-5                   | Parse legacy and enhanced arg schemas; apply defaults, coercion, validation.                      |
-| `src/render.ts`                              | New          | FR-3, FR-5, FR-7, FR-8       | Engine selection, Pi renderer, Liquid renderer, render diagnostics.                               |
-| `src/ui.ts`                                  | New / Modify | FR-4, FR-8                   | Typed arg collection UI, including enum selectors, and existing selector UI extraction.           |
-| `src/commands.ts`                            | New          | FR-1, FR-2, FR-6, FR-7       | Command registration and handler orchestration for flat and grouped prompts.                      |
-| `test/discovery.test.ts`                     | Modify       | FR-1, FR-2, FR-6, FR-8       | Add flat prompt, duplicate, and invalid metadata discovery cases.                                 |
-| `test/render.test.ts`                        | New          | FR-3, FR-5, FR-7             | Snapshot tests for Pi and Liquid rendering.                                                       |
-| `test/args.test.ts`                          | New          | FR-4, FR-5                   | Typed schema parser, validation, defaults, and coercion tests.                                    |
-| `test/extension-flow.test.ts`                | Modify       | FR-1, FR-2, FR-4, FR-7       | End-to-end command dispatch tests for flat and grouped prompts.                                   |
-| `test/helpers/mock-pi.ts`                    | Modify       | FR-4, FR-7, FR-8             | Extend mock UI and command capture for typed arg collection and diagnostics.                      |
-| `package.json`                               | Modify       | FR-3                         | Add selected Liquid renderer dependency and scripts if needed.                                    |
-| `pnpm-lock.yaml`                             | Modify       | FR-3                         | Lock dependency graph.                                                                            |
-| `README.md`                                  | Modify       | FR-1, FR-3, FR-4, FR-6, FR-9 | Document flat prompts, Liquid examples, args schema, and precedence.                              |
-| `docs/FEATURE-SET.md`                        | Modify       | FR-1, FR-3, FR-4, FR-9       | Update product scope from grouped routing to composer prompt rendering.                           |
-| `docs/IMPLEMENTATION-PLAN.md`                | Modify       | FR-1, FR-3, FR-4, FR-9       | Add architecture and implementation slices.                                                       |
-| `docs/ROADMAP.md`                            | Modify       | FR-1, FR-3, FR-4, FR-9       | Add ordered work items for PRD implementation.                                                    |
-| `examples/prompt-composer/prompts/review.md` | New          | FR-1, FR-3, FR-4, FR-9       | Flat enhanced prompt example in native-hidden composer layout.                                    |
+| File                          | Change type  | FR                           | Description                                                                                               |
+| ----------------------------- | ------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `extensions/index.ts`         | Modify       | FR-1, FR-2, FR-6, FR-7       | Thin entrypoint after module extraction; registers commands and lifecycle hooks.                          |
+| `src/types.ts`                | New          | FR-1, FR-2, FR-3, FR-4       | Shared prompt, engine, args, origin, diagnostics, and dispatch types.                                     |
+| `src/discovery.ts`            | New          | FR-1, FR-2, FR-6, FR-8       | Discover top-level `composed/` flat composer prompts and grouped prompts; handle precedence and warnings. |
+| `src/args.ts`                 | New          | FR-4, FR-5                   | Parse legacy and enhanced arg schemas; apply defaults, coercion, validation.                              |
+| `src/render.ts`               | New          | FR-3, FR-5, FR-7, FR-8       | Engine selection, Pi renderer, Liquid renderer, render diagnostics.                                       |
+| `src/ui.ts`                   | New / Modify | FR-4, FR-8                   | Typed arg collection UI, including enum selectors, and existing selector UI extraction.                   |
+| `src/commands.ts`             | New          | FR-1, FR-2, FR-6, FR-7       | Command registration and handler orchestration for flat and grouped prompts.                              |
+| `test/discovery.test.ts`      | Modify       | FR-1, FR-2, FR-6, FR-8       | Add flat prompt, duplicate, and invalid metadata discovery cases.                                         |
+| `test/render.test.ts`         | New          | FR-3, FR-5, FR-7             | Snapshot tests for Pi and Liquid rendering.                                                               |
+| `test/args.test.ts`           | New          | FR-4, FR-5                   | Typed schema parser, validation, defaults, and coercion tests.                                            |
+| `test/extension-flow.test.ts` | Modify       | FR-1, FR-2, FR-4, FR-7       | End-to-end command dispatch tests for flat and grouped prompts.                                           |
+| `test/helpers/mock-pi.ts`     | Modify       | FR-4, FR-7, FR-8             | Extend mock UI and command capture for typed arg collection and diagnostics.                              |
+| `package.json`                | Modify       | FR-3                         | Add selected Liquid renderer dependency and scripts if needed.                                            |
+| `pnpm-lock.yaml`              | Modify       | FR-3                         | Lock dependency graph.                                                                                    |
+| `README.md`                   | Modify       | FR-1, FR-3, FR-4, FR-6, FR-9 | Document flat prompts, Liquid examples, args schema, and precedence.                                      |
+| `docs/FEATURE-SET.md`         | Modify       | FR-1, FR-3, FR-4, FR-9       | Update product scope from grouped routing to composer prompt rendering.                                   |
+| `docs/IMPLEMENTATION-PLAN.md` | Modify       | FR-1, FR-3, FR-4, FR-9       | Add architecture and implementation slices.                                                               |
+| `docs/ROADMAP.md`             | Modify       | FR-1, FR-3, FR-4, FR-9       | Add ordered work items for PRD implementation.                                                            |
+| `examples/composed/review.md` | New          | FR-1, FR-3, FR-4, FR-9       | Flat enhanced prompt example using `composed/` composer layout.                                           |
 
 ---
 
@@ -718,7 +719,7 @@ And other enabled /review subcommands still work
 * Pi prompt processing order is extension commands, then `input`, then skill expansion, then native prompt-template expansion, then `before_agent_start`.
 * Pi prompt discovery is non-recursive for auto-discovered user/project prompt roots, but root-level `.pi/prompts/*.md` and `~/.pi/agent/prompts/*.md` always become native prompt templates when enabled.
 * Pi command inventories and interactive autocomplete include native prompt templates from `session.promptTemplates`; extensions can wrap interactive autocomplete but cannot remove native prompt templates from `session.promptTemplates`, RPC `get_commands`, or native prompt expansion.
-* Composer-owned flat prompt files must therefore live outside native prompt roots, under `.pi/prompt-composer/prompts/` or `~/.pi/agent/prompt-composer/prompts/`.
+* Composer-owned flat prompt files must therefore live outside native prompt roots, under `.pi/composed/` or `~/.pi/agent/composed/`. Pi has no migration or runtime claim on `composed/`; the only legacy migration moves `commands/` → `prompts/` when `prompts/` does not exist.
 * Extension commands take precedence over native prompt templates.
 * `registerCommand()` cannot make composer commands appear as native Pi prompt commands in Pi's internal command inventory.
 * Latest Pi native prompts support `argument-hint`; composer docs should account for it when describing autocomplete parity.
@@ -736,7 +737,7 @@ And other enabled /review subcommands still work
 1. **Architecture prep** — extract `extensions/index.ts` into `src/` modules without behavior changes.
 2. **Typed resource model** — keep `type: group`, add `type: prompt`, and model disabled tombstones without changing current grouped behavior.
 3. **Arg schema foundation** — implement normalized arg definitions supporting both legacy arrays and object schemas.
-4. **Liquid rendering and flat discovery** — add `engine: liquid`, named render context, safe filter allowlist, snapshots, and flat native-hidden `type: prompt` registration.
+4. **Liquid rendering and flat discovery** — add `engine: liquid`, named render context, safe filter allowlist, snapshots, and flat `type: prompt` registration under `.pi/composed/` and `~/.pi/agent/composed/`.
 5. **Typed interactive collection** — add enum selector UI plus boolean/number/string/string\[] collection and validation.
 6. **Docs and examples** — update README, feature set, implementation plan, roadmap, and examples.
 7. **Manual validation** — update and run manual testing checklist in live Pi.
@@ -746,16 +747,16 @@ And other enabled /review subcommands still work
 
 ## 12. Open Questions
 
-| #  | Question                                                                                                                | Owner                 | Due        | Decision                                                                                                     | Status   |
-| -- | ----------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ | -------- |
-| Q1 | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Require `type: prompt`; `engine` stays renderer-only.                                                        | Resolved |
-| Q2 | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value` and `name=value`; document `--name value`; keep positional for `engine: pi`.          | Resolved |
-| Q3 | Should enum args use a selector UI instead of free-text input?                                                          | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                                   | Resolved |
-| Q4 | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts? | Victor Software House | 2026-05-08 | Support object args for flat and grouped prompts that opt into enhanced rendering.                           | Resolved |
-| Q5 | Should Liquid filters be limited to a documented allowlist?                                                             | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                             | Resolved |
-| Q6 | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                 | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                         | Resolved |
-| Q7 | Should composer take over all Pi prompt processing or run in hybrid mode?                                               | Victor Software House | 2026-05-08 | Use hybrid mode; composer handles typed resources and Pi handles unowned native prompts.                     | Resolved |
-| Q8 | Where should composer-owned flat prompt files live so Pi does not also load them as native prompts?                     | Victor Software House | 2026-05-08 | Use native-hidden composer roots: `.pi/prompt-composer/prompts/` and `~/.pi/agent/prompt-composer/prompts/`. | Resolved |
+| #  | Question                                                                                                                | Owner                 | Due        | Decision                                                                                            | Status   |
+| -- | ----------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | --------------------------------------------------------------------------------------------------- | -------- |
+| Q1 | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Require `type: prompt`; `engine` stays renderer-only.                                               | Resolved |
+| Q2 | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value` and `name=value`; document `--name value`; keep positional for `engine: pi`. | Resolved |
+| Q3 | Should enum args use a selector UI instead of free-text input?                                                          | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                          | Resolved |
+| Q4 | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts? | Victor Software House | 2026-05-08 | Support object args for flat and grouped prompts that opt into enhanced rendering.                  | Resolved |
+| Q5 | Should Liquid filters be limited to a documented allowlist?                                                             | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                    | Resolved |
+| Q6 | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                 | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                | Resolved |
+| Q7 | Should composer take over all Pi prompt processing or run in hybrid mode?                                               | Victor Software House | 2026-05-08 | Use hybrid mode; composer handles typed resources and Pi handles unowned native prompts.            | Resolved |
+| Q8 | Where should composer-owned flat prompt files live so Pi does not also load them as native prompts?                     | Victor Software House | 2026-05-08 | Use top-level composer roots: `.pi/composed/` and `~/.pi/agent/composed/`.                          | Resolved |
 
 ---
 
@@ -784,7 +785,7 @@ And other enabled /review subcommands still work
 
 Post-implementation checklist:
 
-1. Create `.pi/prompt-composer/prompts/review.md` with `type: prompt`, `engine: liquid`, typed args, an `if` block, and a `for` loop.
+1. Create `.pi/composed/review.md` with `type: prompt`, `engine: liquid`, typed args, an `if` block, and a `for` loop.
 2. Run `/reload` in Pi and verify `/review` appears as a composer command.
 3. Invoke `/review` with no args and verify required args are collected interactively.
 4. Invoke `/review --mode invalid` and verify validation blocks dispatch with a visible warning.
