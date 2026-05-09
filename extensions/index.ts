@@ -178,7 +178,7 @@ export interface RenderPromptOptions {
 
 interface ParsedPromptArgs {
 	positionals: string[];
-	named: Record<string, string | boolean>;
+	named: Record<string, string | boolean | string[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1247,9 +1247,23 @@ function parseArgsForPrompt(prompt: NestedPrompt | FlatPrompt, tokens: string[])
 	return parsePromptArgs(tokens);
 }
 
+function setNamedArg(named: Record<string, string | boolean | string[]>, key: string, value: string | boolean): void {
+	const existing = named[key];
+	if (existing === undefined) {
+		named[key] = value;
+		return;
+	}
+	const nextValue = typeof value === 'boolean' ? String(value) : value;
+	if (Array.isArray(existing)) {
+		existing.push(nextValue);
+		return;
+	}
+	named[key] = [typeof existing === 'boolean' ? String(existing) : existing, nextValue];
+}
+
 function parsePromptArgs(tokens: string[]): ParsedPromptArgs {
 	const positionals: string[] = [];
-	const named: Record<string, string | boolean> = {};
+	const named: Record<string, string | boolean | string[]> = {};
 
 	for (let index = 0; index < tokens.length; index++) {
 		const token = tokens[index];
@@ -1259,10 +1273,10 @@ function parsePromptArgs(tokens: string[]): ParsedPromptArgs {
 			const key = token.slice(2);
 			const next = tokens[index + 1];
 			if (next === undefined || next.startsWith('--')) {
-				named[key] = true;
+				setNamedArg(named, key, true);
 				continue;
 			}
-			named[key] = next;
+			setNamedArg(named, key, next);
 			index++;
 			continue;
 		}
@@ -1271,7 +1285,7 @@ function parsePromptArgs(tokens: string[]): ParsedPromptArgs {
 		if (equalsIndex > 0) {
 			const key = token.slice(0, equalsIndex);
 			const value = token.slice(equalsIndex + 1);
-			named[key] = value;
+			setNamedArg(named, key, value);
 			continue;
 		}
 

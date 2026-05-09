@@ -63,6 +63,23 @@ beforeEach(() => {
 		'---\ndescription: No args\n---\nJust a static prompt',
 	);
 	writeFileSync(
+		join(fixtureDir, 'checks.md'),
+		[
+			'---',
+			'description: Render repeated checks',
+			'engine: liquid',
+			'args:',
+			'  - name: checks',
+			'    required: false',
+			'    type: string[]',
+			'    hint: Verification checks',
+			'---',
+			'{% for check in args.checks %}',
+			'{{ forloop.index }}. {{ check }}',
+			'{% endfor %}',
+		].join('\n'),
+	);
+	writeFileSync(
 		join(fixtureDir, 'escaped.md'),
 		'---\ndescription: Escape test\n---\nLiteral \\$ARGUMENTS here',
 	);
@@ -88,6 +105,18 @@ describe('direct dispatch', () => {
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toBe('Hello arg1! Extra: arg2 All: arg1 arg2');
 		expect(sentMessages[0]!.options).toEqual({ deliverAs: 'followUp' });
+	});
+
+	test('/testgrp checks preserves repeated key=value named args as a string array', async () => {
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('testgrp')!;
+
+		const { ctx } = createContext();
+		await cmd.handler('checks checks=typecheck checks=lint checks=test', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content.trim()).toBe('1. typecheck\n2. lint\n3. test');
 	});
 
 	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {
