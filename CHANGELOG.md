@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.5.0...v1.5.1) (2026-05-09)
+
+
+### Bug Fixes
+
+* preserve repeated liquid named args ([70c4f58](https://github.com/victor-software-house/pi-prompt-composer/commit/70c4f586543844a9fc3c1f392c50711aafcc0653))
+
 # [1.5.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.4.0...v1.5.0) (2026-05-08)
 
 
