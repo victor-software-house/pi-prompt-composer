@@ -114,13 +114,19 @@ Create new `.md` files that **match the existing group's style exactly**.
 
 ### Style-matching rules
 
-1. **Same frontmatter fields and order** as existing subcommands — if they use `description` then `args`, do the same. Don't introduce fields the existing prompts don't use.
+1. **Same frontmatter fields and order** as existing subcommands — if they use `description` then `args`, do the same. Don't introduce fields the existing prompts don't use unless the new subcommand needs a Composer feature that existing files do not use.
 
-2. **Consistent description tone** — if existing descriptions are terse ("List all items"), match that. If they're sentence-form ("Lists all items in the current workspace and reports their status"), match that.
+2. **Use Composer features intentionally** — add `engine: liquid` for named args, loops, conditionals, structured Markdown, XML blocks, JSON, or shell blocks. Keep default `engine: pi` for simple positional substitution.
 
-3. **Consistent `args` patterns** — if existing subcommands use args with `hint` fields, include hints. If they don't use args, only add them when clearly necessary.
+3. **Shell policy** — only use `{% shell %}` blocks in Liquid prompts. Add `shell: ask` by default, or `shell: allow` only for trusted local-only helpers. Shell-enabled prompts are trusted code, not sandboxed code.
 
-4. **Match the prompt body quality level** — if existing subcommands have `ask_user` calls, verification steps, and structured output, the new ones must too. If existing subcommands are simpler, match that level.
+4. **Validation fields** — prefer current frontmatter fields before prose validation: `required`, `type`, `values`, and `default`. Use `type: enum` + `values` for fixed choices, `type: number` for numeric input, and `type: string[]` for repeated named args. Do not generate `validate:` frontmatter yet; it is future design.
+
+5. **Consistent description tone** — if existing descriptions are terse ("List all items"), match that. If they're sentence-form ("Lists all items in the current workspace and reports their status"), match that.
+
+6. **Consistent `args` patterns** — if existing subcommands use args with `hint` fields, include hints. If they don't use args, only add them when clearly necessary.
+
+7. **Match the prompt body quality level** — if existing subcommands have `ask_user` calls, verification steps, and structured output, the new ones must too. If existing subcommands are simpler, match that level.
 
 ### Quality rules for generated content
 
@@ -129,7 +135,7 @@ Every new subcommand `.md` file **must** include:
 1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
    Unquoted colons in YAML values cause parse errors that crash the extension.
 
-2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `\$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body.
+2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `\$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies.
 
 3. **`ask_user` for interactive decisions** — if the subcommand needs operator input during execution, include the **exact `ask_user` JSON payload**. Do not write "ask the user" — write the literal tool call with `question`, `context`, `options`, and `allowFreeform`.
 
@@ -139,7 +145,7 @@ Every new subcommand `.md` file **must** include:
 
 6. **Output format** — specify what the model reports after completion (table, summary, file list).
 
-7. **Substitution syntax** — when the generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs.
+7. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with `{{ args.<name> }}`.
 
 ### Bad example (what not to generate):
 

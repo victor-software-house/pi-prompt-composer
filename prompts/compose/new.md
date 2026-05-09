@@ -129,10 +129,16 @@ Create the complete file set in `$PROMPT_ROOT/$1/`.
 
 Every generated subcommand `.md` file **must** meet these criteria:
 
-1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
+1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or other special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
    Unquoted colons in YAML values cause parse errors that crash the extension.
 
-2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in the body so the operator's input flows into the prompt.
+   Add `engine: liquid` when the prompt needs named args, conditionals, loops, `json`, XML blocks, Markdown sections that disappear when empty, or shell blocks. Keep default `engine: pi` for simple positional prompts.
+
+   Add `shell: ask` or `shell: allow` only for `engine: liquid` prompts with `{% shell %}` blocks. Shell-enabled prompts are trusted code, not sandboxed code. Prefer `shell: ask` unless the prompt is local-only and explicitly trusted.
+
+   Use current fluent validation fields before writing prose validation: `required`, `type`, `values`, and `default`. Supported types are `string`, `string[]`, `number`, `boolean`, and `enum`. Use `type: string[]` for repeated values such as `checks=typecheck checks=lint`. Do not generate `validate:` frontmatter yet; it is a future design, not current runtime behavior.
+
+2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies so the operator's input flows into the prompt.
 
 3. **`ask_user` for interactive decisions**: If a subcommand needs operator input during execution (choosing between options, confirming destructive actions, providing missing context), include the **exact `ask_user` JSON payload** in the prompt body. Do not write "ask the user" — write the literal tool call.
 
@@ -142,7 +148,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 6. **Error handling**: Include what to do when things go wrong — file not found, name collision, empty results. At minimum: detect the error, report it clearly, suggest a fix.
 
-7. **Substitution syntax**: When the generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs.
+7. **Substitution syntax**: When a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with `{{ args.<name> }}`.
 
 ### Bad example (too vague):
 

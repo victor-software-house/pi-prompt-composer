@@ -75,6 +75,7 @@ This layer adds rendering features Pi does not provide natively, such as:
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - command-batch rendering as text for operator/model review
 - opt-in shell execution with `shell: ask` or `shell: allow`, plus configurable default shell mode
+- fluent current validation through `required`, `type`, `values`, `default`, and repeatable `string[]` named args
 
 These features belong to the package, not to Pi's native prompt-template contract. Shell execution is deny-by-default and treated as trusted code, not sandboxed code.
 
@@ -124,7 +125,9 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 3.6 **Configurable shell mode** — `shell: deny|ask|allow` frontmatter controls each prompt; `prompt-composer.json` can set a user or project default.
 
-3.7 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
+3.7 **Fluent current validation** — Prompt args can use `required`, `type`, `values`, `default`, and repeatable `string[]` values. Unsupported semantic validation belongs in explicit prompt-body checks until declarative `validate:` exists.
+
+3.8 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
 
 ### Priority 4: Reliability and runtime behavior
 

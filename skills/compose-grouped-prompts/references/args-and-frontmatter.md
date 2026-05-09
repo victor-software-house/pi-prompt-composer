@@ -18,13 +18,18 @@ No `type: group` marker is required. A subfolder under `composed/` with `_index.
 ```yaml
 description: What this subcommand does     # recommended
 name: override-name                        # optional — overrides filename-derived name
+engine: liquid                             # optional — pi (default) or liquid
+shell: ask                                 # optional — deny, ask, or allow for Liquid shell blocks
 args:                                      # optional — defines expected arguments
   - name: target
     required: true
     hint: Which item to operate on
   - name: format
     required: false
-    hint: Output format (json, table)
+    type: enum
+    values: [summary, table, json]
+    default: summary
+    hint: Output format
 ```
 
 ### Field details
@@ -34,6 +39,8 @@ args:                                      # optional — defines expected argum
 | `description` | string | filename stem | Shown in selector and autocomplete |
 | `name` | string | kebab-case filename | Overrides the subcommand name |
 | `args` | array | none | Defines positional arguments |
+| `engine` | `pi` or `liquid` | `pi` | Rendering engine |
+| `shell` | `deny`, `ask`, or `allow` | config default | Whether Liquid `{% shell %}` blocks execute |
 
 ### Args items
 
@@ -44,6 +51,9 @@ Each item in the `args` array:
 | `name` | string | **required** | Argument display name |
 | `required` | boolean | `false` | Whether the arg is collected interactively if missing |
 | `hint` | string | `""` | Placeholder text shown in the input prompt |
+| `type` | string | `string` | `string`, `string[]`, `number`, `boolean`, or `enum` |
+| `values` | string[] | none | Allowed values for `enum` |
+| `default` | any | none | Fallback when no value is provided |
 
 Parsing is lenient:
 
@@ -51,6 +61,130 @@ Parsing is lenient:
 - Missing `hint` defaults to `""` with a recommendation warning
 - Missing `name` rejects the item entirely
 - Valid items in a partially malformed array are preserved
+
+Runtime coercion is also bounded:
+
+- `number` rejects non-numeric values
+- `boolean` accepts `true/false`, `yes/no`, and `1/0`
+- `enum` rejects values not listed in `values`
+- `string[]` accepts repeated named args (`checks=a checks=b`) and comma-separated values (`checks=a,b`)
+
+## Fluent validation patterns
+
+Prefer the lowest-friction validation that catches the problem early:
+
+| Need | Pattern |
+|------|---------|
+| Required value | `required: true` |
+| One of a fixed set | `type: enum` + `values` |
+| Number only | `type: number` |
+| Boolean flag | `type: boolean` |
+| List of values | `type: string[]` with repeated named args or comma-separated value |
+| Semantic rule not expressible in frontmatter | Validate in the prompt body, then use `ask_user` to repair/confirm |
+
+Example enum validation:
+
+```yaml
+args:
+  - name: mode
+    required: true
+    type: enum
+    values: [summary, patch, audit]
+    hint: One of summary, patch, or audit
+```
+
+Example list input:
+
+```text
+/release plan PPC-123 "ship trusted shell" checks=typecheck checks=lint checks=test
+```
+
+For semantic validation, make the prompt explicit:
+
+````markdown
+Validate `$1` before proceeding:
+
+```bash
+case "$1" in
+  [A-Z][A-Z]*-[0-9]*) echo "PASS: ticket format" ;;
+  *) echo "FAIL: expected ticket like PPC-123" ;;
+esac
+```
+
+If validation fails, stop and report the expected format. Do not guess a replacement.
+````
+
+A future composer validation extension should stay declarative and close to this shape:
+
+```yaml
+args:
+  - name: ticket
+    required: true
+    hint: Ticket like PPC-123
+    validate:
+      pattern: "^[A-Z][A-Z0-9]+-[0-9]+$"
+      message: "Use an uppercase ticket key like PPC-123"
+```
+
+Do not document `validate:` as implemented until the runtime supports it.
+
+## Liquid rendering
+
+Set `engine: liquid` when the prompt needs named args, conditionals, loops, filters, XML-style blocks, or shell blocks.
+
+```markdown
+---
+description: Build release checklist
+engine: liquid
+args:
+  - name: ticket
+    required: true
+    hint: Ticket ID
+  - name: checks
+    required: false
+    type: string[]
+    hint: Verification checks
+---
+# Release `{{ args.ticket }}`
+
+{% assign check_count = args.checks | size %}
+{% if check_count > 0 %}
+## Checks
+{% for check in args.checks %}
+- [ ] `{{ check }}`
+{% endfor %}
+{% endif %}
+```
+
+Use `{% xml "tag" %}...{% endxml %}` for Claude Code skill-style structured context. Empty XML blocks disappear.
+
+## Shell blocks
+
+Liquid prompts can include trusted shell blocks:
+
+```markdown
+---
+description: Run local helper
+engine: liquid
+shell: ask
+args:
+  - name: topic
+    required: true
+    hint: Topic passed to helper
+---
+{% shell %}
+python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
+{% endshell %}
+```
+
+Shell mode precedence:
+
+1. prompt frontmatter `shell`
+2. project `.pi/prompt-composer.json`
+3. user `~/.pi/agent/prompt-composer.json`
+4. built-in `deny`
+
+Shell-enabled prompts are trusted code, not sandboxed code. Use `shell_quote` for operator-provided values.
 
 ## Substitution syntax
 

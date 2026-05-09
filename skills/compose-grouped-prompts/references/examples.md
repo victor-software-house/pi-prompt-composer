@@ -83,6 +83,74 @@ $2
 Make minimal, targeted changes. Explain each change briefly.
 ```
 
+## Example 1B: Liquid release prompt with repeatable checks
+
+A composer-owned prompt can opt into Liquid when it needs named args, loops, conditional sections, tables, callouts, or shell blocks.
+
+```markdown
+---
+description: Build release checklist
+engine: liquid
+args:
+  - name: ticket
+    required: true
+    hint: Ticket ID
+  - name: change
+    required: true
+    hint: Change summary
+  - name: checks
+    required: false
+    type: string[]
+    hint: Verification checks
+---
+# Release `{{ args.ticket }}`
+
+{% xml "task" %}
+Ticket: {{ args.ticket }}
+Change: {{ args.change | quote }}
+{% endxml %}
+
+{% assign check_count = args.checks | size %}
+{% if check_count > 0 %}
+## Checks
+{% for check in args.checks %}
+- [ ] `{{ check }}`
+{% endfor %}
+{% endif %}
+
+| Field | Value |
+|---|---|
+| Ticket | `{{ args.ticket }}` |
+| Change | {{ args.change | quote }} |
+| Checks | {{ check_count }} |
+```
+
+Usage:
+
+```text
+/release plan PPC-123 "ship trusted shell" checks=typecheck checks=lint checks=test
+```
+
+## Example 1C: Trusted local helper with shell mode
+
+```markdown
+---
+description: Run local summary helper
+engine: liquid
+shell: ask
+args:
+  - name: topic
+    required: true
+    hint: Topic passed to helper
+---
+Helper output:
+{% shell %}
+python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
+{% endshell %}
+```
+
+Use `shell: ask` unless the prompt and helper are local-only and trusted. Composer does not sandbox shell execution.
+
 ## Example 2: Minimal group (no args)
 
 A user-scoped group for daily standup helpers.
