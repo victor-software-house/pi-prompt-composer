@@ -67,6 +67,9 @@ Run this checklist against a live Pi session before first publish and after sign
 | 16 | Create `.pi/prompts/misplaced.md` with `engine: liquid`, then `/reload` | Pi notification warns that composer-style prompt is under native Pi prompt root and should move to `.pi/composed/misplaced.md` | |
 | 17 | Move that file to `.pi/composed/misplaced.md`, then `/reload` | `/misplaced` appears once as a composer command and no misplaced warning appears | |
 | 18 | Put a legacy group under `.pi/prompts/legacy/`, then `/reload` | Directory migrates to `.pi/composed/legacy/` and a deprecation warning names source and target | |
+| 19 | Type `/fixture rest foo create that shit` | Rendered message shows `args.tail` as `create that shit`, `argv` as all positionals, and `arguments` as joined string | |
+| 20 | Type `/fixture validation wrong count=nope` | Render is blocked; UI warns about invalid enum and/or number | |
+| 21 | Before migrating bundled `/compose` prompts to Liquid, run golden tests for `/compose new/add/remove` sample invocations | Rendered instructions are deterministic, use `.pi/composed/`, preserve literal Liquid examples, and contain no unresolved placeholders | |
 
 ## Recording results
 

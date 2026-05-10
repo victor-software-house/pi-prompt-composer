@@ -121,6 +121,19 @@ Acceptance criteria:
 - ✅ command args can use `shell_quote` for user-controlled values
 - ✅ docs state that shell-enabled prompts are trusted code, not sandboxed code
 
+## PPC-006C: Liquid-first bundled compose migration (planned)
+
+Migrate bundled `/compose new`, `/compose add`, and `/compose remove` prompts from Pi-engine templates to Liquid after validation gates are in place.
+
+Acceptance criteria:
+
+- `rest: true`, `argv`, and `arguments` support cover current `${@:N}` use cases
+- golden tests render `/compose new/add/remove` through the runtime path before prompt rewrites
+- rendered instructions keep canonical `.pi/composed/` and `~/.pi/agent/composed/` destinations
+- literal Liquid and shell examples survive through `{% raw %}` blocks
+- `ask_user` examples contain concrete JSON fields and no unresolved placeholders
+- migration commit passes `pnpm test`, `mise run skills:validate`, and `specdocs_validate`
+
 ## PPC-007: Scope-aware diagnostics and documented Pi API limits
 
 Surface grouped prompt scope in package-owned UX while documenting where Pi public APIs do not expose the same metadata.

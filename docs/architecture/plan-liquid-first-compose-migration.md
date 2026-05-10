@@ -82,6 +82,30 @@ Validation should stay fluent and declarative. Current runtime supports `require
 
 **ADR Reference**: None — product-facing migration, not standalone architecture decision.
 
+### Migration Validation Gate
+
+**Purpose**: Prevent the Liquid rewrite from changing `/compose` behavior or generating broken prompt files.
+
+**Key Details**:
+
+- Add golden tests before rewriting each bundled compose prompt.
+- Render `prompts/compose/new.md`, `add.md`, and `remove.md` through the same extension path used at runtime, not a separate markdown-only fixture runner.
+- Validate representative invocations:
+  - `/compose new review create review workflows`
+  - `/compose add review add security checklist`
+  - `/compose remove review summary`
+  - missing optional description
+  - names with spaces rejected or normalized according to existing behavior
+- Assert rendered instructions contain canonical `.pi/composed/` and `~/.pi/agent/composed/` paths, not legacy `.pi/prompts/` authoring paths.
+- Assert generated `_index.md` examples include `order` and no required `type: group` marker.
+- Assert every generated subcommand example includes `description` and correct `args` metadata when needed.
+- Assert literal Liquid examples survive via `{% raw %}` and do not evaluate during `/compose` render.
+- Assert literal Pi substitution examples remain escaped where needed.
+- Assert no angle-bracket placeholders remain in final actionable `ask_user` JSON examples.
+- Run `mise run skills:validate`, `pnpm test`, and `specdocs_validate` before committing the migration.
+
+**ADR Reference**: None — release safety gate.
+
 ### Compose Skill and References
 
 **Purpose**: Make `/skill:compose-grouped-prompts` match new Liquid-first behavior and stop teaching stale patterns.
@@ -215,6 +239,7 @@ Acceptance:
 - `/compose new foo create that shit` can render `create that shit` as one description string.
 - Existing Liquid prompts unchanged.
 - Existing Pi-engine prompts unchanged.
+- Golden tests prove `argv`, `arguments`, and `rest: true` survive future `/compose` migration work.
 
 ### Phase 3: Add minimal declarative validators
 
@@ -247,6 +272,9 @@ Acceptance:
 - `{% raw %}{{ args.file }}{% endraw %}` renders literal `{{ args.file }}`.
 - Literal `{% shell %}` examples survive where intended.
 - Golden fixtures fail on accidental Liquid evaluation.
+- `/compose new/add/remove` sample invocations render deterministic migration-safe output.
+- Rendered instructions contain no stale composer-owned `.pi/prompts/` destinations.
+- Rendered `ask_user` examples contain concrete JSON fields, not unresolved placeholders.
 
 ### Phase 5: Migrate bundled `/compose` prompts to Liquid
 
@@ -267,6 +295,7 @@ Acceptance:
 - `/compose add foo add checker` renders valid instructions.
 - `/compose remove foo bar` renders valid instructions.
 - Existing tests pass.
+- Migration validation gate passes before commit.
 
 ### Phase 6: Update compose skill references
 
