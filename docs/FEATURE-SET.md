@@ -68,14 +68,14 @@ This layer should preserve Pi behavior for:
 
 This layer adds rendering features Pi does not provide natively, such as:
 
-- named args with `{{ args.name }}`
+- named args with `{{ args.name }}`, plus `argv`, `arguments`, and `rest: true` for Pi-like rest args
 - conditionals and loops
 - declarative data shaping through Liquid built-ins like `where`, `map`, `join`, and `size`
 - XML-style prompt blocks with `{% xml "tag" %}` that omit empty sections
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - command-batch rendering as text for operator/model review
 - opt-in shell execution with `shell: ask` or `shell: allow`, plus configurable default shell mode
-- fluent current validation through `required`, `type`, `values`, `default`, and repeatable `string[]` named args
+- fluent current validation through `required`, `type`, `values`, `default`, repeatable `string[]` named args, and `rest: true`
 
 These features belong to the package, not to Pi's native prompt-template contract. Shell execution is deny-by-default and treated as trusted code, not sandboxed code.
 
@@ -113,7 +113,7 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 ### Priority 3: Liquid rendering and prompt power
 
-3.1 **Liquid engine opt-in** — `engine: liquid` renders prompts through LiquidJS with named args.
+3.1 **Liquid engine opt-in** — `engine: liquid` renders prompts through LiquidJS with named args, `argv`, `arguments`, and `rest: true` support.
 
 3.2 **Declarative prompt logic** — Support `if`, `for`, `assign`, `where`, `map`, `join`, `size`, `default`, and other safe Liquid built-ins.
 
@@ -125,7 +125,7 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 3.6 **Configurable shell mode** — `shell: deny|ask|allow` frontmatter controls each prompt; `prompt-composer.json` can set a user or project default.
 
-3.7 **Fluent current validation** — Prompt args can use `required`, `type`, `values`, `default`, and repeatable `string[]` values. Unsupported semantic validation belongs in explicit prompt-body checks until declarative `validate:` exists.
+3.7 **Fluent current validation** — Prompt args can use `required`, `type`, `values`, `default`, repeatable `string[]` values, and `rest: true`. Unsupported semantic validation belongs in explicit prompt-body checks until declarative `validate:` exists.
 
 3.8 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
 

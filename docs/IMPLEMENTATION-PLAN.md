@@ -406,6 +406,8 @@ Supported rendering power includes:
 - `if`, `for`, and `assign` control flow
 - declarative data shaping with `where`, `map`, `join`, `size`, `first`, `last`, and `default`
 - named args via `{{ args.name }}`
+- raw positional context via `argv` and `arguments`
+- rest args via `rest: true` on final `type: string[]` args
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - XML-style prompt blocks via `{% xml "tag" %}...{% endxml %}`
 
@@ -413,7 +415,7 @@ Constraints:
 
 - keep the rendered result fully visible to the operator
 - keep evaluation deterministic and local to the render pipeline
-- do not execute shell commands from Liquid templates
+- execute shell blocks only through explicit `shell: ask` or `shell: allow`; default/configured deny renders command text instead
 - keep filesystem-backed includes, layouts, and partials disabled unless a future design adds an explicit safe supporting-file policy
 
 ### 8. Scope, source, and diagnostics

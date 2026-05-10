@@ -122,6 +122,8 @@ Create new `.md` files that **match the existing group's style exactly**.
 
 4. **Validation fields** — prefer current frontmatter fields before prose validation: `required`, `type`, `values`, and `default`. Use `type: enum` + `values` for fixed choices, `type: number` for numeric input, and `type: string[]` for repeated named args. Do not generate `validate:` frontmatter yet; it is future design.
 
+   Use `rest: true` on the final `type: string[]` arg when a Liquid prompt needs freeform remaining positionals.
+
 5. **Consistent description tone** — if existing descriptions are terse ("List all items"), match that. If they're sentence-form ("Lists all items in the current workspace and reports their status"), match that.
 
 6. **Consistent `args` patterns** — if existing subcommands use args with `hint` fields, include hints. If they don't use args, only add them when clearly necessary.

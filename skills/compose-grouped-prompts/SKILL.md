@@ -69,7 +69,7 @@ Use structured `ask_user` calls for:
 Every subcommand `.md` file produced by the compose workflows **must** include:
 
 1. **`description` in frontmatter** — concise, menu-friendly. Quote values containing colons or brackets.
-2. **`args` when needed** — each with `name`, `required`, and `hint`. Add `type`, `values`, and `default` when they improve validation or UX. Use `type: string[]` for repeated values such as `checks=typecheck checks=test`.
+2. **`args` when needed** — each with `name`, `required`, and `hint`. Add `type`, `values`, `default`, and final-arg `rest: true` when they improve validation or UX. Use `type: string[]` for repeated values such as `checks=typecheck checks=test` or freeform rest tails.
 3. **Engine choice** — use default `engine: pi` for simple positional prompts; use `engine: liquid` for named args, conditionals, loops, structured Markdown, XML blocks, JSON, or shell blocks.
 4. **Shell policy** — only include `{% shell %}` blocks in `engine: liquid` prompts. Set `shell: ask` unless the prompt is clearly trusted and local-only; use `shell: allow` sparingly. Shell-enabled prompts are trusted code, not sandboxed code.
 5. **Validation pattern** — prefer declarative existing fields first: `required`, `type`, `values`, and `default`. For semantic validation not supported by frontmatter, include explicit verification steps and stop conditions in the prompt body. Do **not** document `validate:` as runtime-supported yet.

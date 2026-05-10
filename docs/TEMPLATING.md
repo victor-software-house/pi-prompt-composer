@@ -44,11 +44,51 @@ Liquid prompts receive:
 
 | Variable | Meaning |
 |----------|---------|
-| `args` | Named argument object collected from frontmatter + CLI |
+| `args` | Named/coerced arguments from frontmatter metadata |
+| `argv` | Raw positional argument array after parsing |
+| `arguments` | Raw positional arguments joined by spaces |
 | `prompt.name` | Command name |
 | `prompt.groupName` | Group name for grouped subcommands |
 | `prompt.origin` | `bundled`, `user`, or `project` |
 | `prompt.filePath` | Source prompt file path |
+| `now` | ISO timestamp captured at render time |
+
+Use `argv`/`arguments` when a Liquid prompt needs Pi-like rest behavior.
+
+```liquid
+First arg: {{ argv[0] }}
+Everything: {{ arguments }}
+Rest after first: {{ argv | slice: 1 | join: " " }}
+```
+
+## Rest arguments
+
+For nicer authoring, mark the final arg as `rest: true`. Composer captures all remaining positionals into that arg.
+
+```yaml
+args:
+  - name: group_name
+    required: true
+    hint: Group name
+  - name: description
+    required: false
+    type: string[]
+    rest: true
+    hint: Freeform description
+```
+
+Usage:
+
+```text
+/compose new review create review workflows
+```
+
+Liquid body:
+
+```liquid
+Group: {{ args.group_name }}
+Description: {{ args.description | join: " " }}
+```
 
 ## Helpers
 

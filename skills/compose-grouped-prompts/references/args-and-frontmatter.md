@@ -54,6 +54,7 @@ Each item in the `args` array:
 | `type` | string | `string` | `string`, `string[]`, `number`, `boolean`, or `enum` |
 | `values` | string[] | none | Allowed values for `enum` |
 | `default` | any | none | Fallback when no value is provided |
+| `rest` | boolean | `false` | Capture remaining positionals into this arg; use on final arg with `type: string[]` |
 
 Parsing is lenient:
 
@@ -68,6 +69,7 @@ Runtime coercion is also bounded:
 - `boolean` accepts `true/false`, `yes/no`, and `1/0`
 - `enum` rejects values not listed in `values`
 - `string[]` accepts repeated named args (`checks=a checks=b`) and comma-separated values (`checks=a,b`)
+- `rest: true` captures remaining positional args into one `string[]` arg for Liquid prompts
 
 ## Fluent validation patterns
 
@@ -157,6 +159,37 @@ args:
 ```
 
 Use `{% xml "tag" %}...{% endxml %}` for Claude Code skill-style structured context. Empty XML blocks disappear.
+
+Liquid render context includes:
+
+| Variable | Meaning |
+|----------|---------|
+| `args` | Named/coerced args |
+| `argv` | Raw positional argument array |
+| `arguments` | Raw positional args joined by spaces |
+| `prompt` | Prompt metadata |
+| `now` | ISO timestamp at render time |
+
+For Pi-like `${@:2}` behavior, use `argv` directly or `rest: true`:
+
+```yaml
+args:
+  - name: group_name
+    required: true
+    hint: Group name
+  - name: description
+    required: false
+    type: string[]
+    rest: true
+    hint: Freeform description
+```
+
+```liquid
+Group: {{ args.group_name }}
+Description: {{ args.description | join: " " }}
+Rest manually: {{ argv | slice: 1 | join: " " }}
+All args: {{ arguments }}
+```
 
 ## Shell blocks
 

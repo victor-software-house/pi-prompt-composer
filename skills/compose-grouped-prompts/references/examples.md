@@ -151,6 +151,40 @@ python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
 
 Use `shell: ask` unless the prompt and helper are local-only and trusted. Composer does not sandbox shell execution.
 
+## Example 1D: Liquid rest args for freeform text
+
+Use `rest: true` when the last arg should capture remaining positionals, like Pi `${@:2}`.
+
+```markdown
+---
+description: Create a grouped prompt plan
+engine: liquid
+args:
+  - name: group_name
+    required: true
+    hint: Group name
+  - name: description
+    required: false
+    type: string[]
+    rest: true
+    hint: Freeform group purpose
+---
+Create group `{{ args.group_name }}`.
+
+{% assign description = args.description | join: " " | strip %}
+{% if description | present %}
+Operator intent: {{ description }}
+{% endif %}
+
+Raw invocation: {{ arguments }}
+```
+
+Usage:
+
+```text
+/compose new review create review workflows
+```
+
 ## Example 2: Minimal group (no args)
 
 A user-scoped group for daily standup helpers.

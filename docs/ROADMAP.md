@@ -81,7 +81,7 @@ Add `engine: liquid` for composer-owned prompts and expose safe helpers for powe
 
 Supported capabilities:
 
-- named args via `{{ args.name }}`
+- named args via `{{ args.name }}`, raw `argv`, joined `arguments`, and `rest: true` args
 - Liquid built-ins such as `if`, `for`, `assign`, `where`, `map`, `join`, `size`, and `default`
 - XML-style block helper: `{% xml "tag" %}...{% endxml %}`
 - safe filters: `present`, `quote`, `tokens`, `json`, and `shell_quote`
@@ -91,7 +91,7 @@ Supported capabilities:
 Acceptance criteria:
 
 - ✅ `engine: liquid` renders flat and grouped composer prompts
-- ✅ Liquid prompts receive `{ args, prompt }`
+- ✅ Liquid prompts receive `{ args, argv, arguments, prompt, now }`
 - ✅ XML blocks omit empty rendered bodies
 - ✅ command batches can be rendered safely with `shell_quote`
 - ✅ shell execution defaults to deny and can be enabled per prompt or via `prompt-composer.json`
@@ -143,7 +143,7 @@ Acceptance criteria:
 - `README.md` covers install, usage, directory convention, menu behavior, argument rules, Liquid helpers, and rendered-output behavior
 - realistic grouped and flat composer examples are included
 - templating fixtures document and test the most powerful Liquid patterns
-- docs clearly mark shell execution from templates as out of scope
+- docs clearly mark shell execution as trusted opt-in behavior, not sandboxed behavior
 
 ## PPC-009: Lenient args validation and operator-visible warnings (mostly complete)
 

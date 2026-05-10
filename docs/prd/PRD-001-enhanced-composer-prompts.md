@@ -211,12 +211,15 @@ Minimum context shape:
 ```ts
 {
   args: Record<string, unknown>;
+  argv: string[];
+  arguments: string;
   prompt: {
     name: string;
     groupName?: string;
     origin: 'bundled' | 'user' | 'project';
     filePath: string;
   };
+  now: string;
 }
 ```
 
@@ -233,6 +236,13 @@ Then the visible dispatched message contains "Review fix auth in deep mode"
 Given a Liquid prompt body contains a loop over args.files
 When args.files contains ["a.ts", "b.ts"]
 Then the rendered output contains one line for a.ts and one line for b.ts
+```
+
+```gherkin
+Given a Liquid prompt body contains "{{ argv | join: ',' }}" and "{{ arguments }}"
+When the user runs the prompt with "alpha beta gamma"
+Then `argv` equals ["alpha", "beta", "gamma"]
+And `arguments` equals "alpha beta gamma"
 ```
 
 **Files:**
@@ -269,15 +279,16 @@ args:
     required: false
 ```
 
-Named CLI args must support both `--name value` and `name=value`; `--name value` is the documented canonical style. Optional `--name=value` support is acceptable if it falls out of the parser cleanly. Positional mapping remains limited to legacy `engine: pi` prompts so Liquid prompts do not have two competing ways to bind the same named value.
+Named CLI args must support both `--name value` and `name=value`; `--name value` is the documented canonical style. Optional `--name=value` support is acceptable if it falls out of the parser cleanly. Liquid prompts may bind declared args from positionals when a named value is absent; they also expose `argv` and `arguments` for raw positional access.
 
-Supported initial types:
+Supported initial types and controls:
 
 * `string`
 * `boolean`
 * `number`
 * `enum`
 * `string[]`
+* `rest: true` on the final arg to capture remaining positionals into that arg
 
 **Acceptance criteria:**
 
@@ -299,6 +310,13 @@ And the UI warns that mode must be one of quick, normal, deep
 Given a prompt declares args.mode with default normal
 When the user omits mode
 Then args.mode equals normal during template rendering
+```
+
+```gherkin
+Given a Liquid prompt declares the final arg with type string[] and rest true
+When the user runs /compose new review create review workflows
+Then args.description equals ["create", "review", "workflows"]
+And the prompt can render "create review workflows" with join
 ```
 
 **Files:**

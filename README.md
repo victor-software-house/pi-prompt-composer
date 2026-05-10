@@ -185,7 +185,7 @@ Parsing is lenient — a missing `hint` or `required` won't break the prompt. On
 
 ## Liquid helpers
 
-Liquid prompts get `{ args, prompt }` as their render context:
+Liquid prompts get `{ args, argv, arguments, prompt, now }` as their render context:
 
 ```liquid
 {{ args.change | quote }}
@@ -193,6 +193,25 @@ Liquid prompts get `{ args, prompt }` as their render context:
 {{ args.metadata | json: 2 }}
 {{ args.workdir | shell_quote }}
 {% xml "task" %}{{ args.goal }}{% endxml %}
+```
+
+Liquid also gets raw positional context for Pi-like rest behavior: `argv` is the positional array and `arguments` is every positional joined by spaces. For nicer frontmatter, mark the final arg `rest: true` with `type: string[]` to capture remaining positionals.
+
+```yaml
+args:
+  - name: group_name
+    required: true
+    hint: Group name
+  - name: description
+    required: false
+    type: string[]
+    rest: true
+    hint: Freeform description
+```
+
+```liquid
+Description: {{ args.description | join: " " }}
+Raw argv: {{ argv | join: ", " }}
 ```
 
 Useful helpers:

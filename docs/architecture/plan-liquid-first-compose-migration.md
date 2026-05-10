@@ -19,7 +19,7 @@ status: Draft
 
 Migrate `pi-prompt-composer` authoring assets to a Liquid-first model without breaking Pi-engine compatibility. Runtime remains dual-engine: `engine: pi` stays for simple positional prompts, while `engine: liquid` becomes preferred path for bundled compose prompts, examples, and skill guidance because it supports named args, conditionals, repeatable arrays, shell blocks, rich Markdown, and structured XML-style blocks.
 
-Full migration needs one runtime preparation step before prompt rewrite: Liquid prompts need access to enough invocation context to preserve current `/compose new NAME freeform description...` behavior. Current Liquid render context exposes normalized `args` but not raw argv/rest args. Built-in `/compose` prompts currently rely on Pi `${@:2}` for freeform description. Migration should add explicit rest/variadic arg support or an `argv`/`arguments` context before rewriting those prompts.
+Full migration needs Liquid prompts to preserve current `/compose new NAME freeform description...` behavior. Composer now exposes raw positional context through `argv` and `arguments`, and supports `rest: true` on args so the final arg can capture remaining positionals. That unblocks replacing Pi `${@:2}` in bundled compose prompts with Liquid-friendly `{{ args.description | join: " " }}` or `{{ argv | slice: 1 | join: " " }}`.
 
 Validation should stay fluent and declarative. Current runtime supports `required`, `type`, `values`, `default`, and repeatable `string[]` named args. Migration should first document those as current validation, then add small declarative validators (`pattern`, ranges, lengths, item counts) only if tests prove they improve prompt authoring without turning frontmatter into a full schema language.
 
@@ -31,9 +31,8 @@ Validation should stay fluent and declarative. Current runtime supports `require
 
 **Key Details**:
 
-- Add one of these before prompt migration:
-  - `rest: true` or `variadic: true` on last arg, binding remaining positionals into a `string[]` or joined string.
-  - or render context fields such as `argv`, `arguments`, and `rawArguments` for all Liquid prompts.
+- `rest: true` on the final arg captures remaining positionals into that arg. Use with `type: string[]` for freeform text or repeatable tails.
+- Liquid render context includes `argv` (raw positional array) and `arguments` (raw positionals joined by spaces).
 - Keep existing positional fallback: declared Liquid args still bind from position when named value absent.
 - Preserve repeated named args: `checks=a checks=b` remains `args.checks = ["a", "b"]` for `type: string[]`.
 - Add validation only in small layers:
@@ -70,7 +69,7 @@ Validation should stay fluent and declarative. Current runtime supports `require
 
 **Key Details**:
 
-- Add `engine: liquid` to `new.md`, `add.md`, and `remove.md` after runtime supports rest/argv or variadic args.
+- Add `engine: liquid` to `new.md`, `add.md`, and `remove.md` using current `rest: true`, `argv`, and `arguments` support.
 - Keep command UX source-compatible:
   - `/compose new <group-name> [description...]`
   - `/compose add <group-name> [description...]`
@@ -163,7 +162,7 @@ Validation should stay fluent and declarative. Current runtime supports `require
 **Key Details**:
 
 - Add golden fixtures for migrated `/compose new`, `/compose add`, `/compose remove` rendering.
-- Add tests for rest/variadic arg behavior before prompt migration.
+- Keep tests for rest arg behavior and `argv`/`arguments` render context.
 - Add tests for raw Liquid examples not being evaluated.
 - Add tests for validation messages and blocked render.
 - Add tests for rich Markdown output as raw final message text, not terminal rendering screenshots.
@@ -175,7 +174,7 @@ Validation should stay fluent and declarative. Current runtime supports `require
 | Phase | Component | Dependencies | Estimated Scope |
 |-------|-----------|--------------|-----------------|
 | 1 | Audit references and freeze behavior | None | S |
-| 2 | Add Liquid rest/argv support | Phase 1 | M |
+| 2 | Apply Liquid rest/argv support in bundled prompts | Phase 1 | S |
 | 3 | Add minimal declarative validators | Phase 2 | M |
 | 4 | Add raw-block and compose golden tests | Phase 2 | M |
 | 5 | Migrate bundled `/compose` prompts to Liquid | Phases 2-4 | M |
@@ -193,9 +192,9 @@ Acceptance:
 - Current `/compose new/add/remove` behavior covered by tests.
 - No behavior change.
 
-### Phase 2: Add Liquid rest/argv support
+### Phase 2: Apply Liquid rest/argv support in bundled prompts
 
-Add runtime support needed to preserve Pi `${@:N}` use cases in Liquid. Preferred shape: keep declared named args, add `argv` and `rawArguments`, and optionally support `rest: true` on last arg for friendly frontmatter.
+Runtime support for Pi `${@:N}` use cases in Liquid is available through `argv`, `arguments`, and `rest: true`. This phase applies that support to bundled prompts and locks it with tests.
 
 Example target frontmatter:
 
@@ -313,7 +312,7 @@ Acceptance:
 
 ## Open Questions
 
-- Should rest args be modeled as `rest: true`, `variadic: true`, or only exposed through `argv`/`rawArguments`?
+- Should `arguments` stay a plain space-joined string, or should composer add named helpers for shell-safe/string-safe joins?
 - Should `validate.pattern` ship in same migration or remain follow-up after Liquid prompt migration?
 - Should `/compose new` default generated prompts to `engine: liquid` always, or choose `engine: pi` for simple prompts?
 - Should temporary global `fixture` prompts become packaged examples or stay local-only and deleted?
@@ -324,5 +323,5 @@ Decisions surfaced by this plan:
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| — | Liquid rest/argv invocation contract | Candidate |
+| — | Liquid rest/argv invocation contract | Captured in plan; ADR only if context shape changes again |
 | — | Declarative arg validation scope | Candidate |

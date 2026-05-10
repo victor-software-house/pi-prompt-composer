@@ -80,6 +80,28 @@ beforeEach(() => {
 		].join('\n'),
 	);
 	writeFileSync(
+		join(fixtureDir, 'rest.md'),
+		[
+			'---',
+			'description: Capture rest args',
+			'engine: liquid',
+			'args:',
+			'  - name: group',
+			'    required: true',
+			'    hint: Group name',
+			'  - name: description',
+			'    required: false',
+			'    type: string[]',
+			'    rest: true',
+			'    hint: Freeform description',
+			'---',
+			'Group: {{ args.group }}',
+			'Description: {{ args.description | join: " " }}',
+			'Argv: {{ argv | join: "," }}',
+			'Arguments: {{ arguments }}',
+		].join('\n'),
+	);
+	writeFileSync(
 		join(fixtureDir, 'escaped.md'),
 		'---\ndescription: Escape test\n---\nLiteral \\$ARGUMENTS here',
 	);
@@ -117,6 +139,21 @@ describe('direct dispatch', () => {
 
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content.trim()).toBe('1. typecheck\n2. lint\n3. test');
+	});
+
+	test('/testgrp rest captures remaining positionals and exposes argv context', async () => {
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('testgrp')!;
+
+		const { ctx } = createContext();
+		await cmd.handler('rest compose create that shit', ctx);
+
+		expect(sentMessages).toHaveLength(1);
+		expect(sentMessages[0]!.content).toContain('Group: compose');
+		expect(sentMessages[0]!.content).toContain('Description: create that shit');
+		expect(sentMessages[0]!.content).toContain('Argv: compose,create,that,shit');
+		expect(sentMessages[0]!.content).toContain('Arguments: compose create that shit');
 	});
 
 	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {

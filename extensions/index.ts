@@ -129,6 +129,7 @@ export interface ArgsItem {
 	type?: 'string' | 'boolean' | 'number' | 'enum' | 'string[]';
 	values?: string[];
 	defaultValue?: unknown;
+	rest?: boolean;
 }
 
 export interface NestedPrompt {
@@ -306,6 +307,7 @@ export function parseArgsItem(
 	const rawType = readProp(item, 'type');
 	const rawValues = readProp(item, 'values');
 	const rawDefault = readProp(item, 'default');
+	const rawRest = readProp(item, 'rest');
 
 	if (typeof rawName !== 'string' || rawName.trim() === '') {
 		warnings.push(`${basename(filePath)}: args[${index}] missing required "name" field, skipping`);
@@ -342,11 +344,15 @@ export function parseArgsItem(
 	if (rawValues !== undefined && values === undefined) {
 		warnings.push(`${basename(filePath)}: args[${index}] "${name}" values must be a string array, ignoring`);
 	}
+	if (rawRest !== undefined && typeof rawRest !== 'boolean') {
+		warnings.push(`${basename(filePath)}: args[${index}] "${name}" rest must be boolean, ignoring`);
+	}
 
 	const parsed: ArgsItem = { name, required, hint };
 	if (type !== undefined) parsed.type = type;
 	if (values !== undefined) parsed.values = values;
 	if (rawDefault !== undefined) parsed.defaultValue = rawDefault;
+	if (typeof rawRest === 'boolean') parsed.rest = rawRest;
 	return parsed;
 }
 
@@ -1231,6 +1237,8 @@ export async function renderPrompt(
 	const rendered = String(
 		liquidEngine.renderSync(liquidEngine.parse(expandedContent, prompt.filePath), {
 			args: resolved.namedArgs,
+			argv: resolved.args,
+			arguments: resolved.args.join(' '),
 			prompt: promptMeta,
 			now: new Date().toISOString(),
 		}),
@@ -1330,6 +1338,10 @@ function coerceArgValue(arg: ArgsItem, rawValue: unknown, ctx: ExtensionCommandC
 	return rawValue;
 }
 
+function isMissingArgValue(value: unknown): boolean {
+	return value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+}
+
 async function resolvePromptArgs(
 	prompt: NestedPrompt | FlatPrompt,
 	providedArgs: ParsedPromptArgs,
@@ -1340,9 +1352,13 @@ async function resolvePromptArgs(
 	let didCollectMissingArgs = false;
 
 	for (const [index, arg] of (prompt.args ?? []).entries()) {
-		let rawValue: unknown = namedArgs[arg.name] ?? resolvedArgs[index] ?? arg.defaultValue;
+		const restValues = resolvedArgs.slice(index);
+		let rawValue: unknown =
+			arg.rest === true
+				? (namedArgs[arg.name] ?? (restValues.length > 0 ? restValues : arg.defaultValue))
+				: (namedArgs[arg.name] ?? resolvedArgs[index] ?? arg.defaultValue);
 
-		if ((rawValue === undefined || rawValue === '') && arg.required) {
+		if (isMissingArgValue(rawValue) && arg.required) {
 			let value: string | undefined;
 			do {
 				value = await ctx.ui.input(`${commandPath(prompt)} — ${arg.name}`, arg.hint !== '' ? arg.hint : undefined);
@@ -1370,6 +1386,9 @@ async function resolvePromptArgs(
 		if (coerced === undefined && arg.required) return undefined;
 		if (coerced !== undefined && coerced !== '') {
 			namedArgs[arg.name] = coerced;
+			if (arg.rest === true && Array.isArray(coerced)) {
+				resolvedArgs.splice(index, coerced.length, ...coerced.map((value) => stringifyScalar(value)));
+			}
 		}
 	}
 

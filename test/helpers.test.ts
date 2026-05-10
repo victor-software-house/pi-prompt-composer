@@ -153,6 +153,25 @@ describe('parseArgsItem', () => {
 		expect(w).toHaveLength(0);
 	});
 
+	test('parses rest metadata for variadic Liquid args', () => {
+		const w: string[] = [];
+		expect(
+			parseArgsItem(
+				{ name: 'description', required: false, hint: 'freeform', type: 'string[]', rest: true },
+				0,
+				'test.md',
+				w,
+			),
+		).toEqual({
+			name: 'description',
+			required: false,
+			hint: 'freeform',
+			type: 'string[]',
+			rest: true,
+		});
+		expect(w).toHaveLength(0);
+	});
+
 	test('defaults required to false when missing', () => {
 		const w: string[] = [];
 		const result = parseArgsItem({ name: 'file', hint: 'path' }, 0, 'test.md', w);
