@@ -14,7 +14,7 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import type { AutocompleteItem } from '@earendil-works/pi-tui';
 import { Container, type SelectItem, SelectList, type SelectListTheme, Spacer, Text } from '@earendil-works/pi-tui';
-import { Liquid } from 'liquidjs';
+import { createEngine } from 'pi-template-kit/liquid';
 
 // ---------------------------------------------------------------------------
 // Pi-internal helper reimplementations
@@ -1096,55 +1096,11 @@ async function showPromptSelector(
 // Rendering and interactive prompt helpers
 // ---------------------------------------------------------------------------
 
-const liquidEngine = new Liquid({
+const liquidEngine = createEngine({
 	root: [],
 	partials: [],
 	layouts: [],
-	cache: false,
-	strictVariables: false,
-	strictFilters: false,
-	trimTagRight: true,
-	greedy: false,
 });
-
-liquidEngine.registerFilter('present', (value: unknown) => {
-	if (value === null || value === undefined) return false;
-	if (typeof value === 'string') return value.length > 0;
-	if (Array.isArray(value)) return value.length > 0;
-	return Boolean(value);
-});
-
-liquidEngine.registerFilter('quote', (value: unknown) => {
-	if (value === null || value === undefined) return '';
-	return `"${stringifyScalar(value).replace(/"/g, '\\"').trim()}"`;
-});
-
-liquidEngine.registerFilter('tokens', (value: unknown) => {
-	if (value === null || value === undefined) return 0;
-	return Math.ceil(stringifyScalar(value).length / 4);
-});
-
-liquidEngine.registerFilter('json', (value: unknown, spaces?: unknown) => {
-	const indentation = typeof spaces === 'number' && Number.isInteger(spaces) && spaces >= 0 ? Math.min(spaces, 8) : 0;
-	return JSON.stringify(value, null, indentation) ?? 'null';
-});
-
-liquidEngine.registerFilter('shell_quote', (value: unknown) => {
-	const raw = stringifyScalar(value);
-	if (raw === '') return "''";
-	return `'${raw.replace(/'/g, `'"'"'`)}'`;
-});
-
-function expandXmlBlocks(content: string): string {
-	let index = 0;
-	return content.replace(
-		/{%\s*xml\s+["']([^"']+)["']\s*%}([\s\S]*?){%\s*endxml\s*%}/g,
-		(_match: string, tag: string, body: string) => {
-			const captureName = `__composer_xml_${index++}`;
-			return `{% capture ${captureName} %}${body}{% endcapture %}{% assign ${captureName}_body = ${captureName} | strip %}{% if ${captureName}_body | present %}<${tag}>\n{{ ${captureName}_body }}\n</${tag}>{% endif %}`;
-		},
-	);
-}
 
 function expandShellBlocks(content: string, markerId: string): string {
 	let index = 0;
@@ -1233,7 +1189,7 @@ export async function renderPrompt(
 			: { name: prompt.name, origin: prompt.origin, filePath: prompt.filePath };
 
 	const markerId = randomUUID();
-	const expandedContent = expandShellBlocks(expandXmlBlocks(prompt.content), markerId);
+	const expandedContent = expandShellBlocks(prompt.content, markerId);
 	const rendered = String(
 		liquidEngine.renderSync(liquidEngine.parse(expandedContent, prompt.filePath), {
 			args: resolved.namedArgs,
