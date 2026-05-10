@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.6.0...v1.6.1) (2026-05-10)
+
+
+### Bug Fixes
+
+* reuse shared template kit in composer ([5d98a06](https://github.com/victor-software-house/pi-prompt-composer/commit/5d98a060057cb2f4a252cd56b6c01d2e0f02b253))
+
 # [1.6.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.5.1...v1.6.0) (2026-05-10)
 
 
