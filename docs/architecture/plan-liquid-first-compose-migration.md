@@ -21,7 +21,7 @@ Migrate `pi-prompt-composer` authoring assets to a Liquid-first model without br
 
 Full migration needs Liquid prompts to preserve current `/compose new NAME freeform description...` behavior. Composer now exposes raw positional context through `argv` and `arguments`, and supports `rest: true` on args so the final arg can capture remaining positionals. That unblocks replacing Pi `${@:2}` in bundled compose prompts with Liquid-friendly `{{ args.description | join: " " }}` or `{{ argv | slice: 1 | join: " " }}`.
 
-Validation should stay fluent and declarative. Current runtime supports `required`, `type`, `values`, `default`, and repeatable `string[]` named args. Migration should first document those as current validation, then add small declarative validators (`pattern`, ranges, lengths, item counts) only if tests prove they improve prompt authoring without turning frontmatter into a full schema language.
+Validation should stay fluent and declarative. Current runtime supports `required`, `type`, `values`, `default`, repeatable `string[]` named args, comma-separated `string[]` coercion, and `rest: true`. Migration should first document those as current validation, then add small declarative validators (`pattern`, ranges, lengths, item counts) only if tests prove they improve prompt authoring without turning frontmatter into a full schema language.
 
 ## Components
 
@@ -36,7 +36,7 @@ Validation should stay fluent and declarative. Current runtime supports `require
 - Keep existing positional fallback: declared Liquid args still bind from position when named value absent.
 - Preserve repeated named args: `checks=a checks=b` remains `args.checks = ["a", "b"]` for `type: string[]`.
 - Add validation only in small layers:
-  - current: `required`, `type`, `values`, `default`
+  - current: `required`, `type`, `values`, `default`, repeated/comma-separated `string[]`, `rest: true`
   - next: `validate.pattern`, `validate.message`
   - later: `min`, `max`, `minLength`, `maxLength`, `minItems`, `maxItems`
 - Do not add arbitrary validator scripts in frontmatter. Shell validation belongs in prompt body or `{% shell %}` with explicit `shell` mode.

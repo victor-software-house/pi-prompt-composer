@@ -25,9 +25,9 @@ Current code reality:
 
 * `extensions/index.ts` owns discovery, registry, command registration, selector UI, arg parsing, arg collection, rendering, and dispatch in one file.
 * `discoverGroups()` only discovers directories; flat files are left to Pi.
-* `parseArgsMetadata()` accepts a lenient positional args array, but cannot express named args, enums, booleans, arrays, defaults, validation, or data sources.
+* `parseArgsMetadata()` accepts a lenient ordered args array with named items, required/default behavior, enum values, booleans, numbers, repeatable `string[]`, and `rest: true` metadata.
 * `substituteArgs()` implements Pi-like positional replacement plus escaped dollar support.
-* `resolvePromptArgs()` collects args by position through `ctx.ui.input()`.
+* `resolvePromptArgs()` collects required args through `ctx.ui.input()`, validates current typed fields, supports positional fallback for declared args, and preserves raw `argv` / `arguments` context for Liquid.
 * `pi.sendUserMessage(rendered, { deliverAs: 'followUp' })` dispatches visible rendered content.
 
 The next product step should be first-class **composer-owned prompt files** with a real template engine, typed argument schema, and a unified rendering pipeline for both flat and grouped prompts.
@@ -257,29 +257,33 @@ And `arguments` equals "alpha beta gamma"
 
 ### FR-4: Support typed named argument schemas
 
-Composer must support an object-based args schema for enhanced prompts.
+Composer must support the current ordered args array schema for enhanced prompts. Ordered array form is the public schema because it preserves positional fallback, required-arg collection order, and final-arg `rest: true` behavior without relying on object key order.
 
-Initial schema:
+Current schema:
 
 ```yaml
 args:
-  change:
+  - name: change
     type: string
     required: true
-    prompt: What changed?
-  mode:
+    hint: What changed?
+  - name: mode
     type: enum
     values: [quick, normal, deep]
     default: normal
-  include_tests:
+  - name: include_tests
     type: boolean
     default: true
-  files:
+  - name: files
     type: string[]
     required: false
+  - name: description
+    type: string[]
+    required: false
+    rest: true
 ```
 
-Named CLI args must support both `--name value` and `name=value`; `--name value` is the documented canonical style. Optional `--name=value` support is acceptable if it falls out of the parser cleanly. Liquid prompts may bind declared args from positionals when a named value is absent; they also expose `argv` and `arguments` for raw positional access.
+Named CLI args must support both `--name value` and `name=value`; `--name value` is the documented canonical style. Optional `--name=value` support is acceptable if it falls out of the parser cleanly. Liquid prompts bind declared args from named values first, then from positionals when a named value is absent. Liquid prompts also expose `argv` and `arguments` for raw positional access.
 
 Supported initial types and controls:
 
@@ -288,7 +292,9 @@ Supported initial types and controls:
 * `number`
 * `enum`
 * `string[]`
-* `rest: true` on the final arg to capture remaining positionals into that arg
+* `rest: true` on the final `string[]` arg to capture remaining positionals into that arg
+
+Current validation scope is `required`, `type`, `values`, `default`, repeated named args, comma-separated `string[]` coercion, and `rest: true`. Future declarative validators such as `validate.pattern`, `validate.message`, numeric ranges, string lengths, and array item counts are allowed design extensions, but they are not prerequisites for bundled `/compose` Liquid migration.
 
 **Acceptance criteria:**
 
@@ -313,6 +319,18 @@ Then args.mode equals normal during template rendering
 ```
 
 ```gherkin
+Given a prompt declares args.files with type string[]
+When the user provides files=a.ts files=b.ts
+Then args.files equals ["a.ts", "b.ts"] during template rendering
+```
+
+```gherkin
+Given a prompt declares args.files with type string[]
+When the user provides files=a.ts,b.ts
+Then args.files equals ["a.ts", "b.ts"] during template rendering
+```
+
+```gherkin
 Given a Liquid prompt declares the final arg with type string[] and rest true
 When the user runs /compose new review create review workflows
 Then args.description equals ["create", "review", "workflows"]
@@ -331,7 +349,7 @@ And the prompt can render "create review workflows" with join
 
 ### FR-5: Keep legacy args array and Pi-style engine compatible
 
-Current `args` array syntax and Pi-like substitution must remain valid for existing prompts.
+Current minimal `args` array syntax and Pi-like substitution must remain valid for existing prompts.
 
 **Acceptance criteria:**
 
@@ -542,14 +560,14 @@ And other enabled /review subcommands still work
 
 | Risk                                                                  | Severity | Likelihood | Mitigation                                                                                                                                                                                                   |
 | --------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Separate resource ownership (`type`) from rendering (`engine`) and document the model with examples.                                                                                                         |
+| Liquid support creates a second mental model beside Pi-native prompts | Medium   | High       | Separate resource ownership (location) from rendering (`engine`) and document the model with examples.                                                                                                       |
 | Composer flat prompts shadow native Pi prompts unexpectedly           | High     | Medium     | Keep flat composer prompt files under `.pi/composed/`; warn on duplicate composer commands.                                                                                                                  |
 | Authors leak documentation files into `composed/`                     | Medium   | Medium     | Document that `composed/` is exclusively for prompts; warn on any `.md` whose frontmatter looks intentionally non-prompt; rely on social convention plus visible warnings rather than `type` gating.         |
 | Disabled prompts reappear from lower-precedence or native resources   | High     | Medium     | Treat higher-precedence disabled composer resources as tombstones; keep valid flat composer files under `composed/` so native prompt discovery never sees them; only block misplaced/legacy paths if needed. |
 | Migration moves user files unexpectedly                               | High     | Medium     | One-shot migration is idempotent, refuses to overwrite existing `composed/<group>/`, emits explicit warnings, and never deletes content. Operator-visible diagnostic always names source and target paths.   |
 | Read-only filesystems or worktree-quirky setups break migration       | Medium   | Low        | If migration cannot move (permissions, EXDEV, locked files), emit an actionable warning and continue reading the legacy path for that session only; warn again next session until resolved.                  |
 | Arg schema becomes too complex too soon                               | Medium   | Medium     | Ship small type set first; defer nested objects, computed defaults, and complex validation.                                                                                                                  |
-| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args` and prompt metadata in first slice; add providers through allowlists and docs.                                                                                                   |
+| Template context leaks sensitive env or filesystem data               | High     | Low        | Expose only explicit `args`, `argv`, `arguments`, `now`, and prompt metadata by default; add providers through allowlists and docs.                                                                          |
 | Single-file `extensions/index.ts` becomes harder to evolve            | Medium   | High       | Make module extraction part of rollout before or alongside enhanced rendering.                                                                                                                               |
 | Liquid library behavior differs from prompt-author expectations       | Medium   | Medium     | Add snapshot tests for all documented syntax and link docs to supported subset.                                                                                                                              |
 
@@ -602,19 +620,20 @@ And other enabled /review subcommands still work
 
 **Future path:** Keep engine dispatch pluggable, but do not add more engines until Liquid usage proves gaps.
 
-### D3: Use object-based args schema for enhanced prompts
+### D3: Use ordered args array schema for enhanced prompts
 
 **Options considered:**
 
-1. Preserve only positional args array — compatible but weak.
-2. Add object-based named args schema — expressive, validates well, maps naturally to `args.name` in Liquid.
-3. Infer args from template variables — magical and brittle.
+1. Preserve only untyped positional args array — compatible but weak.
+2. Add object-based named args schema — expressive, but conflicts with positional fallback, collection order, and final rest capture.
+3. Add ordered named args array — expressive, validates well, maps naturally to `args.name` in Liquid, and preserves order-sensitive behavior.
+4. Infer args from template variables — magical and brittle.
 
-**Decision:** Add object-based named args schema while accepting legacy arrays for `engine: pi` compatibility.
+**Decision:** Use the ordered named args array as the current public schema for both Pi-engine and Liquid prompts.
 
-**Rationale:** Liquid templates should use named values. Explicit schemas make UI collection and validation predictable.
+**Rationale:** Liquid templates need named values, but composer also needs deterministic collection order, position-based fallback, and `rest: true` for freeform tails. Ordered array schema provides both without relying on object key order.
 
-**Future path:** Add richer sources and validation only after baseline types ship.
+**Future path:** Object-map syntax may be considered later only as an ergonomic alias, not as replacement for ordered schema.
 
 ### D4: Drop typed composer resource markers in favor of location-based ownership
 
@@ -630,18 +649,18 @@ And other enabled /review subcommands still work
 
 **Future path:** If Pi later exposes native prompt enable/disable or typed prompt metadata, re-evaluate whether composer needs typed markers again. Until then, location is the contract.
 
-### D5: Support named CLI args without positional binding for Liquid
+### D5: Support named CLI args and positional fallback for Liquid
 
 **Options considered:**
 
 1. Use only `--name value` — familiar CLI style and easy to document.
 2. Use only `name=value` — compact and prompt-template friendly, but less standard for flags.
 3. Support both named styles — ergonomic for different author habits.
-4. Map positional values into named Liquid args by schema order — concise, but ambiguous once optional/defaulted args exist.
+4. Map positional values into named Liquid args by schema order — concise and needed for Pi-style command UX, but requires clear precedence and rest rules.
 
-**Decision:** Support `--name value` and `name=value` for named args, document `--name value` as canonical, and keep positional mapping limited to legacy `engine: pi` prompts.
+**Decision:** Support `--name value` and `name=value` for named args, document `--name value` as canonical, and support positional fallback for declared Liquid args when named values are absent. Expose `argv`, `arguments`, and final-arg `rest: true` for freeform tails.
 
-**Rationale:** Liquid prompts should bind values by name so templates remain readable and invocation errors stay diagnosable. Supporting both named syntaxes eases migration without making schema order part of the public contract.
+**Rationale:** Composer-owned prompts need readable named values and source-compatible Pi-like invocation. Named args win when provided; otherwise ordered positionals fill declared args. `rest: true` makes freeform tails explicit instead of overloading all array args.
 
 **Future path:** Add boolean shorthand such as `--include-tests` only after the baseline parser and validation behavior are proven.
 
@@ -663,11 +682,11 @@ And other enabled /review subcommands still work
 
 **Options considered:**
 
-1. Restrict object args to flat prompts first — smaller initial surface, but creates divergent behavior.
-2. Support object args for any `engine: liquid` prompt, flat or grouped — one model for enhanced prompts.
+1. Restrict typed args to flat prompts first — smaller initial surface, but creates divergent behavior.
+2. Support ordered typed args for any `engine: liquid` prompt, flat or grouped — one model for enhanced prompts.
 3. Retain legacy arrays everywhere — compatible, but blocks typed Liquid use in groups.
 
-**Decision:** Support object-based args for flat and grouped prompts that opt into enhanced rendering.
+**Decision:** Support ordered typed args for flat and grouped prompts that opt into enhanced rendering.
 
 **Rationale:** Grouped and flat prompts should share the same internal `PromptDefinition` model and rendering pipeline. Artificially limiting typed args to flat prompts would add migration work later.
 
@@ -750,7 +769,7 @@ Deprecation timeline:
 
 ## 10. Dependencies & Constraints
 
-* Latest Pi package checked on 2026-05-08 is `@earendil-works/pi-coding-agent@0.74.0`; latest legacy scope is `@mariozechner/pi-coding-agent@0.73.1`; this repo currently develops against `@mariozechner/*@0.63.2`.
+* Latest Pi package checked on 2026-05-08 is `@earendil-works/pi-coding-agent@0.74.0`; latest legacy scope is `@mariozechner/pi-coding-agent@0.73.1`; this repo currently develops against `@earendil-works/*@0.74.0`.
 * Pi prompt processing order is extension commands, then `input`, then skill expansion, then native prompt-template expansion, then `before_agent_start`.
 * Pi prompt discovery is non-recursive for auto-discovered user/project prompt roots, but root-level `.pi/prompts/*.md` and `~/.pi/agent/prompts/*.md` always become native prompt templates when enabled.
 * Pi command inventories and interactive autocomplete include native prompt templates from `session.promptTemplates`; extensions can wrap interactive autocomplete but cannot remove native prompt templates from `session.promptTemplates`, RPC `get_commands`, or native prompt expansion.
@@ -771,7 +790,7 @@ Deprecation timeline:
 
 1. **Architecture prep** — extract `extensions/index.ts` into `src/` modules without behavior changes.
 2. **Location-based ownership model** — switch internal model to location-based discovery; preserve any legacy `type` fields in migrated content; do not require `type` markers on new prompts.
-3. **Arg schema foundation** — implement normalized arg definitions supporting both legacy arrays and object schemas.
+3. **Arg schema foundation** — implement normalized arg definitions supporting ordered typed arg arrays, positional fallback, repeated `string[]`, and final-arg `rest: true`.
 4. **Legacy layout migration (deprecated from day one)** — implement one-shot migration from `.pi/prompts/<group>/` and `~/.pi/agent/prompts/<group>/` to `.pi/composed/<group>/` and `~/.pi/agent/composed/<group>/`; warn on collisions; never overwrite. Mark migration step as deprecated in code and docs from the release in which it lands.
 5. **Liquid rendering and flat discovery** — add `engine: liquid`, named render context, safe filter allowlist, snapshots, and flat discovery under `.pi/composed/` and `~/.pi/agent/composed/`.
 6. **Typed interactive collection** — add enum selector UI plus boolean/number/string/string\[] collection and validation.
@@ -787,10 +806,10 @@ Deprecation timeline:
 
 | #   | Question                                                                                                                | Owner                 | Due        | Decision                                                                                                                                                             | Status   |
 | --- | ----------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Q1  | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Require `type: prompt`; `engine` stays renderer-only.                                                                                                                | Resolved |
-| Q2  | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value` and `name=value`; document `--name value`; keep positional for `engine: pi`.                                                                  | Resolved |
+| Q1  | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Neither marker is required. Composer ownership comes from `.pi/composed/` location; `engine` stays renderer-only.                                                     | Resolved |
+| Q2  | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value`, `name=value`, positional fallback for declared args, raw `argv` / `arguments`, and final-arg `rest: true`.                                   | Resolved |
 | Q3  | Should enum args use a selector UI instead of free-text input?                                                          | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                                                                                           | Resolved |
-| Q4  | Should enhanced grouped subcommands support object args immediately, or should object args start only for flat prompts? | Victor Software House | 2026-05-08 | Support object args for flat and grouped prompts that opt into enhanced rendering.                                                                                   | Resolved |
+| Q4  | Should enhanced grouped subcommands support typed args immediately, or should typed args start only for flat prompts?   | Victor Software House | 2026-05-08 | Support ordered typed args for flat and grouped prompts that opt into enhanced rendering.                                                                            | Resolved |
 | Q5  | Should Liquid filters be limited to a documented allowlist?                                                             | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                                                                                     | Resolved |
 | Q6  | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                 | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                                                                                 | Resolved |
 | Q7  | Should composer take over all Pi prompt processing or run in hybrid mode?                                               | Victor Software House | 2026-05-08 | Use hybrid mode; composer handles typed resources and Pi handles unowned native prompts.                                                                             | Resolved |
@@ -805,7 +824,7 @@ Deprecation timeline:
 | Issue                                                                                                  | Relationship                                                                                          |
 | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | [#6 — Allow simple Prompt files](https://github.com/victor-software-house/pi-prompt-composer/issues/6) | Source issue; flat composer prompts complete the requested capability.                                |
-| `docs/ROADMAP.md` PPC-006                                                                              | Related; shell substitution is a future preprocessing stage and should share the new render pipeline. |
+| `docs/ROADMAP.md` PPC-006 / PPC-006B / PPC-006C                                                        | Related; Liquid rendering, shell substitution, and bundled compose migration share the render pipeline. |
 | `docs/ROADMAP.md` PPC-010                                                                              | Related; operator-only prompts should share dispatch-mode plumbing after this work.                   |
 | `docs/ROADMAP.md` PPC-011                                                                              | Enables; module extraction is prerequisite or first rollout step for this PRD.                        |
 
@@ -815,6 +834,7 @@ Deprecation timeline:
 
 | Date       | Change                                          | Author                |
 | ---------- | ----------------------------------------------- | --------------------- |
+| 2026-05-10 | Aligned args schema, Liquid positional fallback, rest args, and Pi package scope with current runtime | Victor Software House |
 | 2026-05-08 | Clarified typed ownership and hybrid processing | Victor Software House |
 | 2026-05-08 | Resolved design open questions                  | Victor Software House |
 | 2026-05-07 | Initial draft                                   | Victor Software House |
