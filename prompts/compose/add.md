@@ -1,25 +1,29 @@
 ---
 description: Add subcommands to an existing grouped prompt set
+engine: liquid
 args:
-  - name: group-name
+  - name: group_name
     required: true
     hint: Name of the existing command group
   - name: description
     required: false
+    type: string[]
+    rest: true
+    default: []
     hint: "What the new subcommand(s) should do (enter to skip)"
 ---
-Add subcommands to the `$1` grouped prompt set.
+Add subcommands to the `{{ args.group_name }}` grouped prompt set.
 
 ## Step 1 — Find and read the existing group
 
 ```bash
 # Check both prompt roots
-for d in ~/.pi/agent/composed/$1 .pi/composed/$1; do
+for d in ~/.pi/agent/composed/{{ args.group_name }} .pi/composed/{{ args.group_name }}; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```
 
-If the directory doesn't exist in either root, **stop**. Tell the user the group was not found and suggest `/compose new $1` instead. Do not proceed.
+If the directory doesn't exist in either root, **stop**. Tell the user the group was not found and suggest `/compose new {{ args.group_name }}` instead. Do not proceed.
 
 Record the found path as `$GROUP_DIR`.
 
@@ -47,13 +51,13 @@ Extract and record:
 
 The operator provided this description of what to add:
 
-> ${@:2}
+> {{ args.description | join: " " }}
 
 If the quoted block above is empty, the operator did not provide a description — use `ask_user` to collect one:
 
 ```json
 {
-  "question": "What subcommands should I add to /$1?",
+  "question": "What subcommands should I add to /{{ args.group_name }}?",
   "context": "Existing subcommands (from Step 1 output):\n- summarize.md: Summarize current repository state\n- checklist.md: Build verification checklist\n\nReplace these example rows with actual filenames and descriptions from Step 1 before calling ask_user. Describe what new subcommands you need and I'll propose specific additions.",
   "allowFreeform": true
 }
@@ -65,7 +69,7 @@ Use `ask_user` to confirm:
 
 ```json
 {
-  "question": "Here are my proposed additions to /$1. Confirm or adjust:",
+  "question": "Here are my proposed additions to /{{ args.group_name }}. Confirm or adjust:",
   "context": "Existing subcommands (from Step 1):\n- summarize: Summarize current repository state\n- checklist: Build verification checklist\n\nProposed new subcommands:\n- security-review: Review changes for security risks\n- release-notes: Draft release notes from the change summary\n\nReplace these example rows with the actual existing and proposed subcommands before calling ask_user. Each performs one focused operation that complements the existing set.",
   "options": [
     { "title": "Use these additions", "description": "Create the subcommands listed above" },
@@ -95,7 +99,7 @@ Substitute the actual collision details:
 
 ```json
 {
-  "question": "The name 'security-review' already exists in /$1. How should I handle this?",
+  "question": "The name 'security-review' already exists in /{{ args.group_name }}. How should I handle this?",
   "context": "Existing subcommand description: Review staged changes for security issues\nProposed purpose: Review changes for security risks\n\nReplace these example values with the actual collision details before calling ask_user.",
   "options": [
     { "title": "Replace it", "description": "Overwrite the existing subcommand" },
@@ -118,7 +122,7 @@ Create new `.md` files that **match the existing group's style exactly**.
 
 2. **Use Composer features intentionally** — add `engine: liquid` for named args, loops, conditionals, structured Markdown, XML blocks, JSON, or shell blocks. Keep default `engine: pi` for simple positional substitution.
 
-3. **Shell policy** — only use `{% shell %}` blocks in Liquid prompts. Add `shell: ask` by default, or `shell: allow` only for trusted local-only helpers. Shell-enabled prompts are trusted code, not sandboxed code.
+3. **Shell policy** — only use `{% raw %}{% shell %}{% endraw %}` blocks in Liquid prompts. Add `shell: ask` by default, or `shell: allow` only for trusted local-only helpers. Shell-enabled prompts are trusted code, not sandboxed code.
 
 4. **Validation fields** — prefer current frontmatter fields before prose validation: `required`, `type`, `values`, and `default`. Use `type: enum` + `values` for fixed choices, `type: number` for numeric input, and `type: string[]` for repeated named args. Do not generate `validate:` frontmatter yet; it is future design.
 
@@ -137,7 +141,7 @@ Every new subcommand `.md` file **must** include:
 1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
    Unquoted colons in YAML values cause parse errors that crash the extension.
 
-2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `\$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies.
+2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies.
 
 3. **`ask_user` for interactive decisions** — if the subcommand needs operator input during execution, include the **exact `ask_user` JSON payload**. Do not write "ask the user" — write the literal tool call with `question`, `context`, `options`, and `allowFreeform`.
 
@@ -147,7 +151,7 @@ Every new subcommand `.md` file **must** include:
 
 6. **Output format** — specify what the model reports after completion (table, summary, file list).
 
-7. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{{ args.file }}`.
+7. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{% raw %}{{ args.file }}{% endraw %}`.
 
 ### Bad example (what not to generate):
 
@@ -255,14 +259,14 @@ echo "Total subcommands: $count"
 
 ```bash
 git add "$GROUP_DIR/"
-git commit -m "feat: add subcommands to /$1 group"
+git commit -m "feat: add subcommands to /{{ args.group_name }} group"
 ```
 
 Report what was added as a table:
 
 | File | Subcommand | Purpose |
 |------|-----------|---------|
-| `<name>.md` | `/$1 <name>` | `<description>` |
+| `<name>.md` | `/{{ args.group_name }} <name>` | `<description>` |
 | ... | ... | ... |
 
 Tell the user: "Run `/reload` to pick up the new commands."

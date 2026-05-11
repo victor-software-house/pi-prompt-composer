@@ -1,14 +1,18 @@
 ---
 description: Create a new grouped prompt set from scratch
+engine: liquid
 args:
-  - name: group-name
+  - name: group_name
     required: true
     hint: Name for the new command group (kebab-case)
   - name: description
     required: false
+    type: string[]
+    rest: true
+    default: []
     hint: "What this group is for (enter to skip)"
 ---
-Create a new grouped prompt set named `$1`.
+Create a new grouped prompt set named `{{ args.group_name }}`.
 
 ## Step 1 — Determine scope
 
@@ -16,11 +20,11 @@ Use `ask_user` to confirm where the group should live:
 
 ```json
 {
-  "question": "Where should the /$1 group live?",
+  "question": "Where should the /{{ args.group_name }} group live?",
   "context": "User composer prompts (~/.pi/agent/composed/) are personal and available everywhere.\nProject composer prompts (.pi/composed/) are shared via the repo.",
   "options": [
-    { "title": "Project (.pi/composed/$1/)", "description": "Shared with the team via git" },
-    { "title": "User (~/.pi/agent/composed/$1/)", "description": "Personal, available in all projects" }
+    { "title": "Project (.pi/composed/{{ args.group_name }}/)", "description": "Shared with the team via git" },
+    { "title": "User (~/.pi/agent/composed/{{ args.group_name }}/)", "description": "Personal, available in all projects" }
   ],
   "allowFreeform": false
 }
@@ -31,16 +35,16 @@ Record the chosen root as `$PROMPT_ROOT` for all subsequent steps.
 ## Step 2 — Check for conflicts
 
 ```bash
-ls -d ~/.pi/agent/composed/$1/ .pi/composed/$1/ 2>/dev/null
+ls -d ~/.pi/agent/composed/{{ args.group_name }}/ .pi/composed/{{ args.group_name }}/ 2>/dev/null
 ```
 
-If the directory exists in either root, **stop**. Tell the user and suggest `/compose add $1` instead. Do not proceed.
+If the directory exists in either root, **stop**. Tell the user and suggest `/compose add {{ args.group_name }}` instead. Do not proceed.
 
 Also verify the name does not collide with a built-in Pi command:
 
 ```bash
-# Known built-in commands — reject if $1 matches any
-echo "help clear model reload config compact tree status" | tr ' ' '\n' | grep -x "$1" && echo "COLLISION" || echo "OK"
+# Known built-in commands — reject if {{ args.group_name }} matches any
+echo "help clear model reload config compact tree status" | tr ' ' '\n' | grep -x "{{ args.group_name }}" && echo "COLLISION" || echo "OK"
 ```
 
 If there is a collision, use `ask_user` to pick an alternative name before continuing.
@@ -51,13 +55,13 @@ If there is a collision, use `ask_user` to pick an alternative name before conti
 
 The operator provided this description of what the group should do:
 
-> ${@:2}
+> {{ args.description | join: " " }}
 
 If the quoted block above is empty, the operator did not provide a description — use `ask_user` to collect one:
 
 ```json
 {
-  "question": "What should /$1 do? Describe the purpose and I'll propose subcommands.",
+  "question": "What should /{{ args.group_name }} do? Describe the purpose and I'll propose subcommands.",
   "allowFreeform": true
 }
 ```
@@ -68,7 +72,7 @@ Use `ask_user` to confirm the subcommand plan. Substitute the actual proposed na
 
 ```json
 {
-  "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
+  "question": "Here's my proposed subcommand plan for /{{ args.group_name }}. Confirm or adjust:",
   "context": "Proposed subcommands:\n- summarize: Summarize current repository state and risks\n- checklist: Build a verification checklist for the requested change\n- handoff: Write a concise handoff for the next session\n\nReplace these example rows with the actual proposed names and purposes before calling ask_user. Each subcommand performs one focused operation. Names are short verbs or nouns in kebab-case.",
   "options": [
     { "title": "Use this plan", "description": "Create the subcommands listed above" },
@@ -111,7 +115,7 @@ Substitute the actual group name and subcommand name from the confirmed plan:
 
 ```json
 {
-  "question": "Should /$1 summarize take arguments?",
+  "question": "Should /{{ args.group_name }} summarize take arguments?",
   "context": "Purpose: Summarize current repository state and risks\n\nReplace the example subcommand and purpose with the actual confirmed values before calling ask_user. Arguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
   "options": [
     { "title": "No args needed", "description": "The prompt is self-contained" },
@@ -123,7 +127,7 @@ Substitute the actual group name and subcommand name from the confirmed plan:
 
 ## Step 5 — Generate files
 
-Create the complete file set in `$PROMPT_ROOT/$1/`.
+Create the complete file set in `$PROMPT_ROOT/{{ args.group_name }}/`.
 
 ### Quality rules for generated prompts
 
@@ -134,13 +138,13 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
    Add `engine: liquid` when the prompt needs named args, conditionals, loops, `json`, XML blocks, Markdown sections that disappear when empty, or shell blocks. Keep default `engine: pi` for simple positional prompts.
 
-   Add `shell: ask` or `shell: allow` only for `engine: liquid` prompts with `{% shell %}` blocks. Shell-enabled prompts are trusted code, not sandboxed code. Prefer `shell: ask` unless the prompt is local-only and explicitly trusted.
+   Add `shell: ask` or `shell: allow` only for `engine: liquid` prompts with `{% raw %}{% shell %}{% endraw %}` blocks. Shell-enabled prompts are trusted code, not sandboxed code. Prefer `shell: ask` unless the prompt is local-only and explicitly trusted.
 
    Use current fluent validation fields before writing prose validation: `required`, `type`, `values`, and `default`. Supported types are `string`, `string[]`, `number`, `boolean`, and `enum`. Use `type: string[]` for repeated values such as `checks=typecheck checks=lint`. Do not generate `validate:` frontmatter yet; it is a future design, not current runtime behavior.
 
    Use `rest: true` on the final `type: string[]` arg when a Liquid prompt needs Pi-like freeform tails, such as `/compose new group create that shit`.
 
-2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`\$1`, `\$2`, `\${@:2}`, `\$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies so the operator's input flows into the prompt.
+2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies so the operator's input flows into the prompt.
 
 3. **`ask_user` for interactive decisions**: If a subcommand needs operator input during execution (choosing between options, confirming destructive actions, providing missing context), include the **exact `ask_user` JSON payload** in the prompt body. Do not write "ask the user" — write the literal tool call.
 
@@ -150,7 +154,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 6. **Error handling**: Include what to do when things go wrong — file not found, name collision, empty results. At minimum: detect the error, report it clearly, suggest a fix.
 
-7. **Substitution syntax**: When a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{{ args.file }}`.
+7. **Substitution syntax**: When a Pi-engine generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{% raw %}{{ args.file }}{% endraw %}`.
 
 ### Bad example (too vague):
 
@@ -218,22 +222,22 @@ After generating all files:
 
 ```bash
 # 1. Directory exists with correct structure
-ls "$PROMPT_ROOT/$1/"
+ls "$PROMPT_ROOT/{{ args.group_name }}/"
 
 # 2. _index.md has a description
-grep -q '^description:' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: description" || echo "FAIL: missing description"
+grep -q '^description:' "$PROMPT_ROOT/{{ args.group_name }}/_index.md" && echo "PASS: description" || echo "FAIL: missing description"
 
 # 3. Every subcommand has a description
-for f in "$PROMPT_ROOT/$1/"*.md; do
+for f in "$PROMPT_ROOT/{{ args.group_name }}/"*.md; do
   [ "$(basename "$f")" = "_index.md" ] && continue
   grep -q 'description:' "$f" && echo "PASS: $(basename "$f")" || echo "FAIL: $(basename "$f") missing description"
 done
 
 # 4. _index.md has order field
-grep -q '^order:' "$PROMPT_ROOT/$1/_index.md" && echo "PASS: order field" || echo "FAIL: missing order"
+grep -q '^order:' "$PROMPT_ROOT/{{ args.group_name }}/_index.md" && echo "PASS: order field" || echo "FAIL: missing order"
 
 # 5. No naming collisions with existing commands
-ls ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null | grep -v "$1"
+ls ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null | grep -v "{{ args.group_name }}"
 ```
 
 **Done when:** all verification checks pass and the user sees the file list.
@@ -243,8 +247,8 @@ ls ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null | grep -v "$1"
 Commit the new group:
 
 ```bash
-git add "$PROMPT_ROOT/$1/"
-git commit -m "feat: add /$1 grouped prompt set"
+git add "$PROMPT_ROOT/{{ args.group_name }}/"
+git commit -m "feat: add /{{ args.group_name }} grouped prompt set"
 ```
 
 Report what was created as a table:
@@ -252,10 +256,10 @@ Report what was created as a table:
 | File | Subcommand | Purpose |
 |------|-----------|---------|
 | `_index.md` | — | Group root |
-| `<name>.md` | `/$1 <name>` | `<description>` |
+| `<name>.md` | `/{{ args.group_name }} <name>` | `<description>` |
 | ... | ... | ... |
 
-Tell the user: "Run `/reload` to pick up the new commands, then test with `/$1` to see the selector."
+Tell the user: "Run `/reload` to pick up the new commands, then test with `/{{ args.group_name }}` to see the selector."
 
 ## Stop conditions
 

@@ -68,7 +68,7 @@ describe('bundled /compose registration', () => {
 // ---------------------------------------------------------------------------
 
 describe('/compose new', () => {
-	test('with group-name only: $1 is substituted, ${@:2} is empty', async () => {
+	test('with group_name only: $1 is substituted, ${@:2} is empty', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -83,7 +83,7 @@ describe('/compose new', () => {
 		expect(content).toContain('`my-group`');
 	});
 
-	test('with group-name and trailing description: ${@:2} captures all remaining args', async () => {
+	test('with group_name and trailing description: ${@:2} captures all remaining args', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -97,7 +97,7 @@ describe('/compose new', () => {
 		expect(content).toContain('A group for code reviews');
 	});
 
-	test('with quoted group-name: quotes are stripped by arg parser', async () => {
+	test('with quoted group_name: quotes are stripped by arg parser', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -109,7 +109,7 @@ describe('/compose new', () => {
 		expect(sentMessages[0]!.content).toContain('my-group');
 	});
 
-	test('missing required group-name: collects via input', async () => {
+	test('missing required group_name: collects via input', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -119,9 +119,9 @@ describe('/compose new', () => {
 		});
 		await cmd.handler('new', ctx);
 
-		// Required group-name collected first, then optional description
+		// Required group_name collected first, then optional description
 		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
-		expect(inputCalls[0]!.title).toContain('group-name');
+		expect(inputCalls[0]!.title).toContain('group_name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
@@ -148,7 +148,7 @@ describe('/compose new', () => {
 // ---------------------------------------------------------------------------
 
 describe('/compose add', () => {
-	test('with group-name only: $1 substituted, ${@:2} empty', async () => {
+	test('with group_name only: $1 substituted, ${@:2} empty', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -174,7 +174,7 @@ describe('/compose add', () => {
 		expect(content).toContain('add a lint subcommand');
 	});
 
-	test('missing required group-name: collects via input', async () => {
+	test('missing required group_name: collects via input', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -185,7 +185,7 @@ describe('/compose add', () => {
 		await cmd.handler('add', ctx);
 
 		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
-		expect(inputCalls[0]!.title).toContain('group-name');
+		expect(inputCalls[0]!.title).toContain('group_name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
 	});
@@ -209,7 +209,7 @@ describe('/compose add', () => {
 // ---------------------------------------------------------------------------
 
 describe('/compose remove', () => {
-	test('with group-name only: $1 substituted, $2 empty', async () => {
+	test('with group_name only: $1 substituted, $2 empty', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -221,7 +221,7 @@ describe('/compose remove', () => {
 		expect(sentMessages[0]!.content).toContain('my-group');
 	});
 
-	test('with group-name and subcommand: $1 and $2 both substituted', async () => {
+	test('with group_name and subcommand: $1 and $2 both substituted', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -235,7 +235,7 @@ describe('/compose remove', () => {
 		expect(content).toContain('old-cmd');
 	});
 
-	test('with no args: collects required group-name via input', async () => {
+	test('with no args: collects required group_name via input', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();
 		await loadExtension(mockPi, cwd);
 		const cmd = commands.get('compose')!;
@@ -246,7 +246,7 @@ describe('/compose remove', () => {
 		await cmd.handler('remove', ctx);
 
 		expect(inputCalls.length).toBeGreaterThanOrEqual(1);
-		expect(inputCalls[0]!.title).toContain('group-name');
+		expect(inputCalls[0]!.title).toContain('group_name');
 		expect(sentMessages).toHaveLength(1);
 		expect(sentMessages[0]!.content).toContain('collected-group');
 	});

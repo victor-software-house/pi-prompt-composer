@@ -1,19 +1,21 @@
 ---
 description: Remove or simplify subcommands from a grouped prompt set
+engine: liquid
 args:
-  - name: group-name
+  - name: group_name
     required: true
     hint: Name of the command group to modify
   - name: subcommand
     required: false
+    default: ""
     hint: Subcommand to remove (optional — will show a list if missing)
 ---
-Remove or simplify subcommands in the `$1` grouped prompt set.
+Remove or simplify subcommands in the `{{ args.group_name }}` grouped prompt set.
 
 ## Step 1 — Find and read the existing group
 
 ```bash
-for d in ~/.pi/agent/composed/$1 .pi/composed/$1; do
+for d in ~/.pi/agent/composed/{{ args.group_name }} .pi/composed/{{ args.group_name }}; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```
@@ -35,10 +37,10 @@ done
 
 ## Step 2 — Identify what to remove
 
-If a subcommand name was provided (`$2`), verify it exists:
+If a subcommand name was provided (`{{ args.subcommand }}`), verify it exists:
 
 ```bash
-[ -f "$GROUP_DIR/$2.md" ] && echo "Found: $2.md" || echo "NOT FOUND: $2.md"
+[ -f "$GROUP_DIR/{{ args.subcommand }}.md" ] && echo "Found: {{ args.subcommand }}.md" || echo "NOT FOUND: {{ args.subcommand }}.md"
 ```
 
 If the file doesn't exist, **stop**. Report which subcommands are available and let the user try again.
@@ -49,7 +51,7 @@ Build the options from the Step 1 output — use the actual filenames and their 
 
 ```json
 {
-  "question": "Which subcommand(s) should I remove from /$1?",
+  "question": "Which subcommand(s) should I remove from /{{ args.group_name }}?",
   "context": "Current subcommands (from Step 1):\n- summarize.md: Summarize current repository state\n- checklist.md: Build verification checklist\n\nReplace these example rows with the actual filenames and descriptions from Step 1 before calling ask_user.",
   "options": [
     { "title": "summarize.md", "description": "Summarize current repository state" },
@@ -67,13 +69,13 @@ Build the options from the Step 1 output — use the actual filenames and their 
 Before removing, search for references to the target subcommand(s):
 
 ```bash
-TARGET="$2"  # or each selected subcommand
+TARGET="{{ args.subcommand }}"  # or each selected subcommand
 
 # Check if other prompts reference this subcommand
-grep -r "/$1 $TARGET" ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null
+grep -r "/{{ args.group_name }} $TARGET" ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null
 
 # Check if docs or scripts reference it
-grep -r "/$1 $TARGET" docs/ README.md AGENTS.md .specify/ 2>/dev/null
+grep -r "/{{ args.group_name }} $TARGET" docs/ README.md AGENTS.md .specify/ 2>/dev/null
 
 # Check if other subcommands in the same group reference it
 grep -r "$TARGET" "$GROUP_DIR/"*.md 2>/dev/null | grep -v "$TARGET.md"
@@ -89,7 +91,7 @@ Paste the actual grep results from Step 3 into the context:
 
 ```json
 {
-  "question": "How should I handle /$1 $TARGET?",
+  "question": "How should I handle /{{ args.group_name }} $TARGET?",
   "context": "No references found to this subcommand.\n\nCurrent subcommand count: 3. After removal: 2. Replace these example values with the actual Step 3 grep output and counts before calling ask_user.",
   "options": [
     { "title": "Delete", "description": "Remove the .md file entirely" },
@@ -107,7 +109,7 @@ If this is the **last subcommand** in the group, use a separate `ask_user` to co
 
 ```json
 {
-  "question": "This is the last subcommand in /$1. Removing it will leave the group empty. Remove the entire group directory?",
+  "question": "This is the last subcommand in /{{ args.group_name }}. Removing it will leave the group empty. Remove the entire group directory?",
   "context": "An empty group directory serves no purpose — Pi ignores groups without subcommands.",
   "options": [
     { "title": "Yes, remove the entire group", "description": "Delete $GROUP_DIR/ including _index.md" },
@@ -183,7 +185,7 @@ For each file that contained a reference, update it and verify:
 
 ```bash
 # After updating each file, confirm the stale reference is gone
-grep -c "/$1 $TARGET" "<updated-file>" && echo "FAIL: stale ref remains" || echo "PASS: <updated-file>"
+grep -c "/{{ args.group_name }} $TARGET" "<updated-file>" && echo "FAIL: stale ref remains" || echo "PASS: <updated-file>"
 ```
 
 ## Step 7 — Update group metadata
@@ -214,7 +216,7 @@ if [ -d "$GROUP_DIR" ]; then
 fi
 
 # 3. No stale references remain
-grep -r "/$1 $TARGET" ~/.pi/agent/composed/ .pi/composed/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
+grep -r "/{{ args.group_name }} $TARGET" ~/.pi/agent/composed/ .pi/composed/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
 
 # 4. Order array does not contain the removed name
 grep '^order:' "$GROUP_DIR/_index.md" 2>/dev/null | grep -q "$TARGET" && echo "FAIL: $TARGET still in order" || echo "PASS: order clean"
@@ -224,7 +226,7 @@ Commit the changes:
 
 ```bash
 git add -A "$GROUP_DIR/" 
-git commit -m "refactor: remove /$1 $TARGET subcommand"
+git commit -m "refactor: remove /{{ args.group_name }} $TARGET subcommand"
 ```
 
 Report what changed:
