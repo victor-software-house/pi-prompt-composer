@@ -188,8 +188,9 @@ async function renderCompose(args: string): Promise<string> {
 
 function expectNoStaleComposePlaceholders(content: string): void {
 	expect(content).not.toContain('.pi/prompts');
-	expect(content).not.toMatch(/<(?:actual|paste|proposed|colliding|formatted|exact|confirmed-subcommand)[^>]*>/);
+	expect(content).not.toMatch(/<[A-Za-z][^>]*>/);
 	expect(content).not.toContain('{{ args.<name> }}');
+	expect(content).not.toContain('Liquid syntax (``)');
 }
 
 describe('bundled compose migration golden tests', () => {

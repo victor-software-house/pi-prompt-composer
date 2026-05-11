@@ -144,7 +144,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
    Use `rest: true` on the final `type: string[]` arg when a Liquid prompt needs Pi-like freeform tails, such as `/compose new group create that shit`.
 
-2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies so the operator's input flows into the prompt.
+2. **Actionable body**: The prompt body must contain specific, step-by-step instructions — not vague guidance. Tell the model *what to do*, *how to verify*, and *what to output*. When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{% raw %}{{ args.name }}{% endraw %}`) in Liquid bodies so the operator's input flows into the prompt.
 
 3. **`ask_user` for interactive decisions**: If a subcommand needs operator input during execution (choosing between options, confirming destructive actions, providing missing context), include the **exact `ask_user` JSON payload** in the prompt body. Do not write "ask the user" — write the literal tool call.
 
@@ -256,7 +256,7 @@ Report what was created as a table:
 | File | Subcommand | Purpose |
 |------|-----------|---------|
 | `_index.md` | — | Group root |
-| `<name>.md` | `/{{ args.group_name }} <name>` | `<description>` |
+| `summarize.md` | `/{{ args.group_name }} summarize` | Summarize current state |
 | ... | ... | ... |
 
 Tell the user: "Run `/reload` to pick up the new commands, then test with `/{{ args.group_name }}` to see the selector."

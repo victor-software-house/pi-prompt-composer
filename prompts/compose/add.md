@@ -88,7 +88,7 @@ Before generating, verify the proposed names don't collide with existing subcomm
 Substitute the actual confirmed names from Step 2:
 
 ```bash
-for proposed in <confirmed-name-1> <confirmed-name-2>; do
+for proposed in security-review release-notes; do
   [ -f "$GROUP_DIR/$proposed.md" ] && echo "COLLISION: $proposed already exists" || echo "OK: $proposed"
 done
 ```
@@ -141,7 +141,7 @@ Every new subcommand `.md` file **must** include:
 1. **`description` in frontmatter** — concise, shown in menus. Match the existing tone. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
    Unquoted colons in YAML values cause parse errors that crash the extension.
 
-2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{{ args.name }}`) in Liquid bodies.
+2. **Actionable body** — specific step-by-step instructions, not vague guidance. "Read the file at `$1` and parse its YAML frontmatter" not "look at the file". When the subcommand takes args, use Pi substitution syntax (`$1`, `$2`, `${@:2}`, `$ARGUMENTS`) in Pi-engine bodies or Liquid syntax (`{% raw %}{{ args.name }}{% endraw %}`) in Liquid bodies.
 
 3. **`ask_user` for interactive decisions** — if the subcommand needs operator input during execution, include the **exact `ask_user` JSON payload**. Do not write "ask the user" — write the literal tool call with `question`, `context`, `options`, and `allowFreeform`.
 
@@ -190,7 +190,7 @@ Every new subcommand `.md` file **must** include:
 3. Apply the update and verify:
 
    ```bash
-   grep "<session-id>" ~/workspace/obsidian-vault/Tools/Pi/Active\ Sessions.md
+   grep "composer-migration" ~/workspace/obsidian-vault/Tools/Pi/Active\ Sessions.md
    ```
 
 4. Report the change:
@@ -235,12 +235,12 @@ Substitute the actual confirmed subcommand names from Step 2:
 
 ```bash
 # 1. New files exist
-for f in <confirmed-name-1> <confirmed-name-2>; do
+for f in security-review release-notes; do
   [ -f "$GROUP_DIR/$f.md" ] && echo "PASS: $f" || echo "FAIL: $f missing"
 done
 
 # 2. Every new file has a description
-for f in <confirmed-name-1> <confirmed-name-2>; do
+for f in security-review release-notes; do
   grep -q 'description:' "$GROUP_DIR/$f.md" && echo "PASS: $f" || echo "FAIL: $f missing description"
 done
 
@@ -266,7 +266,7 @@ Report what was added as a table:
 
 | File | Subcommand | Purpose |
 |------|-----------|---------|
-| `<name>.md` | `/{{ args.group_name }} <name>` | `<description>` |
+| `security-review.md` | `/{{ args.group_name }} security-review` | Review changes for security risks |
 | ... | ... | ... |
 
 Tell the user: "Run `/reload` to pick up the new commands."

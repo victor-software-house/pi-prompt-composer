@@ -185,7 +185,7 @@ For each file that contained a reference, update it and verify:
 
 ```bash
 # After updating each file, confirm the stale reference is gone
-grep -c "/{{ args.group_name }} $TARGET" "<updated-file>" && echo "FAIL: stale ref remains" || echo "PASS: <updated-file>"
+grep -c "/{{ args.group_name }} $TARGET" "docs/README.md" && echo "FAIL: stale ref remains" || echo "PASS: docs/README.md"
 ```
 
 ## Step 7 — Update group metadata
@@ -233,8 +233,8 @@ Report what changed:
 
 | Action | Target | Details |
 |--------|--------|---------|
-| Removed | `$TARGET.md` | `<reason>` |
-| Updated | `<file>` | `<what changed>` |
+| Removed | `$TARGET.md` | User confirmed deletion |
+| Updated | `docs/README.md` | Removed stale command reference |
 | ... | ... | ... |
 
 Tell the user: "Run `/reload` to pick up the changes."
