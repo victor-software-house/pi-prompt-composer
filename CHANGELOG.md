@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.8.0...v1.9.0) (2026-05-11)
+
+
+### Features
+
+* support prompt frontmatter variables ([a44cef2](https://github.com/victor-software-house/pi-prompt-composer/commit/a44cef2634d4a460bc973fc29e395e53e96ef097))
+
 # [1.8.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.2...v1.8.0) (2026-05-11)
 
 
