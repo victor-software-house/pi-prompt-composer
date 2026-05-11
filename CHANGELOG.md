@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.6.1...v1.7.0) (2026-05-11)
+
+
+### Features
+
+* migrate compose prompts to liquid ([c6baff9](https://github.com/victor-software-house/pi-prompt-composer/commit/c6baff9c2ab84bc0b5aada57dd9c319cc9c5e123))
+
 ## [1.6.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.6.0...v1.6.1) (2026-05-10)
 
 
