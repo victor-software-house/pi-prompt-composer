@@ -54,7 +54,7 @@ If the quoted block above is empty, the operator did not provide a description �
 ```json
 {
   "question": "What subcommands should I add to /$1?",
-  "context": "Existing subcommands (from Step 1 output):\n<paste each filename and its description: line from the cat output above>\n\nDescribe what new subcommands you need and I'll propose specific additions.",
+  "context": "Existing subcommands (from Step 1 output):\n- summarize.md: Summarize current repository state\n- checklist.md: Build verification checklist\n\nReplace these example rows with actual filenames and descriptions from Step 1 before calling ask_user. Describe what new subcommands you need and I'll propose specific additions.",
   "allowFreeform": true
 }
 ```
@@ -66,7 +66,7 @@ Use `ask_user` to confirm:
 ```json
 {
   "question": "Here are my proposed additions to /$1. Confirm or adjust:",
-  "context": "Existing subcommands (from Step 1):\n<paste each existing name: description>\n\nProposed new subcommands:\n- <proposed-name>: <one-line purpose>\n- <proposed-name>: <one-line purpose>\n\nEach performs one focused operation that complements the existing set.",
+  "context": "Existing subcommands (from Step 1):\n- summarize: Summarize current repository state\n- checklist: Build verification checklist\n\nProposed new subcommands:\n- security-review: Review changes for security risks\n- release-notes: Draft release notes from the change summary\n\nReplace these example rows with the actual existing and proposed subcommands before calling ask_user. Each performs one focused operation that complements the existing set.",
   "options": [
     { "title": "Use these additions", "description": "Create the subcommands listed above" },
     { "title": "Modify the list", "description": "I'll describe what I want instead" }
@@ -95,8 +95,8 @@ Substitute the actual collision details:
 
 ```json
 {
-  "question": "The name '<colliding-name>' already exists in /$1. How should I handle this?",
-  "context": "Existing subcommand description: <paste the description: line from the existing file>\nProposed purpose: <paste the confirmed purpose from Step 2>",
+  "question": "The name 'security-review' already exists in /$1. How should I handle this?",
+  "context": "Existing subcommand description: Review staged changes for security issues\nProposed purpose: Review changes for security risks\n\nReplace these example values with the actual collision details before calling ask_user.",
   "options": [
     { "title": "Replace it", "description": "Overwrite the existing subcommand" },
     { "title": "Pick a different name", "description": "I'll suggest an alternative" },
@@ -147,7 +147,7 @@ Every new subcommand `.md` file **must** include:
 
 6. **Output format** — specify what the model reports after completion (table, summary, file list).
 
-7. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with `{{ args.<name> }}`.
+7. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{{ args.file }}`.
 
 ### Bad example (what not to generate):
 
@@ -174,10 +174,10 @@ Every new subcommand `.md` file **must** include:
    ```json
    {
      "question": "Which session should I update?",
-     "context": "Current sessions:\n<formatted table rows>",
+     "context": "Current sessions:\n- composer-migration — pi-prompt-composer — main\n- release-check — pi-prompt-composer — release-docs",
      "options": [
-       { "title": "<session 1 name>", "description": "<repo> — <branch>" },
-       { "title": "<session 2 name>", "description": "<repo> — <branch>" }
+       { "title": "composer-migration", "description": "pi-prompt-composer — main" },
+       { "title": "release-check", "description": "pi-prompt-composer — release-docs" }
      ],
      "allowFreeform": true
    }
@@ -214,9 +214,9 @@ Use the extracted value verbatim in the `ask_user` context — do not paraphrase
 ```json
 {
   "question": "Where should the new subcommands appear in the display order?",
-  "context": "Current order line from _index.md: <paste the exact grep output or 'No order field found'>\nExisting subcommands: <comma-separated list from ls>\nNew subcommands: <comma-separated list being added>\n\nThe order array in _index.md controls display in autocomplete and the selector. Subcommands not listed are appended alphabetically.",
+  "context": "Current order line from _index.md: order: [summarize, checklist]\nExisting subcommands: summarize, checklist\nNew subcommands: security-review, release-notes\n\nReplace these example values with the exact grep and ls output before calling ask_user. The order array in _index.md controls display in autocomplete and the selector. Subcommands not listed are appended alphabetically.",
   "options": [
-    { "title": "Append at the end", "description": "Keep current order, add new subcommands after: [<existing>, <new1>, <new2>]" },
+    { "title": "Append at the end", "description": "Keep current order, add new subcommands after: [summarize, checklist, security-review, release-notes]" },
     { "title": "Custom order", "description": "I'll specify the full order" }
   ],
   "allowFreeform": true

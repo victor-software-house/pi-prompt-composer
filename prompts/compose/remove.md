@@ -50,10 +50,10 @@ Build the options from the Step 1 output — use the actual filenames and their 
 ```json
 {
   "question": "Which subcommand(s) should I remove from /$1?",
-  "context": "Current subcommands (from Step 1):\n<paste each filename and its description: line from the output above>",
+  "context": "Current subcommands (from Step 1):\n- summarize.md: Summarize current repository state\n- checklist.md: Build verification checklist\n\nReplace these example rows with the actual filenames and descriptions from Step 1 before calling ask_user.",
   "options": [
-    { "title": "<actual-filename-1>", "description": "<actual description from frontmatter>" },
-    { "title": "<actual-filename-2>", "description": "<actual description from frontmatter>" }
+    { "title": "summarize.md", "description": "Summarize current repository state" },
+    { "title": "checklist.md", "description": "Build verification checklist" }
   ],
   "allowFreeform": true,
   "allowMultiple": true
@@ -90,7 +90,7 @@ Paste the actual grep results from Step 3 into the context:
 ```json
 {
   "question": "How should I handle /$1 $TARGET?",
-  "context": "<paste Step 3 grep output, or 'No references found to this subcommand.' if grep returned nothing>\n\nCurrent subcommand count: <actual count from ls>. After removal: <count minus 1>.",
+  "context": "No references found to this subcommand.\n\nCurrent subcommand count: 3. After removal: 2. Replace these example values with the actual Step 3 grep output and counts before calling ask_user.",
   "options": [
     { "title": "Delete", "description": "Remove the .md file entirely" },
     { "title": "Merge into another subcommand", "description": "Move useful content into an existing subcommand — I'll choose which one" },
@@ -150,10 +150,10 @@ Build the options from the remaining subcommands (excluding the target):
 ```json
 {
   "question": "Which subcommand should absorb the content from $TARGET?",
-  "context": "Available subcommands (excluding $TARGET):\n<paste each remaining filename and its description: line>",
+  "context": "Available subcommands (excluding $TARGET):\n- summarize.md: Summarize current repository state\n- checklist.md: Build verification checklist\n\nReplace these example rows with the actual remaining filenames and descriptions before calling ask_user.",
   "options": [
-    { "title": "<actual-remaining-name>", "description": "<actual description from frontmatter>" },
-    { "title": "<actual-remaining-name>", "description": "<actual description from frontmatter>" }
+    { "title": "summarize.md", "description": "Summarize current repository state" },
+    { "title": "checklist.md", "description": "Build verification checklist" }
   ],
   "allowFreeform": true
 }

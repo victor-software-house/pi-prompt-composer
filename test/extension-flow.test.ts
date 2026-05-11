@@ -174,6 +174,63 @@ describe('direct dispatch', () => {
 	});
 });
 
+async function renderCompose(args: string): Promise<string> {
+	const { mockPi, commands, sentMessages } = createMockPi();
+	await loadExtension(mockPi, cwd);
+	const cmd = commands.get('compose')!;
+
+	const { ctx } = createContext();
+	await cmd.handler(args, ctx);
+
+	expect(sentMessages).toHaveLength(1);
+	return sentMessages[0]!.content;
+}
+
+function expectNoStaleComposePlaceholders(content: string): void {
+	expect(content).not.toContain('.pi/prompts');
+	expect(content).not.toMatch(/<(?:actual|paste|proposed|colliding|formatted|exact|confirmed-subcommand)[^>]*>/);
+	expect(content).not.toContain('{{ args.<name> }}');
+}
+
+describe('bundled compose migration golden tests', () => {
+	test('/compose new preserves freeform description and canonical paths', async () => {
+		const content = await renderCompose('new review create review workflows');
+
+		expect(content).toContain('Create a new grouped prompt set named `review`.');
+		expect(content).toContain('> create review workflows');
+		expect(content).toContain('.pi/composed/review/');
+		expect(content).toContain('~/.pi/agent/composed/review/');
+		expect(content).toContain('order: [summarize, checklist, handoff]');
+		expect(content).toContain('{{ args.file }}');
+		expect(content).toContain('{% shell %}');
+		expectNoStaleComposePlaceholders(content);
+	});
+
+	test('/compose add preserves freeform description and style checklist', async () => {
+		const content = await renderCompose('add review add security checklist');
+
+		expect(content).toContain('Add subcommands to the `review` grouped prompt set.');
+		expect(content).toContain('> add security checklist');
+		expect(content).toContain('~/.pi/agent/composed/review');
+		expect(content).toContain('.pi/composed/review');
+		expect(content).toContain('security-review');
+		expect(content).toContain('{{ args.file }}');
+		expect(content).toContain('{% shell %}');
+		expectNoStaleComposePlaceholders(content);
+	});
+
+	test('/compose remove preserves subcommand target and safe confirmation examples', async () => {
+		const content = await renderCompose('remove review summary');
+
+		expect(content).toContain('Remove or simplify subcommands in the `review` grouped prompt set.');
+		expect(content).toContain('[ -f "$GROUP_DIR/summary.md" ]');
+		expect(content).toContain('Which subcommand(s) should I remove from /review?');
+		expect(content).toContain('Current subcommand count: 3. After removal: 2.');
+		expect(content).toContain('No references found to this subcommand.');
+		expectNoStaleComposePlaceholders(content);
+	});
+});
+
 describe('selector flow', () => {
 	test('bare /testgrp opens custom selector and dispatches after collecting args', async () => {
 		const { mockPi, commands, sentMessages } = createMockPi();

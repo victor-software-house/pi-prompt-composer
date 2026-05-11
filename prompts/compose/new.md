@@ -69,7 +69,7 @@ Use `ask_user` to confirm the subcommand plan. Substitute the actual proposed na
 ```json
 {
   "question": "Here's my proposed subcommand plan for /$1. Confirm or adjust:",
-  "context": "Proposed subcommands:\n- <actual-name>: <actual one-line purpose>\n- <actual-name>: <actual one-line purpose>\n- <actual-name>: <actual one-line purpose>\n\nEach performs one focused operation. Names are short verbs or nouns in kebab-case.",
+  "context": "Proposed subcommands:\n- summarize: Summarize current repository state and risks\n- checklist: Build a verification checklist for the requested change\n- handoff: Write a concise handoff for the next session\n\nReplace these example rows with the actual proposed names and purposes before calling ask_user. Each subcommand performs one focused operation. Names are short verbs or nouns in kebab-case.",
   "options": [
     { "title": "Use this plan", "description": "Create the subcommands listed above" },
     { "title": "Modify the plan", "description": "I'll describe what I want instead" }
@@ -87,9 +87,9 @@ Use the exact subcommand names from the confirmed plan — do not use placeholde
 ```json
 {
   "question": "Should the subcommands appear in this order in the selector?",
-  "context": "Proposed display order (matching the confirmed plan above):\n1. <exact-name-1>\n2. <exact-name-2>\n3. <exact-name-3>\n\nThis becomes the order array in _index.md. It controls autocomplete and the interactive selector. Subcommands not listed are appended alphabetically.",
+  "context": "Proposed display order (matching the confirmed plan above):\n1. summarize\n2. checklist\n3. handoff\n\nReplace these example names with the exact confirmed names before calling ask_user. This becomes the order array in _index.md. It controls autocomplete and the interactive selector. Subcommands not listed are appended alphabetically.",
   "options": [
-    { "title": "Use this order", "description": "order: [<exact-name-1>, <exact-name-2>, <exact-name-3>]" },
+    { "title": "Use this order", "description": "order: [summarize, checklist, handoff]" },
     { "title": "Custom order", "description": "I'll specify a different order" }
   ],
   "allowFreeform": true
@@ -111,8 +111,8 @@ Substitute the actual group name and subcommand name from the confirmed plan:
 
 ```json
 {
-  "question": "Should /$1 <confirmed-subcommand-name> take arguments?",
-  "context": "Purpose: <paste the confirmed one-line purpose from Step 3>\n\nArguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
+  "question": "Should /$1 summarize take arguments?",
+  "context": "Purpose: Summarize current repository state and risks\n\nReplace the example subcommand and purpose with the actual confirmed values before calling ask_user. Arguments make sense when the prompt needs a specific target, name, or path from the operator. Skip args when the prompt works on its own.",
   "options": [
     { "title": "No args needed", "description": "The prompt is self-contained" },
     { "title": "Yes, here's what it needs", "description": "I'll describe the expected arguments" }
@@ -150,7 +150,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
 6. **Error handling**: Include what to do when things go wrong — file not found, name collision, empty results. At minimum: detect the error, report it clearly, suggest a fix.
 
-7. **Substitution syntax**: When a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with `{{ args.<name> }}`.
+7. **Substitution syntax**: When a Pi-engine generated prompt uses args, the body must reference them with `\$1`, `\$2`, `\$@`, or `\${@:N}`. Example: a prompt with `args: [{ name: file }]` should contain `\$1` where the file path belongs. When a Liquid generated prompt uses args, the body must reference them with concrete variable names such as `{{ args.file }}`.
 
 ### Bad example (too vague):
 
@@ -176,8 +176,8 @@ Every generated subcommand `.md` file **must** meet these criteria:
 
    ```json
    {
-     "question": "Apply these changes to <file>?",
-     "context": "Current state: <summary>\nProposed changes: <list>",
+     "question": "Apply these changes to review/checklist.md?",
+     "context": "Current state: description is missing; prompt has no verification step\nProposed changes: add description frontmatter and a numbered verification checklist",
      "options": [
        { "title": "Apply", "description": "Write the changes" },
        { "title": "Cancel", "description": "Discard and stop" }
