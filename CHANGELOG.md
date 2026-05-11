@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.0...v1.7.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* tolerate empty oxlint hook matches ([7f23a4d](https://github.com/victor-software-house/pi-prompt-composer/commit/7f23a4d0c603128c2f85e46514f130e0dca3f813))
+
 # [1.7.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.6.1...v1.7.0) (2026-05-11)
 
 
