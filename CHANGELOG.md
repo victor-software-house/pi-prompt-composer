@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.2...v1.8.0) (2026-05-11)
+
+
+### Features
+
+* validate composed prompts ([7d23c6a](https://github.com/victor-software-house/pi-prompt-composer/commit/7d23c6a256128466c8d0687047c4d91d74800869))
+
 ## [1.7.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.1...v1.7.2) (2026-05-11)
 
 
