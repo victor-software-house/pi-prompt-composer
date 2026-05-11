@@ -32,6 +32,10 @@ export interface TemplateExampleDir {
 	expectedPath: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export async function discoverTemplateExamples(examplesRoot: string): Promise<TemplateExampleDir[]> {
 	let entries: string[];
 	try {
@@ -72,6 +76,7 @@ export async function renderTemplateExample(example: TemplateExampleDir): Promis
 		filePath: exampleCase.file_path ?? example.promptPath,
 		description: exampleCase.description,
 		args,
+		variables: isRecord(frontmatter.variables) ? frontmatter.variables : undefined,
 		content,
 		origin: exampleCase.origin ?? 'project',
 		engine: exampleCase.engine ?? readTemplateEngine(frontmatter),

@@ -367,6 +367,7 @@ describe('formatSelectorLabel', () => {
 		filePath: '/test/create.md',
 		description: 'Create a new thing',
 		args: undefined,
+		variables: undefined,
 		content: 'body',
 		origin: 'user',
 		groupName: 'test',
@@ -396,6 +397,7 @@ describe('renderPrompt shell blocks', () => {
 		filePath: '/tmp/prompts/shell.md',
 		description: 'Shell prompt',
 		args: undefined,
+		variables: undefined,
 		content: '{% shell %}\nprintf {{ args.value | shell_quote }}\n{% endshell %}',
 		origin: 'project',
 		groupName: 'ops',
@@ -461,21 +463,22 @@ describe('renderPrompt shell blocks', () => {
 		expect(rendered).toBe(fakeMarker);
 	});
 
-	test('renders prompt-local partial includes', async () => {
+	test('renders frontmatter variables and prompt-local partial includes', async () => {
 		const cwd = mkdtempSync(join(tmpdir(), 'composer-partials-'));
 		mkdirSync(join(cwd, '_partials'), { recursive: true });
-		writeFileSync(join(cwd, '_partials', 'summary.md'), 'Summary: {{ args.topic }}');
+		writeFileSync(join(cwd, '_partials', 'summary.md'), 'Summary: {{ variables.prefix }} {{ args.topic }}');
 		try {
 			const rendered = await renderPrompt(
 				{
 					...basePrompt,
 					filePath: join(cwd, 'review.md'),
 					content: '{% include "summary.md" %}',
+					variables: { prefix: 'review' },
 					shell: 'deny',
 				},
 				{ args: [], namedArgs: { topic: 'auth' }, didCollectMissingArgs: false },
 			);
-			expect(rendered).toBe('Summary: auth');
+			expect(rendered).toBe('Summary: review auth');
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}

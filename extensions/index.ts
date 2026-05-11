@@ -137,6 +137,7 @@ export interface NestedPrompt {
 	filePath: string;
 	description: string;
 	args: ArgsItem[] | undefined;
+	variables: Record<string, unknown> | undefined;
 	content: string;
 	origin: PromptOrigin;
 	groupName: string;
@@ -149,6 +150,7 @@ export interface FlatPrompt {
 	filePath: string;
 	description: string;
 	args: ArgsItem[] | undefined;
+	variables: Record<string, unknown> | undefined;
 	content: string;
 	origin: PromptOrigin;
 	engine: TemplateEngine;
@@ -373,6 +375,19 @@ export function parseArgsMetadata(raw: unknown, filePath: string, warnings: stri
 	}
 
 	return result.length > 0 ? result : undefined;
+}
+
+export function parseVariablesMetadata(
+	raw: unknown,
+	filePath: string,
+	warnings: string[],
+): Record<string, unknown> | undefined {
+	if (raw === undefined || raw === null) return undefined;
+	if (!isRecord(raw)) {
+		warnings.push(`${basename(filePath)}: variables must be an object, ignoring`);
+		return undefined;
+	}
+	return raw;
 }
 
 export function getMissingRequiredArgs(args: ArgsItem[] | undefined, providedArgs: string[]): ArgsItem[] {
@@ -746,6 +761,7 @@ export function loadSingleGroup(
 
 		// Args (optional)
 		const args = parseArgsMetadata(fm['args'], filePath, warnings);
+		const variables = parseVariablesMetadata(fm['variables'], filePath, warnings);
 		const engine = parseTemplateEngine(fm, filePath, warnings);
 		const shell = parseShellMode(fm, filePath, warnings);
 
@@ -754,6 +770,7 @@ export function loadSingleGroup(
 			filePath,
 			description: effectiveDesc,
 			args,
+			variables,
 			content: body,
 			origin,
 			groupName,
@@ -875,6 +892,7 @@ export function loadFlatPrompt(filePath: string, origin: PromptOrigin, warnings:
 		warnings.push(`Flat prompt ${filePath} missing description, using filename stem as fallback`);
 	}
 	const args = parseArgsMetadata(fm['args'], filePath, warnings);
+	const variables = parseVariablesMetadata(fm['variables'], filePath, warnings);
 	const engine = parseTemplateEngine(fm, filePath, warnings);
 	const shell = parseShellMode(fm, filePath, warnings);
 
@@ -883,6 +901,7 @@ export function loadFlatPrompt(filePath: string, origin: PromptOrigin, warnings:
 		filePath,
 		description: description === '' ? stem : description,
 		args,
+		variables,
 		content: body,
 		origin,
 		engine,
@@ -1199,6 +1218,7 @@ export async function renderPrompt(
 			args: resolved.namedArgs,
 			argv: resolved.args,
 			arguments: resolved.args.join(' '),
+			variables: prompt.variables ?? {},
 			prompt: promptMeta,
 			now: new Date().toISOString(),
 		}),

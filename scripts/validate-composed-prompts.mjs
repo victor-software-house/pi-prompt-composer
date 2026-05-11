@@ -39,6 +39,27 @@ function readPrompt(path) {
 	}
 }
 
+function validateVariables(path, variablesValue) {
+	if (variablesValue === undefined) return;
+	if (!isRecord(variablesValue)) {
+		diagnostic(path, '`variables` must be an object');
+		return;
+	}
+	for (const [key, value] of Object.entries(variablesValue)) {
+		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) diagnostic(path, `variables.${key} must be identifier-safe`);
+		if (typeof value === 'string' && /{{|{%/.test(value)) {
+			diagnostic(path, `variables.${key} must be static data, not Liquid template syntax`);
+		}
+	}
+}
+
+function validateStaticAssigns(path, body) {
+	const staticAssignPattern = /{%\s*assign\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*("[^"]*"|'[^']*'|true|false|-?\d+(?:\.\d+)?)\s*%}/g;
+	for (const match of body.matchAll(staticAssignPattern)) {
+		diagnostic(path, `static assign "${match[1]}" belongs in frontmatter variables, not body`);
+	}
+}
+
 function validateArgs(path, argsValue) {
 	if (argsValue === undefined) return;
 	if (!Array.isArray(argsValue)) {
@@ -106,7 +127,9 @@ function validatePrompt(path) {
 		diagnostic(path, `unsupported shell mode: ${frontmatter.shell}`);
 	}
 	validateArgs(path, frontmatter.args);
+	validateVariables(path, frontmatter.variables);
 	validateShellBlocks(path, frontmatter, body);
+	if ((frontmatter.engine ?? 'pi') === 'liquid') validateStaticAssigns(path, body);
 	if ((frontmatter.engine ?? 'pi') === 'liquid') {
 		try {
 			const liquidEngine = createPromptLiquidEngine(path);

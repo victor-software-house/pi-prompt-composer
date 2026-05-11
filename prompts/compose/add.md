@@ -11,6 +11,10 @@ args:
     rest: true
     default: []
     hint: "What the new subcommand(s) should do (enter to skip)"
+variables:
+  user_root: ~/.pi/agent/composed
+  project_root: .pi/composed
+  validation_command: pnpm run prompts:validate
 ---
 Add subcommands to the `{{ args.group_name }}` grouped prompt set.
 
@@ -18,7 +22,7 @@ Add subcommands to the `{{ args.group_name }}` grouped prompt set.
 
 ```bash
 # Check both prompt roots
-for d in ~/.pi/agent/composed/{{ args.group_name }} .pi/composed/{{ args.group_name }}; do
+for d in {{ variables.user_root }}/{{ args.group_name }} {{ variables.project_root }}/{{ args.group_name }}; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```
@@ -120,7 +124,7 @@ Create new `.md` files that **match the existing group's style exactly**.
 
 1. **Same frontmatter fields and order** as existing subcommands — if they use `description` then `args`, do the same. Don't introduce fields the existing prompts don't use unless the new subcommand needs a Composer feature that existing files do not use.
 
-2. **Use Composer features intentionally** — add `engine: liquid` for named args, loops, conditionals, structured Markdown, XML blocks, JSON, or shell blocks. Keep default `engine: pi` for simple positional substitution.
+2. **Use Composer features intentionally** — add `engine: liquid` for named args, loops, conditionals, structured Markdown, XML blocks, JSON, partials, or shell blocks. Keep default `engine: pi` for simple positional substitution. For Liquid prompts, put static constants in frontmatter `variables`, not body-level `{% raw %}{% assign %}{% endraw %}`. Use `assign` only for dynamic derived values. Use `_partials/` plus `{% raw %}{% include "name.md" %}{% endraw %}` when repeated prompt prose or JSON/tool snippets would otherwise be copied. Follow the Liquid skill if loaded (`~/.agents/skills/liquid/SKILL.md`).
 
 3. **Shell policy** — only use `{% raw %}{% shell %}{% endraw %}` blocks in Liquid prompts. Add `shell: ask` by default, or `shell: allow` only for trusted local-only helpers. Shell-enabled prompts are trusted code, not sandboxed code.
 
@@ -251,6 +255,9 @@ grep '^order:' "$GROUP_DIR/_index.md" || echo "WARNING: no order field"
 count=$(ls "$GROUP_DIR"/*.md | grep -v _index.md | wc -l)
 echo "Total subcommands: $count"
 [ "$count" -gt 8 ] && echo "WARNING: consider splitting this group"
+
+# 5. Composer validator passes
+{{ variables.validation_command }} -- prompts "$GROUP_DIR"
 ```
 
 **Done when:** all new files exist with valid frontmatter and the total count is reasonable.

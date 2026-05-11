@@ -11,6 +11,11 @@ args:
     rest: true
     default: []
     hint: "What this group is for (enter to skip)"
+variables:
+  user_root: ~/.pi/agent/composed
+  project_root: .pi/composed
+  validation_command: pnpm run prompts:validate
+  built_in_commands: help clear model reload config compact tree status
 ---
 Create a new grouped prompt set named `{{ args.group_name }}`.
 
@@ -21,10 +26,10 @@ Use `ask_user` to confirm where the group should live:
 ```json
 {
   "question": "Where should the /{{ args.group_name }} group live?",
-  "context": "User composer prompts (~/.pi/agent/composed/) are personal and available everywhere.\nProject composer prompts (.pi/composed/) are shared via the repo.",
+  "context": "User composer prompts ({{ variables.user_root }}/) are personal and available everywhere.\nProject composer prompts ({{ variables.project_root }}/) are shared via the repo.",
   "options": [
-    { "title": "Project (.pi/composed/{{ args.group_name }}/)", "description": "Shared with the team via git" },
-    { "title": "User (~/.pi/agent/composed/{{ args.group_name }}/)", "description": "Personal, available in all projects" }
+    { "title": "Project ({{ variables.project_root }}/{{ args.group_name }}/)", "description": "Shared with the team via git" },
+    { "title": "User ({{ variables.user_root }}/{{ args.group_name }}/)", "description": "Personal, available in all projects" }
   ],
   "allowFreeform": false
 }
@@ -35,7 +40,7 @@ Record the chosen root as `$PROMPT_ROOT` for all subsequent steps.
 ## Step 2 — Check for conflicts
 
 ```bash
-ls -d ~/.pi/agent/composed/{{ args.group_name }}/ .pi/composed/{{ args.group_name }}/ 2>/dev/null
+ls -d {{ variables.user_root }}/{{ args.group_name }}/ {{ variables.project_root }}/{{ args.group_name }}/ 2>/dev/null
 ```
 
 If the directory exists in either root, **stop**. Tell the user and suggest `/compose add {{ args.group_name }}` instead. Do not proceed.
@@ -44,7 +49,7 @@ Also verify the name does not collide with a built-in Pi command:
 
 ```bash
 # Known built-in commands — reject if {{ args.group_name }} matches any
-echo "help clear model reload config compact tree status" | tr ' ' '\n' | grep -x "{{ args.group_name }}" && echo "COLLISION" || echo "OK"
+echo "{{ variables.built_in_commands }}" | tr ' ' '\n' | grep -x "{{ args.group_name }}" && echo "COLLISION" || echo "OK"
 ```
 
 If there is a collision, use `ask_user` to pick an alternative name before continuing.
@@ -136,7 +141,9 @@ Every generated subcommand `.md` file **must** meet these criteria:
 1. **Frontmatter**: `description` is required. `args` array included when the subcommand takes arguments. Each arg has `name`, `required`, and `hint`. **YAML safety**: always quote `description` and `hint` values that contain colons, brackets, or other special YAML characters (e.g. `hint: "Session name, ID prefix, or 'all' (default: all)"`).
    Unquoted colons in YAML values cause parse errors that crash the extension.
 
-   Add `engine: liquid` when the prompt needs named args, conditionals, loops, `json`, XML blocks, Markdown sections that disappear when empty, or shell blocks. Keep default `engine: pi` for simple positional prompts.
+   Add `engine: liquid` when the prompt needs named args, conditionals, loops, `json`, XML blocks, Markdown sections that disappear when empty, partials, or shell blocks. Keep default `engine: pi` for simple positional prompts.
+
+   For Liquid prompts, put static constants in frontmatter `variables` and reference them as `{% raw %}{{ variables.name }}{% endraw %}`. Use body-level `{% raw %}{% assign %}{% endraw %}` only for dynamic derived values such as normalized args or filtered lists. Use `_partials/` plus `{% raw %}{% include "name.md" %}{% endraw %}` for repeated prompt prose or JSON snippets. Follow the Liquid skill if loaded (`~/.agents/skills/liquid/SKILL.md`).
 
    Add `shell: ask` or `shell: allow` only for `engine: liquid` prompts with `{% raw %}{% shell %}{% endraw %}` blocks. Shell-enabled prompts are trusted code, not sandboxed code. Prefer `shell: ask` unless the prompt is local-only and explicitly trusted.
 
@@ -207,6 +214,7 @@ Every generated subcommand `.md` file **must** meet these criteria:
 1. `_index.md` — with the confirmed `description` and an `order` array listing subcommand names in the display order confirmed by the user. Example:
    ```yaml
    ---
+   type: group
    description: Review workflows
    order: [summary, fix, lint]
    ---
@@ -236,8 +244,8 @@ done
 # 4. _index.md has order field
 grep -q '^order:' "$PROMPT_ROOT/{{ args.group_name }}/_index.md" && echo "PASS: order field" || echo "FAIL: missing order"
 
-# 5. No naming collisions with existing commands
-ls ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null | grep -v "{{ args.group_name }}"
+# 5. Composer validator passes
+{{ variables.validation_command }} -- prompts "$PROMPT_ROOT"
 ```
 
 **Done when:** all verification checks pass and the user sees the file list.

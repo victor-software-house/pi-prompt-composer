@@ -9,13 +9,17 @@ args:
     required: false
     default: ""
     hint: Subcommand to remove (optional — will show a list if missing)
+variables:
+  user_root: ~/.pi/agent/composed
+  project_root: .pi/composed
+  validation_command: pnpm run prompts:validate
 ---
 Remove or simplify subcommands in the `{{ args.group_name }}` grouped prompt set.
 
 ## Step 1 — Find and read the existing group
 
 ```bash
-for d in ~/.pi/agent/composed/{{ args.group_name }} .pi/composed/{{ args.group_name }}; do
+for d in {{ variables.user_root }}/{{ args.group_name }} {{ variables.project_root }}/{{ args.group_name }}; do
   [ -d "$d" ] && echo "Found: $d" && ls "$d"
 done
 ```
@@ -72,7 +76,7 @@ Before removing, search for references to the target subcommand(s):
 TARGET="{{ args.subcommand }}"  # or each selected subcommand
 
 # Check if other prompts reference this subcommand
-grep -r "/{{ args.group_name }} $TARGET" ~/.pi/agent/composed/ .pi/composed/ 2>/dev/null
+grep -r "/{{ args.group_name }} $TARGET" {{ variables.user_root }}/ {{ variables.project_root }}/ 2>/dev/null
 
 # Check if docs or scripts reference it
 grep -r "/{{ args.group_name }} $TARGET" docs/ README.md AGENTS.md .specify/ 2>/dev/null
@@ -216,7 +220,10 @@ if [ -d "$GROUP_DIR" ]; then
 fi
 
 # 3. No stale references remain
-grep -r "/{{ args.group_name }} $TARGET" ~/.pi/agent/composed/ .pi/composed/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
+grep -r "/{{ args.group_name }} $TARGET" {{ variables.user_root }}/ {{ variables.project_root }}/ docs/ README.md 2>/dev/null && echo "FAIL: stale refs" || echo "PASS: no stale refs"
+
+# 4. Composer validator passes for remaining prompts
+[ -d "$GROUP_DIR" ] && {{ variables.validation_command }} -- prompts "$GROUP_DIR" || true
 
 # 4. Order array does not contain the removed name
 grep '^order:' "$GROUP_DIR/_index.md" 2>/dev/null | grep -q "$TARGET" && echo "FAIL: $TARGET still in order" || echo "PASS: order clean"

@@ -47,6 +47,7 @@ Liquid prompts receive:
 | `args` | Named/coerced arguments from frontmatter metadata |
 | `argv` | Raw positional argument array after parsing |
 | `arguments` | Raw positional arguments joined by spaces |
+| `variables` | Static values from frontmatter `variables` |
 | `prompt.name` | Command name |
 | `prompt.groupName` | Group name for grouped subcommands |
 | `prompt.origin` | `bundled`, `user`, or `project` |
@@ -63,21 +64,41 @@ Rest after first: {{ argv | slice: 1 | join: " " }}
 
 ## Variables, conditionals, and partial templates
 
-Liquid supports inline variables with `assign` and multi-line reusable fragments with `capture`.
+Static prompt constants belong in frontmatter `variables`, not body-level `assign`. Body-level `assign` is for values derived from args, filters, loops, or conditional logic.
 
-```liquid
-{% assign preferred_search = "rg" %}
-{% assign fallback_search = "grep" %}
-{% capture search_command %}
-if command -v {{ preferred_search }} >/dev/null 2>&1; then
-  SEARCH={{ preferred_search | shell_quote }}
-else
-  SEARCH={{ fallback_search | shell_quote }}
-fi
-{% endcapture %}
+```markdown
+---
+description: Review one MR
+engine: liquid
+variables:
+  repo_path: acme/app
+  gitlab_project_path: acme%2Fapp
+  slack_channel_id: C0123456789
+---
+MR URL: https://code.example.com/{{ variables.repo_path }}/-/merge_requests/{{ args.iid }}
 ```
 
-Use variables when a value appears more than once: project IDs, channel IDs, repo slugs, ticket keys, paths, output headings, or selected local tools. Do not repeat literals in shell blocks, JSON snippets, and output templates when one `assign` can keep them aligned.
+Use frontmatter `variables` when a static value appears more than once: project IDs, channel IDs, repo slugs, paths, output headings, default commands, or repeated wording. Do not repeat literals in shell blocks, JSON snippets, and output templates when one frontmatter value can keep them aligned.
+
+Use inline `assign` for dynamic values:
+
+```liquid
+{% assign ticket_key = args.key | upcase %}
+{% assign has_checks = args.checks | size %}
+```
+
+Use shell variables inside `{% shell %}` blocks for runtime environment decisions:
+
+```liquid
+{% shell %}
+if command -v rg >/dev/null 2>&1; then
+  SEARCH=rg
+else
+  SEARCH=grep
+fi
+$SEARCH --version | head -1
+{% endshell %}
+```
 
 Use conditionals to include optional sections only when they apply:
 
@@ -287,10 +308,11 @@ The validator checks:
 
 - grouped `_index.md` shape and `order` references
 - required `description` frontmatter
-- supported `engine`, `shell`, and `args` fields
+- supported `engine`, `shell`, `args`, and `variables` fields
 - Liquid parse errors, including prompt-local partial includes
 - shell blocks only in `engine: liquid` prompts with `shell: ask` or `shell: allow`
 - empty shell blocks
+- static body-level `assign` values that should live in frontmatter `variables`
 - unsafe `curl | jq` / raw response redirect patterns in shell blocks
 
 Validation is static. It never executes shell blocks. After validation, smoke render with Pi `/reload` and the target command, approving shell execution when expected.
