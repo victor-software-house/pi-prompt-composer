@@ -60,6 +60,7 @@
 		"fix:biome": "biome check --write .",
 		"fix:oxlint": "oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ .",
 		"test": "vitest --run",
+		"prompts:validate": "node scripts/validate-composed-prompts.mjs",
 		"test:watch": "vitest",
 		"format": "biome format --write .",
 		"prepare": "lefthook install"

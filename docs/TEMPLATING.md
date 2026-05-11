@@ -61,6 +61,54 @@ Everything: {{ arguments }}
 Rest after first: {{ argv | slice: 1 | join: " " }}
 ```
 
+## Variables, conditionals, and partial templates
+
+Liquid supports inline variables with `assign` and multi-line reusable fragments with `capture`.
+
+```liquid
+{% assign preferred_search = "rg" %}
+{% assign fallback_search = "grep" %}
+{% capture search_command %}
+if command -v {{ preferred_search }} >/dev/null 2>&1; then
+  SEARCH={{ preferred_search | shell_quote }}
+else
+  SEARCH={{ fallback_search | shell_quote }}
+fi
+{% endcapture %}
+```
+
+Use variables when a value appears more than once: project IDs, channel IDs, repo slugs, ticket keys, paths, output headings, or selected local tools. Do not repeat literals in shell blocks, JSON snippets, and output templates when one `assign` can keep them aligned.
+
+Use conditionals to include optional sections only when they apply:
+
+```liquid
+{% assign has_checks = args.checks | size %}
+{% if has_checks > 0 %}
+### Checks
+{% for check in args.checks %}
+- {{ check }}
+{% endfor %}
+{% endif %}
+```
+
+Prompt-local partials are supported for repeated snippets. Place partials next to the prompt in `_partials/` or beside the prompt file, then include them with Liquid. Partials share the current render context.
+
+```text
+.pi/composed/review/
+├── _index.md
+├── _partials/
+│   └── local-context.md
+└── create.md
+```
+
+```liquid
+{% if args.include_context %}
+{% include "local-context.md" %}
+{% endif %}
+```
+
+Prefer partials for repeated prompt prose and repeated JSON/tool instruction blocks. Prefer shell variables inside a single `{% shell %}` block for command-local decisions such as `rg` vs `grep`, available CLIs, or temp file paths.
+
 ## Rest arguments
 
 For nicer authoring, mark the final arg as `rest: true`. Composer captures all remaining positionals into that arg.
@@ -225,3 +273,24 @@ Regenerate expected outputs after intentional template/helper changes:
 ```bash
 UPDATE_TEMPLATE_EXAMPLES=1 pnpm test -- --run test/template-fixtures.test.ts
 ```
+
+## Prompt validation
+
+Validate composer-owned prompt roots before manual smoke testing:
+
+```bash
+pnpm run prompts:validate
+mise run prompts:validate -- prompts ~/.pi/agent/composed/workflow
+```
+
+The validator checks:
+
+- grouped `_index.md` shape and `order` references
+- required `description` frontmatter
+- supported `engine`, `shell`, and `args` fields
+- Liquid parse errors, including prompt-local partial includes
+- shell blocks only in `engine: liquid` prompts with `shell: ask` or `shell: allow`
+- empty shell blocks
+- unsafe `curl | jq` / raw response redirect patterns in shell blocks
+
+Validation is static. It never executes shell blocks. After validation, smoke render with Pi `/reload` and the target command, approving shell execution when expected.

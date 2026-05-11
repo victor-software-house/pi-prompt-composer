@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -459,6 +459,26 @@ describe('renderPrompt shell blocks', () => {
 			},
 		);
 		expect(rendered).toBe(fakeMarker);
+	});
+
+	test('renders prompt-local partial includes', async () => {
+		const cwd = mkdtempSync(join(tmpdir(), 'composer-partials-'));
+		mkdirSync(join(cwd, '_partials'), { recursive: true });
+		writeFileSync(join(cwd, '_partials', 'summary.md'), 'Summary: {{ args.topic }}');
+		try {
+			const rendered = await renderPrompt(
+				{
+					...basePrompt,
+					filePath: join(cwd, 'review.md'),
+					content: '{% include "summary.md" %}',
+					shell: 'deny',
+				},
+				{ args: [], namedArgs: { topic: 'auth' }, didCollectMissingArgs: false },
+			);
+			expect(rendered).toBe('Summary: auth');
+		} finally {
+			rmSync(cwd, { recursive: true, force: true });
+		}
 	});
 });
 

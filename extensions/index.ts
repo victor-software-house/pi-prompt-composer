@@ -1096,11 +1096,14 @@ async function showPromptSelector(
 // Rendering and interactive prompt helpers
 // ---------------------------------------------------------------------------
 
-const liquidEngine = createEngine({
-	root: [],
-	partials: [],
-	layouts: [],
-});
+function createPromptLiquidEngine(promptFilePath: string) {
+	const promptDir = dirname(promptFilePath);
+	return createEngine({
+		root: [promptDir],
+		partials: [join(promptDir, '_partials'), promptDir],
+		layouts: [],
+	});
+}
 
 function expandShellBlocks(content: string, markerId: string): string {
 	let index = 0;
@@ -1190,6 +1193,7 @@ export async function renderPrompt(
 
 	const markerId = randomUUID();
 	const expandedContent = expandShellBlocks(prompt.content, markerId);
+	const liquidEngine = createPromptLiquidEngine(prompt.filePath);
 	const rendered = String(
 		liquidEngine.renderSync(liquidEngine.parse(expandedContent, prompt.filePath), {
 			args: resolved.namedArgs,

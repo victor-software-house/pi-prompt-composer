@@ -71,15 +71,17 @@ Every subcommand `.md` file produced by the compose workflows **must** include:
 1. **`description` in frontmatter** — concise, menu-friendly. Quote values containing colons or brackets.
 2. **`args` when needed** — each with `name`, `required`, and `hint`. Add `type`, `values`, `default`, and final-arg `rest: true` when they improve validation or UX. Use `type: string[]` for repeated values such as `checks=typecheck checks=test` or freeform rest tails.
 3. **Engine choice** — use default `engine: pi` for simple positional prompts; use `engine: liquid` for named args, conditionals, loops, structured Markdown, XML blocks, JSON, or shell blocks.
-4. **Shell policy** — only include `{% shell %}` blocks in `engine: liquid` prompts. Set `shell: ask` unless the prompt is clearly trusted and local-only; use `shell: allow` sparingly. Shell-enabled prompts are trusted code, not sandboxed code.
-5. **Validation pattern** — prefer declarative existing fields first: `required`, `type`, `values`, and `default`. For semantic validation not supported by frontmatter, include explicit verification steps and stop conditions in the prompt body. Do **not** document `validate:` as runtime-supported yet.
-6. **`order` in `_index.md`** — list subcommand names in the desired display order. Unlisted subcommands are appended alphabetically.
-7. **Actionable body** — specific step-by-step instructions, not vague guidance
-8. **Exact `ask_user` JSON** — when the subcommand needs operator input during execution, include the literal tool call payload. Never write "ask the user" without the JSON.
-9. **Verification steps** — at least one `bash` block that confirms success
-10. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
-11. **Output format** — specify what the model reports (table, summary, file list)
-12. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}` so operator input flows into the rendered prompt. For Liquid prompts, prefer `{{ args.name }}` and repeatable `string[]` args.
+4. **Liquid reuse** — for `engine: liquid`, define repeated values once with `assign` or `capture`. Use `{% if %}` / `{% for %}` to conditionally render optional sections. Use `_partials/` plus `{% include "name.md" %}` for repeated snippets across prompts in the same group. Do not copy/paste the same project ID, channel ID, path, JSON block, or prose section in multiple places when a variable or partial keeps it aligned.
+5. **Shell policy** — only include `{% shell %}` blocks in `engine: liquid` prompts. Set `shell: ask` unless the prompt is clearly trusted and local-only; use `shell: allow` sparingly. Shell-enabled prompts are trusted code, not sandboxed code. Do environment/tool checks inside shell blocks once, assign shell variables (`SEARCH=rg` vs `SEARCH=grep`, etc.), then reuse those variables; do not ask the LLM to run local discovery later when the prompt can precompute it.
+6. **Validation pattern** — prefer declarative existing fields first: `required`, `type`, `values`, and `default`. For semantic validation not supported by frontmatter, include explicit verification steps and stop conditions in the prompt body. Do **not** document `validate:` as runtime-supported yet.
+7. **`order` in `_index.md`** — list subcommand names in the desired display order. Unlisted subcommands are appended alphabetically.
+8. **Actionable body** — specific step-by-step instructions, not vague guidance
+9. **Exact `ask_user` JSON** — when the subcommand needs operator input during execution, include the literal tool call payload. Never write "ask the user" without the JSON.
+10. **Verification steps** — at least one `bash` block that confirms success
+11. **Error handling** — what to do when the target doesn't exist, a name collides, or results are empty
+12. **Output format** — specify what the model reports (table, summary, file list)
+13. **Substitution syntax** — when a Pi-engine generated prompt uses args, the body must reference them with `$1`, `$2`, `$@`, or `${@:N}` so operator input flows into the rendered prompt. For Liquid prompts, prefer `{{ args.name }}` and repeatable `string[]` args.
+14. **Static validation** — run `pnpm run prompts:validate` for bundled prompts or `mise run prompts:validate -- prompts <extra-root>` when validating user/project prompt roots. Fix warnings before live `/reload` smoke tests.
 
 See the compose prompts themselves (`prompts/compose/new.md`, `prompts/compose/add.md`) for good-vs-bad examples.
 
@@ -103,7 +105,7 @@ Stop and ask before:
 5. Decide args per subcommand (use `ask_user` when ambiguous)
 6. Generate files following the quality bar above
    - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body — not prose like "confirm with the user". See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies) and [references/examples.md](references/examples.md#example-3-interactive-group-with-confirmation-and-choices).
-7. Verify with bash checks
+7. Verify with `pnpm run prompts:validate` or `mise run prompts:validate -- prompts <target-root>`, then targeted bash checks
 8. Commit and report with a summary table
 
 See: [references/workflow.md](references/workflow.md), [references/layout.md](references/layout.md)
@@ -116,7 +118,7 @@ See: [references/workflow.md](references/workflow.md), [references/layout.md](re
 4. Generate files that **match the existing group's style exactly**
    - For any subcommand that requires confirmation or user input during execution, include the full `ask_user` JSON payload inline in the body. See [references/args-and-frontmatter.md](references/args-and-frontmatter.md#interactive-prompt-bodies).
 5. Update `_index.md` `order` array — extract current order with `grep`, confirm placement with `ask_user`
-6. Verify and commit
+6. Verify with prompt validation and commit
 
 See: [references/operations.md](references/operations.md)
 
@@ -128,7 +130,7 @@ See: [references/operations.md](references/operations.md)
 4. Use `ask_user` to confirm action: delete, merge, simplify, or cancel
 5. Apply change, update references
 6. Update `_index.md` — remove deleted name from `order` array, update `description` if scope changed
-7. Verify, commit
+7. Verify with prompt validation, commit
 
 See: [references/operations.md](references/operations.md)
 
