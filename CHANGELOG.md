@@ -1,3 +1,10 @@
+## [1.7.2](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.1...v1.7.2) (2026-05-11)
+
+
+### Bug Fixes
+
+* preserve literal liquid examples ([1ea879c](https://github.com/victor-software-house/pi-prompt-composer/commit/1ea879ca6dea4ae0895fd54f1e9d2a9495c0f435))
+
 ## [1.7.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.7.0...v1.7.1) (2026-05-11)
 
 
