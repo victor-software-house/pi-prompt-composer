@@ -1,97 +1,98 @@
 {
-	"name": "pi-prompt-composer",
-	"version": "1.9.1",
-	"packageManager": "pnpm@11.0.8",
-	"description": "Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for Pi",
-	"license": "MIT",
-	"author": "Victor Software House",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/victor-software-house/pi-prompt-composer.git"
-	},
-	"homepage": "https://github.com/victor-software-house/pi-prompt-composer#readme",
-	"bugs": {
-		"url": "https://github.com/victor-software-house/pi-prompt-composer/issues"
-	},
-	"engines": {
-		"node": ">=18"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"keywords": [
-		"pi-package",
-		"pi-extension",
-		"pi-coding-agent",
-		"prompt-templates",
-		"slash-commands",
-		"coding-agent",
-		"developer-tools",
-		"llm",
-		"openai",
-		"prompt-engineering"
-	],
-	"pi": {
-		"extensions": [
-			"./extensions"
-		],
-		"skills": [
-			"./skills"
-		],
-		"image": "https://raw.githubusercontent.com/victor-software-house/pi-prompt-composer/main/assets/preview.png"
-	},
-	"type": "module",
-	"files": [
-		"extensions",
-		"prompts",
-		"skills",
-		"examples",
-		"README.md",
-		"LICENSE"
-	],
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"lint": "pnpm run lint:biome && pnpm run lint:oxlint",
-		"lint:biome": "biome check .",
-		"lint:oxlint": "oxlint --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ .",
-		"lint:fix": "biome check --write .",
-		"fix": "pnpm run fix:oxlint && pnpm run fix:biome",
-		"fix:biome": "biome check --write .",
-		"fix:oxlint": "oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ .",
-		"test": "vitest --run",
-		"prompts:validate": "node scripts/validate-composed-prompts.mjs",
-		"test:watch": "vitest",
-		"format": "biome format --write .",
-		"prepare": "lefthook install"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.8",
-		"@commitlint/cli": "^20.5.0",
-		"@commitlint/config-conventional": "^20.5.0",
-		"@earendil-works/pi-agent-core": "^0.74.0",
-		"@earendil-works/pi-ai": "^0.74.0",
-		"@earendil-works/pi-coding-agent": "^0.74.0",
-		"@earendil-works/pi-tui": "^0.74.0",
-		"@limegrass/eslint-plugin-import-alias": "^1.6.1",
-		"@semantic-release/changelog": "^6.0.3",
-		"@semantic-release/git": "^10.0.1",
-		"@semantic-release/github": "^12.0.6",
-		"@semantic-release/npm": "^13.1.5",
-		"@types/node": "^25.6.0",
-		"eslint-plugin-zod": "^3.5.0",
-		"lefthook": "^2.1.4",
-		"oxlint": "^1.63.0",
-		"oxlint-tsgolint": "^0.22.1",
-		"semantic-release": "^25.0.3",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.0"
-	},
-	"dependencies": {
-		"pi-template-kit": "^0.1.0"
-	}
+  "name": "pi-prompt-composer",
+  "version": "1.9.1",
+  "packageManager": "pnpm@11.1.1",
+  "description": "Build multi-option slash commands from plain prompts — variable expansion, arg collection & interactive selectors for Pi",
+  "license": "MIT",
+  "author": "Victor Software House",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/victor-software-house/pi-prompt-composer.git"
+  },
+  "homepage": "https://github.com/victor-software-house/pi-prompt-composer#readme",
+  "bugs": {
+    "url": "https://github.com/victor-software-house/pi-prompt-composer/issues"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-coding-agent",
+    "prompt-templates",
+    "slash-commands",
+    "coding-agent",
+    "developer-tools",
+    "llm",
+    "openai",
+    "prompt-engineering"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "image": "https://raw.githubusercontent.com/victor-software-house/pi-prompt-composer/main/assets/preview.png"
+  },
+  "type": "module",
+  "files": [
+    "extensions",
+    "prompts",
+    "skills",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm run lint:biome && pnpm run lint:oxlint",
+    "lint:biome": "biome check .",
+    "lint:oxlint": "oxlint --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ .",
+    "lint:fix": "biome check --write .",
+    "fix": "pnpm run fix:oxlint && pnpm run fix:biome",
+    "fix:biome": "biome check --write .",
+    "fix:oxlint": "oxlint --fix --import-plugin --type-aware --tsconfig=./tsconfig.json --ignore-pattern=test/ .",
+    "test": "vitest --run",
+    "prompts:validate": "node scripts/validate-composed-prompts.mjs",
+    "test:watch": "vitest",
+    "format": "biome format --write .",
+    "prepare": "lefthook install",
+    "prepublishOnly": "pnpm run typecheck && pnpm test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.74.0",
+    "@earendil-works/pi-tui": ">=0.74.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@earendil-works/pi-agent-core": "^0.74.0",
+    "@earendil-works/pi-ai": "^0.74.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-tui": "^0.74.0",
+    "@limegrass/eslint-plugin-import-alias": "^1.6.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@types/node": "^25.6.0",
+    "eslint-plugin-zod": "^3.5.0",
+    "lefthook": "^2.1.4",
+    "oxlint": "^1.63.0",
+    "oxlint-tsgolint": "^0.22.1",
+    "semantic-release": "^25.0.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  },
+  "dependencies": {
+    "pi-template-kit": "^0.1.0"
+  }
 }

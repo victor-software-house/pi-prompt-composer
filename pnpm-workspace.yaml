@@ -1,5 +1,6 @@
 allowBuilds:
-  '@google/genai': true
+  "@google/genai": true
   koffi: true
   lefthook: true
   protobufjs: true
+  "@vscode/ripgrep": true
