@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.9.0...v1.9.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* block invalid optional prompt args ([d0229e3](https://github.com/victor-software-house/pi-prompt-composer/commit/d0229e32986dbba142967f5f1beb96c947957eb5))
+
 # [1.9.0](https://github.com/victor-software-house/pi-prompt-composer/compare/v1.8.0...v1.9.0) (2026-05-11)
 
 
