@@ -25,7 +25,7 @@ Pending:
 - module extraction from `extensions/index.ts` into focused `src/` modules
 - operator-only dispatch mode
 - optional future `validate.*` fields beyond current args schema
-- remaining live smoke checklist and temporary `fixture` cleanup
+- remaining live smoke checklist and temporary local fixture-prompt cleanup
 
 
 ## Scope

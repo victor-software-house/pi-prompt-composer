@@ -29,8 +29,8 @@ Implemented:
 
 Remaining follow-ups:
 
-* complete live smoke for `/compose add`, `/compose remove`, `/fixture rest`, `/fixture validation`, and `/workflow` renders
-* remove temporary `~/.pi/agent/composed/fixture` once smoke passes
+* complete live smoke for `/compose add`, `/compose remove`, local rest/validation fixture prompts, and private shell-enabled workflow prompts
+* remove temporary local fixture prompts once smoke passes
 * decide whether future `validate.pattern` / ranges / length validators are worth shipping
 * module extraction remains tracked separately by roadmap PPC-011
 
@@ -341,7 +341,7 @@ Acceptance:
 
 ### Phase 8: Live smoke testing and temp prompt cleanup
 
-Use temporary global `~/.pi/agent/composed/fixture/` prompts for manual testing, then remove them or document their temp status.
+Use temporary local fixture prompts for manual testing, then remove them or document their temp status.
 
 Acceptance:
 
@@ -366,7 +366,7 @@ Acceptance:
 * Should `arguments` stay a plain space-joined string, or should composer add named helpers for shell-safe/string-safe joins?
 * `validate.pattern` remains follow-up after Liquid prompt migration; current runtime validation stays limited to shipped arg fields plus static prompt validator.
 * `/compose new` should choose `engine: liquid` when named args, conditionals, loops, partials, variables, XML, JSON, or shell blocks are useful; keep `engine: pi` for simple positional prompts.
-* Temporary global `fixture` prompts stay local-only and should be deleted after smoke testing.
+* Temporary fixture prompts stay local-only and should be deleted after smoke testing.
 
 ## ADR Index
 

@@ -18,8 +18,8 @@ Shipped in current `main`:
 
 Still pending:
 
-- live smoke completion for `/compose add`, `/compose remove`, `/fixture`, and `/workflow` shell-approved renders
-- remove temporary `~/.pi/agent/composed/fixture` after smoke
+- live smoke completion for `/compose add`, `/compose remove`, local rest/validation fixture prompts, and private workflow prompts with shell-approved renders
+- remove temporary local fixture prompts after smoke
 - module extraction from `extensions/index.ts` into `src/` modules
 - operator-only dispatch mode
 - optional future declarative validators beyond current arg fields

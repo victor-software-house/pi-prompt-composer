@@ -32,7 +32,7 @@ Still open or deferred:
 * operator-only dispatch mode
 * resource-level `enabled: false` tombstones
 * future `validate.*` schema fields such as `pattern` / range / length validators
-* live smoke completion and temporary `fixture` cleanup
+* live smoke completion and temporary local fixture-prompt cleanup
 
 ## 1. Problem & Context
 
@@ -52,7 +52,7 @@ Current code reality:
 * `renderPrompt()` supports Liquid, prompt-local partials, XML blocks, filters, and trusted `{% shell %}` blocks.
 * `pi.sendUserMessage(rendered, { deliverAs: 'followUp' })` dispatches visible rendered content.
 
-The remaining product steps are module extraction, operator-only dispatch, optional future `validate.*` fields, live smoke completion, and cleanup of temporary test prompts.
+The remaining product steps are module extraction, operator-only dispatch, optional future `validate.*` fields, live smoke completion, and cleanup of temporary local fixture prompts.
 
 ---
 

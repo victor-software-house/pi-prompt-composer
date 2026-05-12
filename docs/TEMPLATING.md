@@ -68,14 +68,14 @@ Static prompt constants belong in frontmatter `variables`, not body-level `assig
 
 ```markdown
 ---
-description: Review one MR
+description: Review one change request
 engine: liquid
 variables:
   repo_path: acme/app
-  gitlab_project_path: acme%2Fapp
-  slack_channel_id: C0123456789
+  project_slug: acme%2Fapp
+  review_channel: dev-review
 ---
-MR URL: https://code.example.com/{{ variables.repo_path }}/-/merge_requests/{{ args.iid }}
+Change URL: https://code.example.com/{{ variables.repo_path }}/changes/{{ args.iid }}
 ```
 
 Use frontmatter `variables` when a static value appears more than once: project IDs, channel IDs, repo slugs, paths, output headings, default commands, or repeated wording. Do not repeat literals in shell blocks, JSON snippets, and output templates when one frontmatter value can keep them aligned.
@@ -301,7 +301,7 @@ Validate composer-owned prompt roots before manual smoke testing:
 
 ```bash
 pnpm run prompts:validate
-mise run prompts:validate -- prompts ~/.pi/agent/composed/workflow
+mise run prompts:validate -- prompts ~/.pi/agent/composed/review
 ```
 
 The validator checks:

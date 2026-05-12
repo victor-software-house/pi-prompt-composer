@@ -200,12 +200,12 @@ Static constants belong in frontmatter `variables`, not repeated body literals o
 ```yaml
 variables:
   repo_path: acme/app
-  slack_channel_id: C0123456789
+  review_channel: dev-review
 ```
 
 ```liquid
 Repo: {{ variables.repo_path }}
-Channel: {{ variables.slack_channel_id }}
+Channel: {{ variables.review_channel }}
 ```
 
 Use body-level `assign` for dynamic derived values only, such as `args.key | upcase`.
@@ -273,7 +273,7 @@ This is opt-in because shell can read files, call networks, mutate repos, or exp
 
 ```bash
 pnpm run prompts:validate
-mise run prompts:validate -- prompts ~/.pi/agent/composed/workflow
+mise run prompts:validate -- prompts ~/.pi/agent/composed/review
 ```
 
 See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
