@@ -3,7 +3,7 @@ title: "Enhanced Composer Prompts"
 prd: "PRD-001-enhanced-composer-prompts"
 date: 2026-05-08
 author: "Victor Software House"
-status: Draft
+status: Archived
 ---
 
 # Plan: Enhanced Composer Prompts
@@ -13,6 +13,10 @@ status: Draft
 * **PRD**: [docs/prd/PRD-001-enhanced-composer-prompts.md](../prd/PRD-001-enhanced-composer-prompts.md)
 * **Date**: 2026-05-08
 * **Author**: Victor Software House
+
+## Status note — 2026-05-11
+
+This plan is historical baseline architecture. Core requirements shipped through the implementation tracked in [Liquid-First Compose Prompt Migration](plan-liquid-first-compose-migration.md), [ROADMAP](../ROADMAP.md), and [PRD-001](../prd/PRD-001-enhanced-composer-prompts.md). Some details below are intentionally stale (for example early dependency/import notes, no-filesystem Liquid assumptions, and pre-`variables` context shape). Treat current docs as source of truth before implementing new work.
 
 ## Architecture Overview
 

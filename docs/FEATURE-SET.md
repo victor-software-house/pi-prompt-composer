@@ -16,7 +16,7 @@ Operators should be able to:
 - open an interactive menu from bare `/command`
 - provide missing prompt arguments through guided input
 - keep Pi-native frontmatter and argument semantics when using `engine: pi`
-- opt into Liquid rendering for conditionals, loops, data shaping, JSON snippets, XML-style prompt blocks, and safe command-batch text
+- opt into Liquid rendering for conditionals, loops, data shaping, JSON snippets, XML-style prompt blocks, frontmatter variables, prompt-local partials, safe command-batch text, and opt-in shell execution
 - see every rendered prompt as normal visible user-message content before the agent responds
 
 Example:
@@ -74,8 +74,11 @@ This layer adds rendering features Pi does not provide natively, such as:
 - XML-style prompt blocks with `{% xml "tag" %}` that omit empty sections
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - command-batch rendering as text for operator/model review
+- frontmatter `variables` for static constants exposed as `{{ variables.name }}`
+- prompt-local `_partials/` includes for repeated prompt snippets
 - opt-in shell execution with `shell: ask` or `shell: allow`, plus configurable default shell mode
 - fluent current validation through `required`, `type`, `values`, `default`, repeatable `string[]` named args, and `rest: true`
+- static prompt validation via `prompts:validate`
 
 These features belong to the package, not to Pi's native prompt-template contract. Shell execution is deny-by-default and treated as trusted code, not sandboxed code.
 
@@ -115,19 +118,21 @@ These features belong to the package, not to Pi's native prompt-template contrac
 
 3.1 **Liquid engine opt-in** — `engine: liquid` renders prompts through LiquidJS with named args, `argv`, `arguments`, and `rest: true` support.
 
-3.2 **Declarative prompt logic** — Support `if`, `for`, `assign`, `where`, `map`, `join`, `size`, `default`, and other safe Liquid built-ins.
+3.2 **Declarative prompt logic** — Support `if`, `for`, dynamic `assign`, `where`, `map`, `join`, `size`, `default`, and other safe Liquid built-ins. Static constants belong in frontmatter `variables`.
 
 3.3 **Structured prompt blocks** — `{% xml "tag" %}` renders Claude Code skill-style XML blocks and omits empty bodies.
 
 3.4 **Safe formatting helpers** — Ship `present`, `quote`, `tokens`, `json`, and `shell_quote` filters.
 
-3.5 **Command-batch rendering** — Prompt authors can render shell command blocks with safe quoting; shell blocks render command text unless prompt frontmatter or config opts into execution.
+3.5 **Command-batch rendering and shell blocks** — Prompt authors can render shell command blocks with safe quoting; shell blocks render command text unless prompt frontmatter or config opts into bounded execution.
 
 3.6 **Configurable shell mode** — `shell: deny|ask|allow` frontmatter controls each prompt; `prompt-composer.json` can set a user or project default.
 
 3.7 **Fluent current validation** — Prompt args can use `required`, `type`, `values`, `default`, repeatable `string[]` values, and `rest: true`. Unsupported semantic validation belongs in explicit prompt-body checks until declarative `validate:` exists.
 
 3.8 **Golden fixture coverage** — Templating examples are captured in `examples/templating/` and verified byte-for-byte by tests.
+
+3.9 **Prompt validation** — `pnpm run prompts:validate` validates grouped indexes, frontmatter, args, variables, Liquid syntax, partial includes, shell policy, and common unsafe shell anti-patterns.
 
 ### Priority 4: Reliability and runtime behavior
 
@@ -172,10 +177,10 @@ Keep these out of scope:
 - pretending grouped commands are native Pi prompt commands inside Pi's internal command metadata
 - arbitrary JavaScript or unbounded template execution
 - hidden preprocessing that the operator cannot inspect after dispatch
-- prompt inheritance across directories
+- cross-directory prompt inheritance
 - dynamic generated subcommands
 - grouped-prompt-specific permission systems
-- shell command execution from Liquid templates
+- arbitrary unbounded shell command execution from Liquid templates
 
 ## Roadmap guidance
 

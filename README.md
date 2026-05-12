@@ -185,7 +185,7 @@ Parsing is lenient — a missing `hint` or `required` won't break the prompt. On
 
 ## Liquid helpers
 
-Liquid prompts get `{ args, argv, arguments, prompt, now }` as their render context:
+Liquid prompts get `{ args, argv, arguments, variables, prompt, now }` as their render context:
 
 ```liquid
 {{ args.change | quote }}
@@ -194,6 +194,23 @@ Liquid prompts get `{ args, argv, arguments, prompt, now }` as their render cont
 {{ args.workdir | shell_quote }}
 {% xml "task" %}{{ args.goal }}{% endxml %}
 ```
+
+Static constants belong in frontmatter `variables`, not repeated body literals or body-level `assign` statements:
+
+```yaml
+variables:
+  repo_path: acme/app
+  slack_channel_id: C0123456789
+```
+
+```liquid
+Repo: {{ variables.repo_path }}
+Channel: {{ variables.slack_channel_id }}
+```
+
+Use body-level `assign` for dynamic derived values only, such as `args.key | upcase`.
+
+Prompt-local partials live beside the prompt in `_partials/` and can be included with `{% include "name.md" %}`. Use them for repeated prompt prose or JSON/tool snippets.
 
 Liquid also gets raw positional context for Pi-like rest behavior: `argv` is the positional array and `arguments` is every positional joined by spaces. For nicer frontmatter, mark the final arg `rest: true` with `type: string[]` to capture remaining positionals.
 
@@ -252,7 +269,14 @@ python3 scripts/summarize.py --topic {{ args.topic | shell_quote }}
 {% endshell %}
 ```
 
-This is opt-in because shell can read files, call networks, mutate repos, or expose secrets. Quote user-controlled args with `shell_quote`. See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
+This is opt-in because shell can read files, call networks, mutate repos, or expose secrets. Quote user-controlled args with `shell_quote`. Validate prompt roots before live smoke:
+
+```bash
+pnpm run prompts:validate
+mise run prompts:validate -- prompts ~/.pi/agent/composed/workflow
+```
+
+See [docs/TEMPLATING.md](docs/TEMPLATING.md) and [examples/templating/README.md](examples/templating/README.md).
 
 Composer does not pretend to sandbox commands. Portable sandboxing is platform-specific; shell-enabled prompts are trusted code, matching Pi's normal shell trust model.
 

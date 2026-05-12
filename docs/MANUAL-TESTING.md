@@ -6,7 +6,7 @@ Run this checklist against a live Pi session before first publish and after sign
 
 1. Install the package locally:
    ```bash
-   pi install -l git:github.com/victor-software-house/pi-prompt-composer@003-publish-readiness
+   pi update npm:pi-prompt-composer
    ```
 2. Copy example prompts into your project prompt root:
    ```bash
@@ -69,8 +69,13 @@ Run this checklist against a live Pi session before first publish and after sign
 | 18 | Put a legacy group under `.pi/prompts/legacy/`, then `/reload` | Directory migrates to `.pi/composed/legacy/` and a deprecation warning names source and target | |
 | 19 | Type `/fixture rest foo create that shit` | Rendered message shows `args.tail` as `create that shit`, `argv` as all positionals, and `arguments` as joined string | |
 | 20 | Type `/fixture validation wrong count=nope` | Render is blocked; UI warns about invalid enum and/or number | |
-| 21 | Before migrating bundled `/compose` prompts to Liquid, run golden tests for `/compose new/add/remove` sample invocations | Rendered instructions are deterministic, use `.pi/composed/`, preserve literal Liquid examples, and contain no unresolved placeholders | |
+| 21 | Type `/compose new review create review workflows` | Rendered instructions are deterministic, use `composed/`, preserve literal Liquid examples, include `variables` guidance, and contain no unresolved placeholders | |
+| 22 | Type `/compose add review add security checklist` | Rendered instructions match existing group style and include prompt validation guidance | |
+| 23 | Type `/compose remove review summary` | Rendered instructions include stale-reference checks, order update, and prompt validation guidance | |
+| 24 | Run `pnpm run prompts:validate -- prompts ~/.pi/agent/composed/workflow` | Validator passes without warnings | |
+| 25 | Type `/workflow mr 241` and approve shell execution | Rendered prompt includes precomputed local context, no raw Liquid tags, and no secret token values | |
+| 26 | Type `/workflow ticket ABC-1234` and approve shell execution | Rendered prompt includes ticket key uppercase, SDLC item status, and no raw Liquid tags | |
 
 ## Recording results
 
-Fill in the Pass? column with ✅ or ❌ and the date. Keep the last result committed.
+Fill in the Pass? column with pass/fail marker and the date. Keep latest result committed when doing release validation. Current known gap: `/compose add`, `/compose remove`, `/fixture`, and `/workflow` live shell-approved smoke still need completion after latest Liquid/variables changes.

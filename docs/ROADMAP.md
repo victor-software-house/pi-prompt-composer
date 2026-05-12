@@ -2,6 +2,29 @@
 
 This roadmap implements the product-level priorities defined in `FEATURE-SET.md` and the deeper design in `IMPLEMENTATION-PLAN.md`.
 
+## Current status — 2026-05-11
+
+Shipped in current `main`:
+
+- composer-owned flat prompts and grouped prompts under `composed/` roots
+- dual rendering engines: `engine: pi` and `engine: liquid`
+- Liquid context: `args`, `argv`, `arguments`, `variables`, `prompt`, and `now`
+- typed args: `required`, `type`, `values`, `default`, repeated/comma-separated `string[]`, and final-arg `rest: true`
+- prompt-local `_partials/` includes
+- frontmatter `variables` for static constants; validator rejects static literal body-level `assign`
+- XML helper, safe filters, raw-block compatible examples, and prompt-body shell blocks with `deny|ask|allow` policy
+- bundled `/compose new|add|remove` migrated to Liquid and updated to generate current best practices
+- static prompt validator: `pnpm run prompts:validate` / `mise run prompts:validate`
+
+Still pending:
+
+- live smoke completion for `/compose add`, `/compose remove`, `/fixture`, and `/workflow` shell-approved renders
+- remove temporary `~/.pi/agent/composed/fixture` after smoke
+- module extraction from `extensions/index.ts` into `src/` modules
+- operator-only dispatch mode
+- optional future declarative validators beyond current arg fields
+
+
 ## PPC-001: Directory scanner and grouped prompt registry (complete)
 
 Scan `~/.pi/agent/composed/` and `.pi/composed/` for composer-owned flat prompts and prompt subdirectories, migrating legacy grouped prompts from `prompts/<group>/` once.
@@ -85,6 +108,8 @@ Supported capabilities:
 - Liquid built-ins such as `if`, `for`, `assign`, `where`, `map`, `join`, `size`, and `default`
 - XML-style block helper: `{% xml "tag" %}...{% endxml %}`
 - safe filters: `present`, `quote`, `tokens`, `json`, and `shell_quote`
+- frontmatter `variables` for static constants
+- prompt-local `_partials/` includes
 - command-batch rendering as shell text for operator/model review
 - opt-in `{% shell %}...{% endshell %}` execution with configurable `deny|ask|allow` mode
 
@@ -120,19 +145,20 @@ Acceptance criteria:
 - ✅ rendered stdout is present in the final user message bubble
 - ✅ command args can use `shell_quote` for user-controlled values
 - ✅ docs state that shell-enabled prompts are trusted code, not sandboxed code
+- ✅ static prompt validator catches malformed metadata, Liquid parse errors, shell policy issues, unsafe curl piping, and static literal assigns that belong in `variables`
 
-## PPC-006C: Liquid-first bundled compose migration (planned)
+## PPC-006C: Liquid-first bundled compose migration (complete)
 
 Migrate bundled `/compose new`, `/compose add`, and `/compose remove` prompts from Pi-engine templates to Liquid after validation gates are in place.
 
 Acceptance criteria:
 
-- `rest: true`, `argv`, and `arguments` support cover current `${@:N}` use cases
-- golden tests render `/compose new/add/remove` through the runtime path before prompt rewrites
-- rendered instructions keep canonical `.pi/composed/` and `~/.pi/agent/composed/` destinations
-- literal Liquid and shell examples survive through `{% raw %}` blocks
-- `ask_user` examples contain concrete JSON fields and no unresolved placeholders
-- migration commit passes `pnpm test`, `mise run skills:validate`, and `specdocs_validate`
+- ✅ `rest: true`, `argv`, and `arguments` support cover current `${@:N}` use cases
+- ✅ golden tests render `/compose new/add/remove` through the runtime path before prompt rewrites
+- ✅ rendered instructions keep canonical `.pi/composed/` and `~/.pi/agent/composed/` destinations
+- ✅ literal Liquid and shell examples survive through `{% raw %}` blocks
+- ✅ `ask_user` examples contain concrete JSON fields and no unresolved placeholders
+- ✅ migration commits pass `pnpm test`, `mise run skills:validate`, and prompt/spec validation
 
 ## PPC-007: Scope-aware diagnostics and documented Pi API limits
 
@@ -177,7 +203,7 @@ Acceptance criteria:
 
 Restructure the single-file implementation and test suite to support reliable, low-maintenance expansion of the rendering pipeline.
 
-The current codebase ships all logic in one 586-line `extensions/index.ts` and tests it with hand-written assertions. This works for the current feature set but is not ready for PPC-006 (shell substitution) and beyond, where many rendering scenarios need snapshot validation and each pipeline stage needs independent testability.
+The current codebase still ships most runtime logic in `extensions/index.ts`, with some helper scripts/tests around it. This works for the current feature set but is not ready for long-term expansion, where operator-only dispatch, richer validation, and each pipeline stage need independent testability.
 
 Scope:
 
@@ -222,7 +248,7 @@ Acceptance criteria:
 - ✅ `examples/templating/` contains reusable `.md` prompt fixtures and expected output files
 - add `test/render.test.ts` for smaller isolated pipeline tests during module extraction
 - ✅ mock factory supports `on` event capture and session-start warning tests
-- pending: `exec` call capture (needed only if PPC-006B shell execution lands)
+- pending: deeper `exec` call capture in the mock factory for more direct Pi API assertions
 - pending: dispatch-mode branching (needed for PPC-010 operator-only prompts)
 
 ## PPC-012: Bundled `/compose` helpers and authoring skill (complete)

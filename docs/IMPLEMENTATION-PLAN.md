@@ -8,6 +8,26 @@ It focuses on three things:
 2. Pi-native prompt-template semantics where Pi already has them
 3. a package-native preprocessing pipeline for richer rendered prompts that remain fully visible to the operator
 
+## Current implementation status — 2026-05-11
+
+Implemented:
+
+- `engine: liquid` for flat and grouped composer prompts
+- Liquid context: `args`, `argv`, `arguments`, `variables`, `prompt`, `now`
+- typed arg coercion/validation for current schema fields
+- prompt-local `_partials/` includes
+- `{% shell %}` blocks with `deny|ask|allow` policy and timeout
+- static prompt validator entrypoints: `pnpm run prompts:validate` and `mise run prompts:validate`
+- bundled `/compose` prompts migrated to Liquid and updated to generate `variables`/partials guidance
+
+Pending:
+
+- module extraction from `extensions/index.ts` into focused `src/` modules
+- operator-only dispatch mode
+- optional future `validate.*` fields beyond current args schema
+- remaining live smoke checklist and temporary `fixture` cleanup
+
+
 ## Scope
 
 `pi-prompt-composer` is not a separate prompt language.
@@ -403,20 +423,22 @@ Conditional rendering now ships through `engine: liquid` for composer-owned prom
 
 Supported rendering power includes:
 
-- `if`, `for`, and `assign` control flow
+- `if`, `for`, and dynamic `assign` control flow
 - declarative data shaping with `where`, `map`, `join`, `size`, `first`, `last`, and `default`
 - named args via `{{ args.name }}`
 - raw positional context via `argv` and `arguments`
+- static frontmatter `variables` exposed as `variables`
 - rest args via `rest: true` on final `type: string[]` args
 - safe formatting helpers: `present`, `quote`, `tokens`, `json`, and `shell_quote`
 - XML-style prompt blocks via `{% xml "tag" %}...{% endxml %}`
+- prompt-local partials via `{% include "name.md" %}` from `_partials/` or the prompt directory
 
 Constraints:
 
 - keep the rendered result fully visible to the operator
 - keep evaluation deterministic and local to the render pipeline
 - execute shell blocks only through explicit `shell: ask` or `shell: allow`; default/configured deny renders command text instead
-- keep filesystem-backed includes, layouts, and partials disabled unless a future design adds an explicit safe supporting-file policy
+- allow prompt-local partial includes from the prompt directory and `_partials/`; keep broader filesystem/template inheritance disabled
 
 ### 8. Scope, source, and diagnostics
 
@@ -486,11 +508,16 @@ Deliver:
 
 ### Slice 4: preprocessing pipeline
 
-Deliver:
+Delivered for prompt bodies:
 
-- shell substitution with `!`-backtick syntax
-- visible failure handling
-- operator-visible rendered results as the stable contract
+- `{% shell %}...{% endshell %}` blocks in Liquid prompts
+- `shell: deny|ask|allow` plus configurable timeout
+- visible failure handling in rendered output
+- final rendered user message remains stable contract
+
+Still pending for this slice:
+
+- deeper module extraction around render stages
 
 ### Slice 5: runtime correctness and diagnostics
 
@@ -506,8 +533,8 @@ Deliver:
 Candidates:
 
 - conditional rendering
-- additional explicit render variables
-- supporting files referenced from prompt groups
+- additional explicit render variables beyond current `variables` map
+- broader supporting-file policies beyond prompt-local partials
 
 These are follow-on enhancements, not prerequisites for the first useful release.
 
@@ -516,7 +543,7 @@ These are follow-on enhancements, not prerequisites for the first useful release
 1. Pi's public command API cannot assign per-command `sourceInfo` for extension commands.
 2. Grouped prompts can faithfully reuse Pi parsing and substitution helpers, but they do not run through Pi's native prompt-template dispatch path.
 3. Missing-argument inference is heuristic because native Pi templates do not declare required arguments.
-4. Liquid templates can render command batches as text, but shell execution from templates remains deferred and must be bounded with sensible timeouts and visible error handling if implemented later.
+4. Liquid shell execution is implemented through `{% shell %}` blocks with explicit trust policy, bounded timeout, and visible failure output. It is trusted code, not sandboxed code.
 
 ## Definition of done for the first useful release
 
@@ -526,7 +553,7 @@ A first useful release is done when:
 - bare `/group` opens a usable selector
 - rendered prompt content uses Pi-native argument semantics
 - missing required args are collected before dispatch
-- Liquid templating works for structured prompt bodies
+- Liquid templating works for structured prompt bodies, frontmatter variables, prompt-local partials, and trusted shell blocks
 - the operator can see the final rendered prompt in the conversation history
 - flat native Pi prompt templates continue to work unchanged
 - the known Pi API limitations are documented clearly rather than hidden

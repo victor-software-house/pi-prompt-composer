@@ -1,7 +1,7 @@
 ---
 title: "Enhanced Composer Prompts"
 prd: PRD-001
-status: Draft
+status: Implemented
 owner: "Victor Software House"
 issue: "#6"
 date: 2026-05-07
@@ -12,25 +12,47 @@ version: "1.0"
 
 ---
 
+## Current Status (2026-05-11)
+
+Implemented from this PRD:
+
+* flat composer prompt discovery under `composed/` roots
+* grouped prompt routing and bundled `/compose` command
+* `engine: pi` and `engine: liquid` render paths
+* Liquid render context: `args`, `argv`, `arguments`, `variables`, `prompt`, `now`
+* current typed args schema with required/default/type/enum/number/boolean/string\[]/rest behavior
+* prompt-body `{% shell %}` blocks with explicit `deny|ask|allow` trust policy
+* prompt-local `_partials/` includes
+* static prompt validator for grouped indexes, args, variables, Liquid syntax, partial includes, shell policy, and common unsafe shell anti-patterns
+* bundled `/compose new|add|remove` migrated to Liquid-first authoring guidance
+
+Still open or deferred:
+
+* module extraction into `src/` modules
+* operator-only dispatch mode
+* resource-level `enabled: false` tombstones
+* future `validate.*` schema fields such as `pattern` / range / length validators
+* live smoke completion and temporary `fixture` cleanup
+
 ## 1. Problem & Context
 
-`pi-prompt-composer` currently adds grouped slash-command routing on top of Pi's native prompt-template system. A prompt directory with `_index.md` and nested `.md` files becomes `/group subcommand`; flat `.md` files remain Pi-native and are ignored by this package.
-
-That model solves prompt organization, but it creates two product gaps:
+`pi-prompt-composer` originally added grouped slash-command routing on top of Pi's native prompt-template system. That model solved prompt organization but created two product gaps that this PRD now addresses:
 
 1. **Single enhanced prompts are impossible without an artificial folder.** GitHub issue [#6](https://github.com/victor-software-house/pi-prompt-composer/issues/6) reports this directly: users want plain prompt files, not forced directories.
 2. **Current rendering is not powerful enough for serious prompt workflows.** The package mostly mirrors Pi-native `$1`, `$@`, `$ARGUMENTS`, and `${@:N}` substitution. Planned shell substitution helps, but it still leaves composer below the customization bar expected from modern coding-agent prompt systems.
 
 Current code reality:
 
-* `extensions/index.ts` owns discovery, registry, command registration, selector UI, arg parsing, arg collection, rendering, and dispatch in one file.
-* `discoverGroups()` only discovers directories; flat files are left to Pi.
+* `extensions/index.ts` still owns most discovery, registry, command registration, selector UI, arg parsing, arg collection, rendering, and dispatch logic; module extraction remains pending.
+* Composer discovers grouped prompts and flat prompt files under `composed/` roots; native `.pi/prompts/*.md` files remain Pi-owned.
 * `parseArgsMetadata()` accepts a lenient ordered args array with named items, required/default behavior, enum values, booleans, numbers, repeatable `string[]`, and `rest: true` metadata.
-* `substituteArgs()` implements Pi-like positional replacement plus escaped dollar support.
+* `parseVariablesMetadata()` exposes static frontmatter `variables` to Liquid render context.
+* `substituteArgs()` implements Pi-like positional replacement plus escaped dollar support for `engine: pi`.
 * `resolvePromptArgs()` collects required args through `ctx.ui.input()`, validates current typed fields, supports positional fallback for declared args, and preserves raw `argv` / `arguments` context for Liquid.
+* `renderPrompt()` supports Liquid, prompt-local partials, XML blocks, filters, and trusted `{% shell %}` blocks.
 * `pi.sendUserMessage(rendered, { deliverAs: 'followUp' })` dispatches visible rendered content.
 
-The next product step should be first-class **composer-owned prompt files** with a real template engine, typed argument schema, and a unified rendering pipeline for both flat and grouped prompts.
+The remaining product steps are module extraction, operator-only dispatch, optional future `validate.*` fields, live smoke completion, and cleanup of temporary test prompts.
 
 ---
 
@@ -98,14 +120,14 @@ The next product step should be first-class **composer-owned prompt files** with
 
 ### Out of scope / later
 
-| What                                             | Why                                                              | Tracked in             |
-| ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------- |
-| `default.md` for grouped folders                 | Useful sugar, but flat prompt files solve issue #6 more directly | Future issue           |
-| Deep nested commands such as `/a b c`            | Routing complexity unrelated to enhanced single prompts          | Existing non-goal      |
-| Full Claude Code prompt compatibility            | Target parity in capability, not byte-for-byte syntax            | Future research        |
-| Remote/network context providers                 | Security and latency need separate design                        | Future issue           |
-| Arbitrary unbounded shell execution in templates | Requires permission, timeout, and visibility policy              | PPC-006 / future issue |
-| Prompt inheritance across directories            | Adds mental model cost before core flat-file support is proven   | Future issue           |
+| What                                             | Why                                                                                               | Tracked in        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------- |
+| `default.md` for grouped folders                 | Useful sugar, but flat prompt files solve issue #6 more directly                                  | Future issue      |
+| Deep nested commands such as `/a b c`            | Routing complexity unrelated to enhanced single prompts                                           | Existing non-goal |
+| Full Claude Code prompt compatibility            | Target parity in capability, not byte-for-byte syntax                                             | Future research   |
+| Remote/network context providers                 | Security and latency need separate design                                                         | Future issue      |
+| Arbitrary unbounded shell execution in templates | Bounded trusted shell blocks are implemented; unbounded/background execution remains out of scope | Future issue      |
+| Prompt inheritance across directories            | Adds mental model cost before core flat-file support is proven                                    | Future issue      |
 
 ### Design for future (build with awareness)
 
@@ -213,6 +235,7 @@ Minimum context shape:
   args: Record<string, unknown>;
   argv: string[];
   arguments: string;
+  variables: Record<string, unknown>;
   prompt: {
     name: string;
     groupName?: string;
@@ -245,10 +268,23 @@ Then `argv` equals ["alpha", "beta", "gamma"]
 And `arguments` equals "alpha beta gamma"
 ```
 
+```gherkin
+Given a Liquid prompt declares variables.repo_path in frontmatter
+When the body renders "{{ variables.repo_path }}"
+Then the dispatched output contains the static value
+And static literal body-level assign is rejected by prompt validation
+```
+
+```gherkin
+Given a grouped prompt has `_partials/context.md`
+When the body includes `{% include "context.md" %}`
+Then the partial renders with the same args, variables, prompt, and now context
+```
+
 **Files:**
 
 * `package.json` / `pnpm-lock.yaml` — add renderer dependency after implementation spike. `liquidjs` latest checked on 2026-05-07: `10.25.7`; `handlebars` latest checked: `4.7.9`.
-* `src/render.ts` — engine dispatch and Liquid renderer.
+* `extensions/index.ts` now; future `src/render.ts` — engine dispatch and Liquid renderer.
 * `test/render.test.ts` — inline snapshots for Liquid rendering.
 * `docs/FEATURE-SET.md` — update product model.
 * `README.md` — document `engine: liquid`.
@@ -416,7 +452,7 @@ Enhanced rendering must preserve the existing product promise that the operator 
 **Acceptance criteria:**
 
 ```gherkin
-Given a Liquid prompt renders variables and conditionals
+Given a Liquid prompt renders args, variables, partials, and conditionals
 When composer dispatches it to the model
 Then the user message bubble contains the final rendered text
 And hidden intermediate template syntax is not sent
@@ -804,40 +840,40 @@ Deprecation timeline:
 
 ## 12. Open Questions
 
-| #   | Question                                                                                                                | Owner                 | Due        | Decision                                                                                                                                                             | Status   |
-| --- | ----------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Q1  | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?               | Victor Software House | 2026-05-08 | Neither marker is required. Composer ownership comes from `.pi/composed/` location; `engine` stays renderer-only.                                                     | Resolved |
-| Q2  | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?       | Victor Software House | 2026-05-08 | Support `--name value`, `name=value`, positional fallback for declared args, raw `argv` / `arguments`, and final-arg `rest: true`.                                   | Resolved |
-| Q3  | Should enum args use a selector UI instead of free-text input?                                                          | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                                                                                           | Resolved |
-| Q4  | Should enhanced grouped subcommands support typed args immediately, or should typed args start only for flat prompts?   | Victor Software House | 2026-05-08 | Support ordered typed args for flat and grouped prompts that opt into enhanced rendering.                                                                            | Resolved |
-| Q5  | Should Liquid filters be limited to a documented allowlist?                                                             | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                                                                                     | Resolved |
-| Q6  | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                                 | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                                                                                 | Resolved |
-| Q7  | Should composer take over all Pi prompt processing or run in hybrid mode?                                               | Victor Software House | 2026-05-08 | Use hybrid mode; composer handles typed resources and Pi handles unowned native prompts.                                                                             | Resolved |
-| Q8  | Where should composer-owned flat prompt files live so Pi does not also load them as native prompts?                     | Victor Software House | 2026-05-08 | Use top-level composer roots: `.pi/composed/` and `~/.pi/agent/composed/`.                                                                                           | Resolved |
-| Q9  | What should composer do with existing user/project groups under `.pi/prompts/<group>/`?                                 | Victor Software House | 2026-05-08 | Auto-migrate once at startup to `.pi/composed/<group>/`; warn on collisions; mark migration deprecated immediately; remove migration step in the next major release. | Resolved |
-| Q10 | Should composer keep requiring `type: prompt` and `type: group` frontmatter markers?                                    | Victor Software House | 2026-05-08 | Drop both markers; ownership comes from `.pi/composed/` location and `_index.md` folder presence. Preserve any legacy `type` fields encountered in migrated content. | Resolved |
+| #   | Question                                                                                                              | Owner                 | Due        | Decision                                                                                                                                                             | Status   |
+| --- | --------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Q1  | Should flat composer prompts require `type: prompt`, or should `engine: liquid` imply composer ownership?             | Victor Software House | 2026-05-08 | Neither marker is required. Composer ownership comes from `.pi/composed/` location; `engine` stays renderer-only.                                                    | Resolved |
+| Q2  | Which command-line syntax should set named args: `--mode deep`, `mode=deep`, positional mapping, or all of these?     | Victor Software House | 2026-05-08 | Support `--name value`, `name=value`, positional fallback for declared args, raw `argv` / `arguments`, and final-arg `rest: true`.                                   | Resolved |
+| Q3  | Should enum args use a selector UI instead of free-text input?                                                        | Victor Software House | 2026-05-08 | Use selector UI when interactive; reject invalid CLI values before render.                                                                                           | Resolved |
+| Q4  | Should enhanced grouped subcommands support typed args immediately, or should typed args start only for flat prompts? | Victor Software House | 2026-05-08 | Support ordered typed args for flat and grouped prompts that opt into enhanced rendering.                                                                            | Resolved |
+| Q5  | Should Liquid filters be limited to a documented allowlist?                                                           | Victor Software House | 2026-05-08 | Use a safe documented allowlist; add package-owned filters explicitly over time.                                                                                     | Resolved |
+| Q6  | Should `default.md` be tracked as a separate issue now or wait until flat prompts ship?                               | Victor Software House | 2026-05-08 | Wait until flat prompts ship, then reassess as grouped-folder sugar.                                                                                                 | Resolved |
+| Q7  | Should composer take over all Pi prompt processing or run in hybrid mode?                                             | Victor Software House | 2026-05-08 | Use hybrid mode; composer handles typed resources and Pi handles unowned native prompts.                                                                             | Resolved |
+| Q8  | Where should composer-owned flat prompt files live so Pi does not also load them as native prompts?                   | Victor Software House | 2026-05-08 | Use top-level composer roots: `.pi/composed/` and `~/.pi/agent/composed/`.                                                                                           | Resolved |
+| Q9  | What should composer do with existing user/project groups under `.pi/prompts/<group>/`?                               | Victor Software House | 2026-05-08 | Auto-migrate once at startup to `.pi/composed/<group>/`; warn on collisions; mark migration deprecated immediately; remove migration step in the next major release. | Resolved |
+| Q10 | Should composer keep requiring `type: prompt` and `type: group` frontmatter markers?                                  | Victor Software House | 2026-05-08 | Drop both markers; ownership comes from `.pi/composed/` location and `_index.md` folder presence. Preserve any legacy `type` fields encountered in migrated content. | Resolved |
 
 ---
 
 ## 13. Related
 
-| Issue                                                                                                  | Relationship                                                                                          |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| [#6 — Allow simple Prompt files](https://github.com/victor-software-house/pi-prompt-composer/issues/6) | Source issue; flat composer prompts complete the requested capability.                                |
+| Issue                                                                                                  | Relationship                                                                                            |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| [#6 — Allow simple Prompt files](https://github.com/victor-software-house/pi-prompt-composer/issues/6) | Source issue; flat composer prompts complete the requested capability.                                  |
 | `docs/ROADMAP.md` PPC-006 / PPC-006B / PPC-006C                                                        | Related; Liquid rendering, shell substitution, and bundled compose migration share the render pipeline. |
-| `docs/ROADMAP.md` PPC-010                                                                              | Related; operator-only prompts should share dispatch-mode plumbing after this work.                   |
-| `docs/ROADMAP.md` PPC-011                                                                              | Enables; module extraction is prerequisite or first rollout step for this PRD.                        |
+| `docs/ROADMAP.md` PPC-010                                                                              | Related; operator-only prompts should share dispatch-mode plumbing after this work.                     |
+| `docs/ROADMAP.md` PPC-011                                                                              | Enables; module extraction is prerequisite or first rollout step for this PRD.                          |
 
 ---
 
 ## 14. Changelog
 
-| Date       | Change                                          | Author                |
-| ---------- | ----------------------------------------------- | --------------------- |
+| Date       | Change                                                                                                | Author                |
+| ---------- | ----------------------------------------------------------------------------------------------------- | --------------------- |
 | 2026-05-10 | Aligned args schema, Liquid positional fallback, rest args, and Pi package scope with current runtime | Victor Software House |
-| 2026-05-08 | Clarified typed ownership and hybrid processing | Victor Software House |
-| 2026-05-08 | Resolved design open questions                  | Victor Software House |
-| 2026-05-07 | Initial draft                                   | Victor Software House |
+| 2026-05-08 | Clarified typed ownership and hybrid processing                                                       | Victor Software House |
+| 2026-05-08 | Resolved design open questions                                                                        | Victor Software House |
+| 2026-05-07 | Initial draft                                                                                         | Victor Software House |
 
 ---
 
