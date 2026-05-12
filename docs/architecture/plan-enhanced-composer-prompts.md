@@ -14,9 +14,9 @@ status: Archived
 * **Date**: 2026-05-08
 * **Author**: Victor Software House
 
-## Status note — 2026-05-11
+## Status note — 2026-05-12
 
-This plan is historical baseline architecture. Core requirements shipped through the implementation tracked in [Liquid-First Compose Prompt Migration](plan-liquid-first-compose-migration.md), [ROADMAP](../ROADMAP.md), and [PRD-001](../prd/PRD-001-enhanced-composer-prompts.md). Some details below are intentionally stale (for example early dependency/import notes, no-filesystem Liquid assumptions, and pre-`variables` context shape). Treat current docs as source of truth before implementing new work.
+This plan is historical baseline architecture. Core requirements shipped through the implementation tracked in [Liquid-First Compose Prompt Migration](plan-liquid-first-compose-migration.md), [ROADMAP](../ROADMAP.md), and [PRD-001](../prd/PRD-001-enhanced-composer-prompts.md). The Liquid migration has probe-backed smoke coverage for compose add/remove, rest args, typed validation, shell-enabled prompts, and fixture cleanup. Some details below are intentionally stale (for example early dependency/import notes, no-filesystem Liquid assumptions, and pre-`variables` context shape). Treat current docs as source of truth before implementing new work.
 
 ## Architecture Overview
 

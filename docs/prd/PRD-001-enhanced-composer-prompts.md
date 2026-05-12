@@ -12,7 +12,7 @@ version: "1.0"
 
 ---
 
-## Current Status (2026-05-11)
+## Current Status (2026-05-12)
 
 Implemented from this PRD:
 
@@ -20,11 +20,13 @@ Implemented from this PRD:
 * grouped prompt routing and bundled `/compose` command
 * `engine: pi` and `engine: liquid` render paths
 * Liquid render context: `args`, `argv`, `arguments`, `variables`, `prompt`, `now`
-* current typed args schema with required/default/type/enum/number/boolean/string\[]/rest behavior
+* current typed args schema with required/default/type/enum/number/boolean/string\[]/rest behavior, including blocked renders for invalid provided optional typed values
 * prompt-body `{% shell %}` blocks with explicit `deny|ask|allow` trust policy
 * prompt-local `_partials/` includes
 * static prompt validator for grouped indexes, args, variables, Liquid syntax, partial includes, shell policy, and common unsafe shell anti-patterns
 * bundled `/compose new|add|remove` migrated to Liquid-first authoring guidance
+* probe-level smoke for `/compose add`, `/compose remove`, local rest/validation fixtures, and private shell-enabled prompts
+* cleanup of temporary local fixture prompts after smoke
 
 Still open or deferred:
 
@@ -32,7 +34,6 @@ Still open or deferred:
 * operator-only dispatch mode
 * resource-level `enabled: false` tombstones
 * future `validate.*` schema fields such as `pattern` / range / length validators
-* live smoke completion and temporary local fixture-prompt cleanup
 
 ## 1. Problem & Context
 
@@ -52,7 +53,7 @@ Current code reality:
 * `renderPrompt()` supports Liquid, prompt-local partials, XML blocks, filters, and trusted `{% shell %}` blocks.
 * `pi.sendUserMessage(rendered, { deliverAs: 'followUp' })` dispatches visible rendered content.
 
-The remaining product steps are module extraction, operator-only dispatch, optional future `validate.*` fields, live smoke completion, and cleanup of temporary local fixture prompts.
+The remaining product steps are module extraction, operator-only dispatch, optional future `validate.*` fields, and any future resource tombstone design.
 
 ---
 

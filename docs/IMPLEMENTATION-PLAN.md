@@ -8,24 +8,25 @@ It focuses on three things:
 2. Pi-native prompt-template semantics where Pi already has them
 3. a package-native preprocessing pipeline for richer rendered prompts that remain fully visible to the operator
 
-## Current implementation status — 2026-05-11
+## Current implementation status — 2026-05-12
 
 Implemented:
 
 - `engine: liquid` for flat and grouped composer prompts
 - Liquid context: `args`, `argv`, `arguments`, `variables`, `prompt`, `now`
-- typed arg coercion/validation for current schema fields
+- typed arg coercion/validation for current schema fields, including blocked renders for invalid provided optional values
 - prompt-local `_partials/` includes
 - `{% shell %}` blocks with `deny|ask|allow` policy and timeout
 - static prompt validator entrypoints: `pnpm run prompts:validate` and `mise run prompts:validate`
 - bundled `/compose` prompts migrated to Liquid and updated to generate `variables`/partials guidance
+- probe-level smoke of `/compose add`, `/compose remove`, local rest/validation fixtures, and private shell-enabled prompts through extension command handlers
+- temporary local fixture prompt group removed after smoke
 
 Pending:
 
 - module extraction from `extensions/index.ts` into focused `src/` modules
 - operator-only dispatch mode
 - optional future `validate.*` fields beyond current args schema
-- remaining live smoke checklist and temporary local fixture-prompt cleanup
 
 
 ## Scope

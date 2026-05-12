@@ -76,6 +76,22 @@ Run this checklist against a live Pi session before first publish and after sign
 | 25 | Type a private workflow prompt with `shell: ask` and approve shell execution | Rendered prompt includes precomputed local context, no raw Liquid tags, and no secret/token values | |
 | 26 | Type a private workflow prompt with typed args and approve shell execution | Rendered prompt includes normalized args and no raw Liquid tags | |
 
+## Latest probe-backed result — 2026-05-12
+
+The latest smoke was run with `probe_eval` against the real extension entrypoint and a mock Pi runtime. It registered the same command handlers the extension exposes at runtime, captured `pi.sendUserMessage()` calls, confirmed `shell: ask`, and mocked shell execution output.
+
+| Check | Result |
+|:--|:--|
+| `/compose add review add security checklist` | Rendered one follow-up message with `composed/` and `prompts:validate` guidance |
+| `/compose remove review summary` | Rendered one follow-up message with cleanup/reference-check guidance |
+| Local fixture `rest foo create that shit` | Rendered `rest: true`, `argv`, and `arguments` correctly |
+| Local fixture `validation wrong count=nope` | Blocked render and warned for invalid enum |
+| Local fixture `validation summary count=nope` | Blocked render and warned for invalid optional number |
+| Private workflow prompt with `shell: ask` | Confirm path ran, shell executor was called, mocked output appeared in rendered prompt, no raw Liquid tags leaked |
+| Temporary fixture command cleanup | Temporary local fixture group removed; probe verified its slash command no longer registers |
+
+This smoke found and fixed one runtime bug: invalid provided optional typed args, such as `count=nope`, previously emitted a warning but still rendered with the default. The current runtime blocks rendering for invalid provided optional values.
+
 ## Recording results
 
-Fill in the Pass? column with pass/fail marker and the date. Keep latest result committed when doing release validation. Current known gap: `/compose add`, `/compose remove`, local fixture prompts, and private shell-enabled workflow prompts still need live smoke after latest Liquid/variables changes.
+Fill in the Pass? column with pass/fail marker and the date. Keep latest result committed when doing release validation. There is no remaining known smoke gap for the Liquid/variables migration path; future manual testing should focus on visual selector polish, real operator interaction, and future feature changes.

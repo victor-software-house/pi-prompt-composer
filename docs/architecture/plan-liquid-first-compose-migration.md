@@ -15,7 +15,7 @@ status: Implemented
 * **Date**: 2026-05-09
 * **Author**: Victor Software House
 
-## Current status — 2026-05-11
+## Current status — 2026-05-12
 
 Implemented:
 
@@ -26,11 +26,12 @@ Implemented:
 * frontmatter `variables` support for static constants
 * prompt-local `_partials/` includes
 * compose skill and docs updated for Liquid-first authoring
+* probe-level smoke of `/compose add`, `/compose remove`, local rest/validation fixtures, and private shell-enabled prompts
+* invalid provided optional typed args now block render instead of warning and falling back to defaults
+* temporary local fixture prompts removed after smoke
 
 Remaining follow-ups:
 
-* complete live smoke for `/compose add`, `/compose remove`, local rest/validation fixture prompts, and private shell-enabled workflow prompts
-* remove temporary local fixture prompts once smoke passes
 * decide whether future `validate.pattern` / ranges / length validators are worth shipping
 * module extraction remains tracked separately by roadmap PPC-011
 
@@ -226,7 +227,7 @@ Validation should stay fluent and declarative. Current runtime supports `require
 | 5     | Migrate bundled `/compose` prompts to Liquid      | Phases 2-4   | M               |
 | 6     | Update compose skill references                   | Phase 5      | M               |
 | 7     | Update docs/manual testing/spec links             | Phase 5      | S               |
-| 8     | Live smoke testing and cleanup temp prompts       | Phases 5-7   | S               |
+| 8     | Probe smoke testing and cleanup temp prompts      | Phases 5-7   | S               |
 
 ### Phase 1: Audit references and freeze behavior
 
@@ -339,16 +340,17 @@ Acceptance:
 * `specdocs_validate` passes.
 * No active docs tell users to put composer groups under `.pi/prompts/`.
 
-### Phase 8: Live smoke testing and temp prompt cleanup
+### Phase 8: Probe smoke testing and temp prompt cleanup
 
-Use temporary local fixture prompts for manual testing, then remove them or document their temp status.
+Temporary local fixture prompts were used for smoke testing, then removed.
 
 Acceptance:
 
-* Live Pi `/reload` sees migrated `/compose`.
-* Rich Markdown output displays as normal Pi user message.
-* Shell `ask` and `allow` behavior tested.
-* Temporary prompts removed unless explicitly kept.
+* Probe-loaded extension entrypoint registered migrated `/compose`.
+* `/compose add review add security checklist` and `/compose remove review summary` rendered follow-up user messages.
+* Local fixture prompts verified `rest: true`, `argv`, `arguments`, invalid enum blocking, and invalid optional number blocking.
+* Private shell-enabled prompts verified `shell: ask`, command execution handoff, shell output insertion, and no raw Liquid leaks.
+* Temporary prompts were removed and a post-cleanup probe verified the fixture command no longer registers.
 
 ## Risks and Mitigations
 
@@ -366,7 +368,6 @@ Acceptance:
 * Should `arguments` stay a plain space-joined string, or should composer add named helpers for shell-safe/string-safe joins?
 * `validate.pattern` remains follow-up after Liquid prompt migration; current runtime validation stays limited to shipped arg fields plus static prompt validator.
 * `/compose new` should choose `engine: liquid` when named args, conditionals, loops, partials, variables, XML, JSON, or shell blocks are useful; keep `engine: pi` for simple positional prompts.
-* Temporary fixture prompts stay local-only and should be deleted after smoke testing.
 
 ## ADR Index
 

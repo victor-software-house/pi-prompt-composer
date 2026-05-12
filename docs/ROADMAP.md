@@ -2,24 +2,24 @@
 
 This roadmap implements the product-level priorities defined in `FEATURE-SET.md` and the deeper design in `IMPLEMENTATION-PLAN.md`.
 
-## Current status — 2026-05-11
+## Current status — 2026-05-12
 
 Shipped in current `main`:
 
 - composer-owned flat prompts and grouped prompts under `composed/` roots
 - dual rendering engines: `engine: pi` and `engine: liquid`
 - Liquid context: `args`, `argv`, `arguments`, `variables`, `prompt`, and `now`
-- typed args: `required`, `type`, `values`, `default`, repeated/comma-separated `string[]`, and final-arg `rest: true`
+- typed args: `required`, `type`, `values`, `default`, repeated/comma-separated `string[]`, and final-arg `rest: true`; invalid provided optional typed args now block render instead of silently falling back
 - prompt-local `_partials/` includes
 - frontmatter `variables` for static constants; validator rejects static literal body-level `assign`
 - XML helper, safe filters, raw-block compatible examples, and prompt-body shell blocks with `deny|ask|allow` policy
 - bundled `/compose new|add|remove` migrated to Liquid and updated to generate current best practices
 - static prompt validator: `pnpm run prompts:validate` / `mise run prompts:validate`
+- probe-level smoke for `/compose add`, `/compose remove`, local rest/validation fixtures, and private shell-enabled prompts
+- temporary local fixture prompts removed after smoke
 
 Still pending:
 
-- live smoke completion for `/compose add`, `/compose remove`, local rest/validation fixture prompts, and private workflow prompts with shell-approved renders
-- remove temporary local fixture prompts after smoke
 - module extraction from `extensions/index.ts` into `src/` modules
 - operator-only dispatch mode
 - optional future declarative validators beyond current arg fields
