@@ -102,6 +102,25 @@ beforeEach(() => {
 		].join('\n'),
 	);
 	writeFileSync(
+		join(fixtureDir, 'validate.md'),
+		[
+			'---',
+			'description: Validate typed args',
+			'engine: liquid',
+			'args:',
+			'  - name: mode',
+			'    required: true',
+			'    type: enum',
+			'    values: [summary, patch, audit]',
+			'  - name: count',
+			'    required: false',
+			'    type: number',
+			'    default: 3',
+			'---',
+			'Mode: {{ args.mode }} Count: {{ args.count }}',
+		].join('\n'),
+	);
+	writeFileSync(
 		join(fixtureDir, 'escaped.md'),
 		'---\ndescription: Escape test\n---\nLiteral \\$ARGUMENTS here',
 	);
@@ -154,6 +173,22 @@ describe('direct dispatch', () => {
 		expect(sentMessages[0]!.content).toContain('Description: create that shit');
 		expect(sentMessages[0]!.content).toContain('Argv: compose,create,that,shit');
 		expect(sentMessages[0]!.content).toContain('Arguments: compose create that shit');
+	});
+
+	test('/testgrp validate blocks invalid enum and number args', async () => {
+		const { mockPi, commands, sentMessages } = createMockPi();
+		await loadExtension(mockPi, cwd);
+		const cmd = commands.get('testgrp')!;
+
+		const invalidEnum = createContext();
+		await cmd.handler('validate wrong count=2', invalidEnum.ctx);
+		expect(sentMessages).toHaveLength(0);
+		expect(invalidEnum.notifyCalls[0]!.message).toContain('must be one of');
+
+		const invalidNumber = createContext();
+		await cmd.handler('validate summary count=nope', invalidNumber.ctx);
+		expect(sentMessages).toHaveLength(0);
+		expect(invalidNumber.notifyCalls[0]!.message).toContain('must be a number');
 	});
 
 	test('/testgrp hello collects missing required args then dispatches rendered content', async () => {

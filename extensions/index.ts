@@ -1363,7 +1363,7 @@ async function resolvePromptArgs(
 		}
 
 		const coerced = coerceArgValue(arg, rawValue, ctx);
-		if (coerced === undefined && arg.required) return undefined;
+		if (coerced === undefined && (arg.required || !isMissingArgValue(rawValue))) return undefined;
 		if (coerced !== undefined && coerced !== '') {
 			namedArgs[arg.name] = coerced;
 			if (arg.rest === true && Array.isArray(coerced)) {
